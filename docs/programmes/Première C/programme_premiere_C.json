@@ -1,0 +1,337 @@
+{
+  "classe": "Première C",
+  "filiere": "Série Scientifique (Mathématiques et Sciences Physiques)",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "modules": [
+        {
+          "titre": "Algèbre et analyse",
+          "themes": [
+            {
+              "theme": "Équations, inéquations et systèmes",
+              "contenus": [
+                "Équations et inéquations du second degré dans R",
+                "Systèmes d'équations linéaires dans R² et R³ (méthode du pivot de Gauss, Cramer)"
+              ]
+            },
+            {
+              "theme": "Polynômes et fractions rationnelles",
+              "contenus": [
+                "Factorisation, racines apparentes, division euclidienne des polynômes"
+              ]
+            },
+            {
+              "theme": "Fonctions numériques",
+              "contenus": [
+                "Généralités, domaine de définition, parité, périodicité, opérations et composées de fonctions",
+                "Limites et continuité. Dérivation et applications (sens de variation, extrémums, tangente)",
+                "Étude et représentation graphique (fonctions polynômes, rationnelles/homographiques, irrationalités simples)",
+                "Asymptotes (horizontales, verticales, obliques)"
+              ]
+            },
+            {
+              "theme": "Suites numériques",
+              "contenus": [
+                "Généralités, raisonnement par récurrence",
+                "Suites arithmétiques et géométriques, calcul de sommes"
+              ]
+            },
+            {
+              "theme": "Trigonométrie",
+              "contenus": [
+                "Formules d'addition, de duplication et de transformation",
+                "Équations et inéquations trigonométriques dans R"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géométrie plane et de l'espace",
+          "themes": [
+            {
+              "theme": "Barycentres et lignes de niveau",
+              "contenus": [
+                "Barycentre de 2, 3 ou 4 points pondérés ; propriétés (associativité)",
+                "Lignes de niveau de l'application M → MA·MB ou M → aM(A²) + bM(B²)"
+              ]
+            },
+            {
+              "theme": "Produit scalaire et applications",
+              "contenus": [
+                "Formes du produit scalaire, relations métriques dans le triangle (théorème d'Al-Kashi, formule de la médiane)"
+              ]
+            },
+            {
+              "theme": "Transformations du plan",
+              "contenus": [
+                "Isométries du plan (translations, rotations, réflexions), homothéties"
+              ]
+            },
+            {
+              "theme": "Géométrie analytique du plan",
+              "contenus": [
+                "Droites et cercles (équations cartésiennes et paramétriques)"
+              ]
+            },
+            {
+              "theme": "Géométrie de l'espace",
+              "contenus": [
+                "Vecteurs de l'espace, repérage, orthogonalité, plans et droites dans l'espace"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation et gestion des données",
+          "themes": [
+            {
+              "theme": "Dénombrement et probabilités",
+              "contenus": [
+                "p-uplets, arrangements, permutations, combinaisons",
+                "Calcul de probabilités simples sur un univers fini"
+              ]
+            },
+            {
+              "theme": "Statistiques",
+              "contenus": [
+                "Séries statistiques groupées en classes",
+                "Caractéristiques de position (moyenne, médiane, mode) et de dispersion (variance, écart-type)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "physique": {
+      "modules": [
+        {
+          "titre": "Mesures, incertitudes et vecteurs",
+          "themes": [
+            {
+              "theme": "Mesures et incertitudes",
+              "contenus": [
+                "Incertitude absolue, incertitude relative, écriture du résultat d'une mesure"
+              ]
+            },
+            {
+              "theme": "Calcul vectoriel appliqué à la physique",
+              "contenus": [
+                "Projection de forces, dérivée d'un vecteur position/vitesse par rapport au temps"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Mécanique",
+          "themes": [
+            {
+              "theme": "Cinématique du point matériel",
+              "contenus": [
+                "Vecteurs position, vitesse et accélération",
+                "Mouvement rectiligne uniforme (MRU) et mouvement rectiligne uniformément varié (MRUV)",
+                "Mouvement circulaire uniforme (MCU), accélération centripète et vitesse angulaire"
+              ]
+            },
+            {
+              "theme": "Dynamique du point matériel",
+              "contenus": [
+                "Forces fondamentales, principe d'inertie (1ère loi de Newton)",
+                "Relation fondamentale de la dynamique (2ème loi de Newton)",
+                "Principe des actions réciproques (3ème loi de Newton)",
+                "Applications : mouvement sur un plan incliné, pendule simple, frottements"
+              ]
+            },
+            {
+              "theme": "Travail et énergie mécanique",
+              "contenus": [
+                "Travail d'une force constante / de frottement",
+                "Énergie cinétique et théorème de l'énergie cinétique (TEC)",
+                "Énergie potentielle de pesanteur",
+                "Énergie mécanique totale et conservation/non-conservation en présence de frottements"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Électricité et électromagnétisme",
+          "themes": [
+            {
+              "theme": "Champ électrostatique",
+              "contenus": [
+                "Force de Coulomb, vecteur champ électrostatique E, potentiel électrostatique V",
+                "Mouvement d'une particule chargée dans un champ électrostatique uniforme"
+              ]
+            },
+            {
+              "theme": "Champ magnétique",
+              "contenus": [
+                "Aimants, courants électriques et vecteur champ magnétique B",
+                "Champ magnétique créé par un fil rectiligne, une bobine plate et un solénoïde",
+                "Force de Laplace (F = IL × B) et ses applications (moteur à courant continu, haut-parleur)",
+                "Force de Lorentz (F = qv × B) et trajectoire des particules chargées"
+              ]
+            },
+            {
+              "theme": "Électrocinétique",
+              "contenus": [
+                "Résistances, condensateurs et inductances (bobines)",
+                "Réponse d'un dipôle RC et RL à un échelon de tension"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Optique géométrique",
+          "themes": [
+            {
+              "theme": "Lentilles minces convergentes et divergentes",
+              "contenus": [
+                "Formules de conjugaison et de grandissement (Descartes)",
+                "Construction géométrique des images",
+                "Vergence, lentilles accolées"
+              ]
+            },
+            {
+              "theme": "Instruments d'optique",
+              "contenus": [
+                "L'œil humain (défauts et corrections)",
+                "La loupe et le microscope (grossissement, puissance)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "modules": [
+        {
+          "titre": "Structure et chimie organique",
+          "themes": [
+            {
+              "theme": "Analyse quantitative et calculs de formules",
+              "contenus": [
+                "Détermination précise des masses molaires, compositions centésimales massiques et formules développées"
+              ]
+            },
+            {
+              "theme": "Isomérie spatiale",
+              "contenus": [
+                "Stéréoisomérie Z/E approfondie et géométrie des molécules"
+              ]
+            },
+            {
+              "theme": "Recherche de mécanismes et réactions organiques",
+              "contenus": [
+                "Halogénation des alcanes, régiosélectivité lors de l'addition sur les alcènes (règle de Markovnikov)",
+                "Substitutions aromatiques électrophiles sur le benzène",
+                "Oxydation ménagée quantitative des alcools et équilibrage par les demi-équations d'oxydoréduction"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie des solutions et oxydoréduction",
+          "themes": [
+            {
+              "theme": "Réactions d'oxydoréduction quantitatives",
+              "contenus": [
+                "Équilibrage complexe d'équations-bilans en milieu acide/basique",
+                "Étude quantitative des piles (force électromotrice, polarité, bilan de matière pendant le fonctionnement)",
+                "Notions sur la corrosion des métaux et procédés de protection (galvanisation, anode sacrificielle)"
+              ]
+            },
+            {
+              "theme": "Équilibres acido-basiques",
+              "contenus": [
+                "Produit ionique de l'eau, notion de produit de solubilité ou dosage précis d'un acide fort par une base forte"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "modules": [
+        {
+          "titre": "Étude de la langue et outils d'analyse (toutes séries)",
+          "themes": [
+            {
+              "theme": "Sémantique et lexique",
+              "contenus": [
+                "Champ lexical et champ sémique",
+                "Dénotation, connotation et visée argumentative",
+                "Figures de style (d'analogie, d'opposition, d'amplification, d'atténuation)"
+              ]
+            },
+            {
+              "theme": "Grammaire du texte et de la phrase",
+              "contenus": [
+                "Énonciation (embrayeurs, modalisateurs, statut du locuteur)",
+                "Connecteurs logiques et chronologiques",
+                "Progression thématique (à thème constant, linéaire, à thème dérivé)",
+                "Les types et formes de phrases au service de l'argumentation"
+              ]
+            },
+            {
+              "theme": "Actes de parole et pragmatique",
+              "contenus": [
+                "Registres de langue (courant, soutenu, familier)",
+                "Registres littéraires (tragique, comique, lyrique, pathétique, satirique, épique, polémique)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Expression écrite / techniques de rédaction",
+          "description": "Préparation directe aux épreuves du Probatoire",
+          "themes": [
+            {
+              "theme": "Séries C, D et TI (Épreuve de Français)",
+              "contenus": [
+                "Contraction de texte / Résumé de texte et discussion : analyse d'un texte argumentatif contemporain",
+                "Technique du résumé au 1/4 de la longueur initiale (avec marge de plus ou moins 10%)",
+                "Rédaction d'une discussion (mini-dissertation sur le thème du texte)",
+                "Commentaire composé : analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre)",
+                "Élaboration d'un plan détaillé (2 à 3 axes de lecture) avec centrage sur la forme et le fond"
+              ]
+            },
+            {
+              "theme": "Série A (Épreuves de Langue et Littérature) — exigences renforcées",
+              "contenus": [
+                "Dissertation littéraire : analyse d'un sujet portant sur la littérature, le rôle de l'écrivain, le théâtre, la poésie ou le roman",
+                "Construction d'un plan dialectique (Thèse / Antithèse / Synthèse) ou analytique",
+                "Mobilisation d'une culture littéraire vaste et citation précise d'œuvres au programme et hors-programme",
+                "Épreuve de Langue Française : évaluation approfondie de la grammaire, la stylistique et la pragmatique sur un corpus de textes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Littérature et œuvres au programme",
+          "description": "L'étude des œuvres intégrales se fait selon les grands axes littéraires définis pour le sous-cycle (Négritude, roman africain, théâtre classique/moderne, poésie). Les œuvres précises sont renouvelées périodiquement par arrêté ministériel du MINESEC.",
+          "themes": [
+            {
+              "theme": "Axes d'étude principaux",
+              "contenus": [
+                "Littérature africaine (génération des Indépendances et contemporaine) : roman africain (tradition/modernité, pouvoir politique, condition féminine), poésie engagée et mouvement de la Négritude (Césaire, Senghor, Damas)",
+                "Littérature française et francophone : théâtre classique ou moderne (Molière, Racine, Anouilh, Corneille) ou théâtre africain (Guillaume Oyônô Mbia), roman réaliste/naturaliste du XIXe siècle ou romanciers francophones modernes"
+              ]
+            },
+            {
+              "theme": "Œuvres au programme de l'année en cours",
+              "contenus": [
+                "Roman/Récit — Balafon, Engelbert Mveng : poésie / littérature africaine du patrimoine, exploration de l'identité, des traditions et du dialogue entre culture africaine et foi",
+                "Roman — Au cœur des ténèbres (Heart of Darkness), Joseph Conrad : roman moderne, étude du colonialisme, de la condition humaine et du voyage psychologique",
+                "Théâtre — Le Lion et la Perle, Wole Soyinka : comédie dramatique / théâtre africain, confrontation entre tradition africaine et modernité occidentale (Baroka, Lakunle, Sidi)",
+                "Poésie — Les Chants de la forêt ou recueils poétiques au choix du sous-cycle : poésie lyrique et engagée, célébration de la nature et mémoire collective"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

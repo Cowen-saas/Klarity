@@ -1,0 +1,315 @@
+{
+  "classe": "Première D",
+  "filiere": "Série Scientifique Expérimentale",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "modules": [
+        {
+          "titre": "Algèbre et analyse",
+          "themes": [
+            {
+              "theme": "Équations et systèmes",
+              "contenus": [
+                "Équations/inéquations du second degré et bicarrées",
+                "Systèmes d'équations dans R² et R³ (méthode de substitution et combinaison/Gauss simplifié)"
+              ]
+            },
+            {
+              "theme": "Fonctions numériques",
+              "contenus": [
+                "Domaine de définition, parité, limites usuelles",
+                "Dérivation et étude de variations",
+                "Représentation graphique de fonctions polynômes (de degré ≤ 3) et fonctions rationnelles simples"
+              ]
+            },
+            {
+              "theme": "Suites numériques",
+              "contenus": [
+                "Suites arithmétiques et suites géométriques (terme général, somme des termes)"
+              ]
+            },
+            {
+              "theme": "Trigonométrie",
+              "contenus": [
+                "Cercle trigonométrique, formules de base de transformation",
+                "Résolution d'équations du type cos(x) = a et sin(x) = a"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géométrie",
+          "themes": [
+            {
+              "theme": "Barycentre",
+              "contenus": [
+                "Barycentre de 2 et 3 points pondérés"
+              ]
+            },
+            {
+              "theme": "Produit scalaire",
+              "contenus": [
+                "Calculs de distances, d'angles et théorème d'Al-Kashi",
+                "Géométrie analytique : équations de droites et de cercles dans le plan"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Statistiques et dénombrement",
+          "themes": [
+            {
+              "theme": "Dénombrement",
+              "contenus": [
+                "Principe fondamental de comptage, arrangements et combinaisons"
+              ]
+            },
+            {
+              "theme": "Statistiques",
+              "contenus": [
+                "Représentations graphiques (histogrammes, diagrammes), calcul de la moyenne, médiane, variance et écart-type"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "physique": {
+      "modules": [
+        {
+          "titre": "Mesures physiques",
+          "themes": [
+            {
+              "theme": "Incertitudes et précision des mesures",
+              "contenus": [
+                "Incertitudes et précision des mesures"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Mécanique",
+          "themes": [
+            {
+              "theme": "Cinématique",
+              "contenus": [
+                "Mouvements rectilignes (MRU et MRUV)"
+              ]
+            },
+            {
+              "theme": "Dynamique",
+              "contenus": [
+                "Forces et conditions d'équilibre",
+                "Théorème de l'énergie cinétique (TEC)",
+                "Énergies potentielle et mécanique"
+              ]
+            },
+            {
+              "theme": "Énergie thermique",
+              "contenus": [
+                "Quantité de chaleur, échanges thermiques sans changement d'état, calorimétrie"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Électricité et électromagnétisme",
+          "themes": [
+            {
+              "theme": "Champ électrostatique",
+              "contenus": [
+                "Notion de champ, potentiel et force électrostatique"
+              ]
+            },
+            {
+              "theme": "Champ magnétique et magnétostatique",
+              "contenus": [
+                "Expérience d'Oersted, champ créé par des courants usuels",
+                "Force de Laplace (définition, direction, sens et norme) et applications pratiques"
+              ]
+            },
+            {
+              "theme": "Circuits électriques",
+              "contenus": [
+                "Loi d'Ohm généralisée, dipôles récepteurs/générateurs, bilans d'énergie"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Optique",
+          "themes": [
+            {
+              "theme": "Lentilles minces",
+              "contenus": [
+                "Propriétés, foyers, constructions d'images"
+              ]
+            },
+            {
+              "theme": "Étude de l'œil et corrections",
+              "contenus": [
+                "Myopie, hypermétropie, presbytie"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "modules": [
+        {
+          "titre": "Chimie organique",
+          "themes": [
+            {
+              "theme": "Généralités",
+              "contenus": [
+                "Analyse élémentaire, détermination de formule brute, notions d'isomérie (chaîne, position, fonction, Z/E)"
+              ]
+            },
+            {
+              "theme": "Hydrocarbures saturés et insaturés",
+              "contenus": [
+                "Alcanes : nomenclature, halogénation (mécanisme radicalaire), combustion",
+                "Alcènes et alcynes : nomenclature, réactions d'addition (hydratation, halogénation, hydrogénation) et notion de polymérisation (PVC, polyéthylène)"
+              ]
+            },
+            {
+              "theme": "Hydrocarbures aromatiques",
+              "contenus": [
+                "Structure du benzène et caractère aromatique",
+                "Réactions de substitution (nitration, halogénation) et d'addition"
+              ]
+            },
+            {
+              "theme": "Fonctions oxygénées",
+              "contenus": [
+                "Alcools : classes d'alcools, déshydratation, oxydation ménagée (obtention des aldéhydes, cétones, acides)",
+                "Composés carbonylés : aldéhydes et cétones (tests d'identification : DNPH, liqueur de Fehling, réactif de Tollens)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Solutions aqueuses et oxydoréduction",
+          "themes": [
+            {
+              "theme": "Notions de pH et réactions acide-base",
+              "contenus": [
+                "Autoprotolyse de l'eau, calculs de pH des solutions diluées",
+                "Reconstitution d'équations bilan de réactions acide-base simples, dosage volumétrique"
+              ]
+            },
+            {
+              "theme": "Oxydoréduction",
+              "contenus": [
+                "Nombre d'oxydation, ajustement des équations d'oxydoréduction",
+                "Classification électrochimique des couples oxydant/réducteur (M^(n+)/M)",
+                "Piles électrochimiques (pile Daniell, prévision des réactions)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie appliquée et environnement",
+          "themes": [
+            {
+              "theme": "Pétrochimie",
+              "contenus": [
+                "Distillation du pétrole, craquage, reformage, indice d'octane"
+              ]
+            },
+            {
+              "theme": "Polymères et impact environnemental",
+              "contenus": [
+                "Recyclage des plastiques, effet de serre et gaz à effet de serre"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "modules": [
+        {
+          "titre": "Étude de la langue et outils d'analyse (toutes séries)",
+          "themes": [
+            {
+              "theme": "Sémantique et lexique",
+              "contenus": [
+                "Champ lexical et champ sémique",
+                "Dénotation, connotation et visée argumentative",
+                "Figures de style (d'analogie, d'opposition, d'amplification, d'atténuation)"
+              ]
+            },
+            {
+              "theme": "Grammaire du texte et de la phrase",
+              "contenus": [
+                "Énonciation (embrayeurs, modalisateurs, statut du locuteur)",
+                "Connecteurs logiques et chronologiques",
+                "Progression thématique (à thème constant, linéaire, à thème dérivé)",
+                "Les types et formes de phrases au service de l'argumentation"
+              ]
+            },
+            {
+              "theme": "Actes de parole et pragmatique",
+              "contenus": [
+                "Registres de langue (courant, soutenu, familier)",
+                "Registres littéraires (tragique, comique, lyrique, pathétique, satirique, épique, polémique)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Expression écrite / techniques de rédaction",
+          "description": "Préparation directe aux épreuves du Probatoire",
+          "themes": [
+            {
+              "theme": "Séries C, D et TI (Épreuve de Français)",
+              "contenus": [
+                "Contraction de texte / Résumé de texte et discussion : analyse d'un texte argumentatif contemporain",
+                "Technique du résumé au 1/4 de la longueur initiale (avec marge de plus ou moins 10%)",
+                "Rédaction d'une discussion (mini-dissertation sur le thème du texte)",
+                "Commentaire composé : analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre)",
+                "Élaboration d'un plan détaillé (2 à 3 axes de lecture) avec centrage sur la forme et le fond"
+              ]
+            },
+            {
+              "theme": "Série A (Épreuves de Langue et Littérature) — exigences renforcées",
+              "contenus": [
+                "Dissertation littéraire : analyse d'un sujet portant sur la littérature, le rôle de l'écrivain, le théâtre, la poésie ou le roman",
+                "Construction d'un plan dialectique (Thèse / Antithèse / Synthèse) ou analytique",
+                "Mobilisation d'une culture littéraire vaste et citation précise d'œuvres au programme et hors-programme",
+                "Épreuve de Langue Française : évaluation approfondie de la grammaire, la stylistique et la pragmatique sur un corpus de textes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Littérature et œuvres au programme",
+          "description": "L'étude des œuvres intégrales se fait selon les grands axes littéraires définis pour le sous-cycle (Négritude, roman africain, théâtre classique/moderne, poésie). Les œuvres précises sont renouvelées périodiquement par arrêté ministériel du MINESEC.",
+          "themes": [
+            {
+              "theme": "Axes d'étude principaux",
+              "contenus": [
+                "Littérature africaine (génération des Indépendances et contemporaine) : roman africain (tradition/modernité, pouvoir politique, condition féminine), poésie engagée et mouvement de la Négritude (Césaire, Senghor, Damas)",
+                "Littérature française et francophone : théâtre classique ou moderne (Molière, Racine, Anouilh, Corneille) ou théâtre africain (Guillaume Oyônô Mbia), roman réaliste/naturaliste du XIXe siècle ou romanciers francophones modernes"
+              ]
+            },
+            {
+              "theme": "Œuvres au programme de l'année en cours",
+              "contenus": [
+                "Roman/Récit — Balafon, Engelbert Mveng : poésie / littérature africaine du patrimoine, exploration de l'identité, des traditions et du dialogue entre culture africaine et foi",
+                "Roman — Au cœur des ténèbres (Heart of Darkness), Joseph Conrad : roman moderne, étude du colonialisme, de la condition humaine et du voyage psychologique",
+                "Théâtre — Le Lion et la Perle, Wole Soyinka : comédie dramatique / théâtre africain, confrontation entre tradition africaine et modernité occidentale (Baroka, Lakunle, Sidi)",
+                "Poésie — Les Chants de la forêt ou recueils poétiques au choix du sous-cycle : poésie lyrique et engagée, célébration de la nature et mémoire collective"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

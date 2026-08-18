@@ -1,0 +1,45 @@
+Klarity - Document de reference pour la scalabilite
+
+1. Séparer le travail synchrone du travail asynchrone — le point le plus critique pour Klarity
+
+C'est probablement le levier le plus important, et un piège classique : si tu fais l'appel au modèle vision (correction d'épreuve) directement dans la requête HTTP qui répond à l'utilisateur, chaque correction bloque un processus pendant plusieurs secondes. Avec 50 élèves qui uploadent une correction en même temps, ton serveur s'écroule.
+
+La bonne architecture : l'upload de la photo répond immédiatement ("Correction en cours de traitement"), puis un worker en arrière-plan (file d'attente — BullMQ avec Redis est le standard Node.js le plus simple à mettre en place) traite la correction, et le front-end reçoit le résultat via polling ou websocket une fois prêt. Ça s'applique à : correction d'épreuve, génération de quiz, recherche/filtrage vidéo, envoi de SMS/WhatsApp. Rien de tout ça ne doit bloquer une requête utilisateur.
+
+2. Traiter la couche IA comme un service isolé, jamais un appel en dur
+
+Tu as déjà la bonne base avec la fonction appelerModeleIA() unifiée qu'on avait prévue — pousse ce principe plus loin :
+
+Retry automatique avec backoff en cas de 429 (rate limit) plutôt que de planter
+File d'attente dédiée aux appels IA, avec un débit contrôlé (par exemple max X requêtes/minute vers Nvidia), pour ne jamais dépasser le quota et provoquer une cascade d'échecs
+Abstraction du provider : le jour où tu dois basculer de Nvidia gratuit vers un provider payant (ou répartir la charge entre plusieurs), ça doit être un changement de config, pas une réécriture de code
+3. Base de données — les fondamentaux qui évitent 90% des problèmes de scale
+Pool de connexions (Prisma le gère, mais vérifie la config — connection_limit adapté à ton nombre d'instances serveur)
+Index sur toutes les clés étrangères et champs de recherche fréquents (ex. Eleve.identifiant, Lacune.eleveId, Paiement.statut) — dès la conception du schéma, pas après coup quand les requêtes deviennent lentes
+Pagination systématique sur toute liste (historique de corrections, quiz, élèves côté admin) — jamais de SELECT * sans limite
+Postgres seul scale très loin (des dizaines de milliers d'utilisateurs actifs) avant que tu aies besoin de réplicas de lecture ou de partitionnement — ne complique pas ça avant d'en avoir la preuve par les métriques réelles
+4. Stateless par design — la base pour scaler horizontalement
+
+Ton serveur Next.js ne doit jamais garder d'état en mémoire (pas de variable globale qui stocke des données utilisateur, pas de session en RAM). Sessions via NextAuth avec JWT (stateless) ou stockées en base — jamais en mémoire locale du process. Ça te permet de faire tourner plusieurs instances de ton app derrière un load balancer sans qu'un utilisateur soit "collé" à une instance précise.
+
+5. Cache à plusieurs niveaux, pas juste "une base plus rapide"
+Cache vidéo/lacune qu'on avait déjà prévu (évite de re-consommer l'API YouTube et l'appel LLM)
+Prompt caching côté API IA (déjà mentionné) — le programme OBC et le barème réinjectés à chaque appel sont des candidats parfaits
+CDN pour les assets statiques et R2 (Cloudflare le fait déjà nativement pour R2)
+Redis en cache applicatif pour des données lues souvent mais modifiées rarement (ex. liste des matières/chapitres)
+6. Observabilité dès le premier déploiement, pas après le premier incident
+Logging structuré (pas juste console.log) avec un outil comme Sentry ou équivalent — tu dois savoir immédiatement quand une correction échoue, un paiement webhook rate, ou un appel IA timeout, sans attendre qu'un élève te le signale
+Monitoring d'uptime basique sur les endpoints critiques (auth, paiement, correction)
+Ça coûte quelques heures à mettre en place maintenant, et t'évite des jours de debugging à l'aveugle plus tard
+7. Idempotence sur tout ce qui touche à l'argent
+
+Le webhook CamerPay peut être appelé plusieurs fois pour le même événement (retry réseau, etc.) — ta logique de traitement du paiement doit être idempotente (vérifier si ce paiement a déjà été traité avant de créditer l'abonnement une deuxième fois). C'est un bug classique qui coûte cher si on ne l'anticipe pas.
+
+8. Contrôle des coûts IA — spécifique à ton modèle économique
+
+C'est le risque business le plus concret pour Klarity : un abonnement à 3000-5000 FCFA/mois avec un usage IA illimité en premium peut te faire perdre de l'argent sur les gros utilisateurs si les coûts d'API dépassent la marge. Prévoir dès le départ : des limites techniques raisonnables même en premium (pas "illimité" au sens littéral — un plafond haut mais réel), et un monitoring des coûts IA par utilisateur pour repérer les cas aberrants.
+
+9. Ce qu'il ne faut PAS faire maintenant
+Pas de microservices dès le départ — un monolithe Next.js bien structuré scale très loin et est beaucoup plus simple à maintenir seul
+Pas de Kubernetes ni d'infrastructure complexe — un déploiement simple (Vercel, Railway, ou un VPS avec Docker Compose) suffit largement jusqu'à plusieurs milliers d'utilisateurs actifs
+Pas de sharding de base de données — prématuré à ce stade, complique tout sans bénéfice réel.

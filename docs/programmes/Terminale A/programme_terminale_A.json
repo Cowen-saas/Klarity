@@ -1,0 +1,383 @@
+{
+  "classe": "Terminale A",
+  "filiere": "Série Littéraire",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
+      "series_scientifiques_techno": {
+        "series": ["C", "D", "TI"],
+        "volume_horaire": "~3 h / semaine",
+        "coefficient": "2 à 3",
+        "modules": [
+          {
+            "titre": "Étude de la langue et communication",
+            "themes": [
+              {
+                "theme": "Grammaire du texte et énonciation",
+                "contenus": [
+                  "Les marques de la présence du locuteur (modalisateurs, embrayeurs, indices d'énonciation)",
+                  "La syntaxe complexe et la structuration logique du discours",
+                  "Les types d'arguments (d'autorité, par analogie, déductif, inductif, ad hominem)",
+                  "Les connecteurs logiques, temporels et spatiaux au service de la démonstration"
+                ]
+              },
+              {
+                "theme": "Stylistique et pragmatique",
+                "contenus": [
+                  "Analyse des visées de communication (informer, convaincre, persuader, faire agir)",
+                  "Les registres de langue et registres littéraires (satirique, polémique, tragique, épidictique, lyrique)",
+                  "Les figures de style et leur impact argumentatif ou expressif"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Techniques de rédaction et d'expression écrite",
+            "description": "Préparation directe aux deux sujets au choix lors de l'épreuve du Baccalauréat",
+            "themes": [
+              {
+                "theme": "Sujet 1 — La contraction de texte et la discussion",
+                "contenus": [
+                  "Résumé / contraction : analyse d'un texte argumentatif contemporain (800 à 1000 mots), dégagement de la thèse, de la structure argumentative et réduction rigoureuse au 1/4 du texte d'origine (± 10%)",
+                  "Discussion : rédaction d'un essai structuré portant sur une problématique soulevée par le texte d'appui"
+                ]
+              },
+              {
+                "theme": "Sujet 2 — Le commentaire composé",
+                "contenus": [
+                  "Analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre ou essai)",
+                  "Élaboration d'un plan détaillé s'articulant autour de 2 ou 3 axes d'analyse (fond et forme)",
+                  "Rédaction d'une introduction complète, d'un développement structuré avec transitions et d'une conclusion synthétique"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Littérature et culture générale",
+            "themes": [
+              {
+                "theme": "Mouvements et analyse thématique",
+                "contenus": [
+                  "Étude des mouvements littéraires majeurs (Négritude, roman africain post-colonial, réalisme, romantisme, théâtre engagé)",
+                  "Analyse thématique d'œuvres au programme national pour nourrir la culture générale et les arguments de la discussion"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "serie_litteraire_A": {
+        "series": ["A"],
+        "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
+        "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
+        "modules": [
+          {
+            "titre": "Épreuve 1 — Langue française",
+            "description": "Ce module évalue la maîtrise scientifique et stylistique de la langue à partir d'un corpus de textes.",
+            "themes": [
+              {
+                "theme": "Grammaire, sémantique et stylistique",
+                "contenus": [
+                  "Énonciation et théorie des actes de parole (illocutoire, perlocutoire, présupposés et sous-entendus)",
+                  "Cohésion et cohérence textuelles (progression thématique, anaphores, cataphores, récurrences lexicales)",
+                  "Analyse stylistique approfondie des figures de rhétorique et des champs lexicaux",
+                  "Morphosyntaxe avancée et analyse des structures de phrases complexes"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Épreuve 2 — Littérature et dissertation littéraire",
+            "description": "Ce module repose sur la maîtrise des genres littéraires, de la critique et de l'histoire littéraire.",
+            "themes": [
+              {
+                "theme": "La dissertation littéraire",
+                "contenus": [
+                  "Traitement de sujets théoriques ou d'opinion portant sur la création littéraire, la fonction de la poésie, le rôle du théâtre, la valeur du roman ou la mission de l'écrivain",
+                  "Maîtrise des plans dialectiques (thèse, antithèse, synthèse) et analytiques",
+                  "Mobilisation obligatoire d'une vaste culture littéraire (exemples et citations d'œuvres africaines, françaises et francophones)"
+                ]
+              },
+              {
+                "theme": "Étude des œuvres intégrales au programme",
+                "contenus": [
+                  "Analyse linéaire et explications de textes extraits des œuvres inscrites au programme officiel",
+                  "Étude des contextes historiques, sociopolitiques et esthétiques des auteurs au programme"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "philosophie": {
+      "volume_horaire": "non précisé dans la source",
+      "coefficient": "non précisé",
+      "modules": [
+        {
+          "titre": "Philosophie générale (les grands domaines de la réflexion)",
+          "themes": [
+            {
+              "theme": "A. L'Homme, le conscient et l'inconscient",
+              "contenus": [
+                "La conscience et la perception : définitions, formes de conscience (immédiate, réfléchie, morale), le sujet pensant (le Cogito cartésien)",
+                "L'inconscient et la psychanalyse : théorie de l'inconscient chez Sigmund Freud (Ics, Pcs, Cs et Ça, Moi, Surmoi)",
+                "Les manifestations de l'inconscient (rêves, actes manqués, lapsus, névroses)",
+                "Critiques de l'inconscient (Alain, Sartre et la mauvaise foi)",
+                "La mémoire et le temps : la durée, le souvenir, la perception du temps chez Bergson"
+              ]
+            },
+            {
+              "theme": "B. Le langage et la culture",
+              "contenus": [
+                "Le langage : origine et nature du langage, langage humain et communication animale",
+                "Rapports entre langage et pensée (pensons-nous sans les mots ?)",
+                "Le pouvoir des mots et les fonctions du langage (Jakobson)",
+                "La culture et la nature : distinction nature/culture, ethnocentrisme et relativisme culturel",
+                "Le travail et la technique : le travail comme libération ou aliénation (Marx), l'impact du progrès technique sur l'homme",
+                "L'art et la création esthétique : le beau, le goût, le rôle de l'artiste dans la société"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Épistémologie et philosophie des sciences",
+          "themes": [
+            {
+              "theme": "A. La connaissance, la raison et le réel",
+              "contenus": [
+                "La vérité : définitions, critères de la vérité (cohérence, correspondance, pragmatisme), vérité et opinion, le scepticisme et le dogmatisme",
+                "La démonstration et la logique : le raisonnement logique, la déduction, l'induction, la valeur et les limites du syllogisme"
+              ]
+            },
+            {
+              "theme": "B. Épistémologie des sciences particulières",
+              "contenus": [
+                "Les mathématiques : origine des concepts mathématiques (empirisme vs rationalisme), la méthode axiomatique, la nature des objets mathématiques",
+                "Les sciences de la nature (physique, chimie, biologie) : la méthode expérimentale (Claude Bernard : observation, hypothèse, expérience, conclusion)",
+                "Le problème de l'induction et le critère de réfutation (Karl Popper)",
+                "Le vivant et la spécificité des sciences biologiques (mécanisme vs vitalisme)",
+                "Les sciences humaines (histoire, sociologie, psychologie) : la possibilité d'une connaissance scientifique de l'homme, l'objectivité en histoire et la notion de vérité historique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Politique, droit et société",
+          "themes": [
+            {
+              "theme": "A. L'État, la justice et le pouvoir",
+              "contenus": [
+                "La société et l'État : l'état de nature et les théories du contrat social (Hobbes, Locke, Rousseau)",
+                "La nature et les fonctions de l'État : garant de la liberté ou instrument d'oppression ?",
+                "La souveraineté, la démocratie et les régimes politiques",
+                "Le droit et la justice : droit naturel vs droit positif, la justice comme équité et égalité, la punition et le châtiment",
+                "La violence et la paix : la légitimité de la violence, le problème de la guerre et les conditions d'une paix durable"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Éthique et métaphysique",
+          "themes": [
+            {
+              "theme": "A. La morale et la condition humaine",
+              "contenus": [
+                "La liberté et le libre arbitre : déterminisme, fatalisme et existentialisme (Sartre : « L'existence précède l'essence »)",
+                "Le devoir et la morale : les morales du devoir (l'impératif catégorique de Kant) vs les morales du bonheur/conséquentialistes (l'épicurisme, le stoïcisme, l'utilitarisme)",
+                "Le bonheur et le désir : la nature du désir, le bonheur comme souverain bien"
+              ]
+            },
+            {
+              "theme": "B. Les problèmes fondamentaux de la métaphysique",
+              "contenus": [
+                "L'existence de Dieu et la foi : les preuves métaphysiques de l'existence de Dieu (ontologique, cosmologique, téléologique), le problème du mal, la relation entre foi et raison",
+                "Le sens de la vie et la mort : l'angoisse, le néant, la finitude humaine"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Philosophie africaine et étude d'œuvre intégrale",
+          "themes": [
+            {
+              "theme": "A. La philosophie africaine",
+              "contenus": [
+                "Le débat sur l'existence d'une philosophie africaine : l'ethnophilosophie et ses critiques (Paulin Hountondji, Marcien Towa, Fabien Eboussi Boulaga)",
+                "La Négritude philosophique (Aimé Césaire, Léopold Sédar Senghor)",
+                "La quête du développement et la philosophie politique africaine contemporaine"
+              ]
+            },
+            {
+              "theme": "B. Étude d'œuvre intégrale (au programme national)",
+              "contenus": [
+                "Auteur et œuvre : De la médiocrité à l'excellence, d'Ebenezer Njoh-Mouellé",
+                "Thématiques : l'analyse de l'homme médiocre et du sous-développement en Afrique",
+                "La définition du véritable développement (développement de l'homme tout entier)",
+                "Le rôle de l'éducation, de la liberté et de la créativité dans la quête de l'excellence"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mathematiques": {
+      "volume_horaire": "2 h / semaine",
+      "coefficient": 2,
+      "modules": [
+        {
+          "titre": "Analyse élémentaire",
+          "themes": [
+            {
+              "theme": "Fonctions numériques",
+              "contenus": [
+                "Limites élémentaires et domaine de définition",
+                "Dérivation : calcul de la dérivée, sens de variation",
+                "Étude usuelle de fonctions polynômes du 2nd et 3ème degré",
+                "Introduction aux fonctions logarithme népérien (ln) et exponentielle (exp) — calculs simples, résolutions d'équations",
+                "Représentation graphique élémentaire"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation et gestion de données",
+          "themes": [
+            {
+              "theme": "Systèmes d'équations et inéquations",
+              "contenus": [
+                "Systèmes linéaires 2×2 et 3×3 appliqués à des problèmes d'économie domestique ou de gestion de stocks",
+                "Programmation linéaire simple (résolution graphique)"
+              ]
+            },
+            {
+              "theme": "Statistiques à deux variables",
+              "contenus": [
+                "Nuage de points, point moyen",
+                "Ajustement linéaire visuel et méthode de Mayer"
+              ]
+            },
+            {
+              "theme": "Probabilités",
+              "contenus": [
+                "Dénombrement simple (combinaisons, arrangements)",
+                "Calcul de probabilités simples sur des tirages (urne, cartes, dés)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "svt": {
+      "nom_complet": "Sciences de la Vie et de la Terre",
+      "modules": [
+        {
+          "titre": "Reproduction humaine et santé",
+          "themes": [
+            {
+              "theme": "L'appareil reproducteur et la gamétogenèse",
+              "contenus": [
+                "Organisation schématique des appareils génitaux masculin et féminin",
+                "Formation des gamètes (spermatozoïdes et ovules) et comparaison des mécanismes"
+              ]
+            },
+            {
+              "theme": "Le contrôle hormonal des fonctions reproductrices",
+              "contenus": [
+                "Le cycle sexuel chez la femme (cycle ovarien et cycle utérin)",
+                "Régulation hormonale chez l'homme et chez la femme (axe hypothalamo-hypophysaire)"
+              ]
+            },
+            {
+              "theme": "Procréation et maîtrise de la reproduction",
+              "contenus": [
+                "Fécondation, nidation et étapes clés de la grossesse",
+                "Contraception et contragestion (méthodes naturelles, hormonales, barrières)",
+                "Procréation Médicalement Assistée (PMA) : insémination artificielle, fécondation in vitro (FIVETE)"
+              ]
+            },
+            {
+              "theme": "Santé sexuelle",
+              "contenus": [
+                "Infections Sexuellement Transmissibles (IST) et VIH/SIDA : modes de transmission, prévention, traitements antirétroviraux"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Génétique humaine et hérédité",
+          "themes": [
+            {
+              "theme": "Les bases de l'hérédité chez l'Homme",
+              "contenus": [
+                "Notions de gène, allèle, chromosome, caryotype, génotype et phénotype",
+                "Transmission des caractères héréditaires simples (monohybridisme, dominance, récessivité, codominance)"
+              ]
+            },
+            {
+              "theme": "Arbres généalogiques (pédigrées)",
+              "contenus": [
+                "Analyse de généalogies pour déterminer le mode de transmission d'une anomalie ou maladie (autosomique ou liée au sexe)"
+              ]
+            },
+            {
+              "theme": "Affections héréditaires et santé publique au Cameroun",
+              "contenus": [
+                "La drépanocytose : origines, transmission, dépistage, prise en charge et conseil génétique",
+                "Anomalies chromosomiques (ex. trisomie 21)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Immunologie et défense de l'organisme",
+          "themes": [
+            {
+              "theme": "Le système immunitaire",
+              "contenus": [
+                "Les organes lymphoïdes (moelle osseuse, thymus, ganglions) et les cellules de l'immunité (leucocytes, lymphocytes B et T)"
+              ]
+            },
+            {
+              "theme": "Les réponses immunitaires",
+              "contenus": [
+                "Immunité innée / non spécifique (réaction inflammatoire, phagocytose)",
+                "Immunité acquise / spécifique (voie humorale par anticorps et voie cellulaire)"
+              ]
+            },
+            {
+              "theme": "Dysfonctionnements et aides à l'immunité",
+              "contenus": [
+                "Dysfonctionnements : allergies et SIDA (destruction des lymphocytes T4)",
+                "Aides médicales : principe et rôle de la vaccination et de la sérothérapie"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Écosystèmes et environnement",
+          "themes": [
+            {
+              "theme": "Les grands équilibres écologiques",
+              "contenus": [
+                "Structure d'un écosystème (biocénose, biotope, réseaux trophiques)",
+                "Le cycle de la matière et les flux d'énergie"
+              ]
+            },
+            {
+              "theme": "Impact des activités humaines sur l'environnement",
+              "contenus": [
+                "Déforestation, désertification et perte de la biodiversité",
+                "Pollutions (de l'eau, de l'air, du sol) et leurs conséquences sur la santé humaine",
+                "Changement climatique : effet de serre, réchauffement climatique et gestion durable des ressources naturelles au Cameroun"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "classe": "Première A",
+  "filiere": "Série Littéraire",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "modules": [
+        {
+          "titre": "Algèbre",
+          "themes": [
+            {
+              "theme": "Équations et inéquations dans R",
+              "contenus": [
+                "Résolution des équations du 1er degré et du 2nd degré",
+                "Systèmes d'équations linéaires à 2 inconnues (2×2) par substitution et combinaison",
+                "Problèmes concrets (calcul de prix, de bénéfices, de partages)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation et gestion des données",
+          "themes": [
+            {
+              "theme": "Statistiques à une variable",
+              "contenus": [
+                "Tableaux d'effectifs, fréquences et pourcentages",
+                "Représentations graphiques (diagrammes circulaires, bâtons, histogrammes)",
+                "Caractéristiques de position (moyenne, mode, médiane)"
+              ]
+            },
+            {
+              "theme": "Proportionnalité et calcul financier de base",
+              "contenus": [
+                "Pourcentages, accroissements, réductions",
+                "Intérêts simples et composés (notions élémentaires applicables aux problèmes économiques)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "svt": {
+      "nom_complet": "Sciences de la Vie et de la Terre / Éducation Environnementale",
+      "modules": [
+        {
+          "titre": "Éducation à la santé et nutrition",
+          "themes": [
+            {
+              "theme": "Alimentation et besoins nutritionnels",
+              "contenus": [
+                "Les groupes d'aliments, la ration alimentaire équilibrée selon l'âge et l'activité",
+                "Les maladies liées à la malnutrition (kwashiorkor, marasme, obésité, carences vitaminiques)"
+              ]
+            },
+            {
+              "theme": "Hygiène alimentaire et sécurité sanitaire",
+              "contenus": [
+                "Conservation des aliments, intoxications alimentaires et hygiène de l'eau"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Santé de la reproduction et éducation à la vie",
+          "themes": [
+            {
+              "theme": "Système reproducteur humain",
+              "contenus": [
+                "Anatomie et physiologie des appareils génitaux masculin et féminin",
+                "Le cycle menstruel et la fécondation"
+              ]
+            },
+            {
+              "theme": "Planification familiale et prévention",
+              "contenus": [
+                "Méthodes contraceptives (barrières, hormonales, naturelles)",
+                "Prévention des Infections Sexuellement Transmissibles (IST) et du VIH/SIDA"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Éducation à l'environnement et développement durable",
+          "themes": [
+            {
+              "theme": "Les écosystèmes et la biodiversité",
+              "contenus": [
+                "Notion d'écosystème, chaînes et réseaux alimentaires",
+                "Protection de la biodiversité locale et de la flore au Cameroun"
+              ]
+            },
+            {
+              "theme": "Les perturbations de l'environnement",
+              "contenus": [
+                "Déforestation, désertification et érosion des sols",
+                "Les pollutions (eau, air, sol) et la gestion des déchets ménagers"
+              ]
+            },
+            {
+              "theme": "Changements climatiques",
+              "contenus": [
+                "Effet de serre, réchauffement climatique et comportements éco-citoyens"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "philosophie": {
+      "modules": [
+        {
+          "titre": "Initiation à la philosophie et épistémologie",
+          "themes": [
+            {
+              "theme": "Définition et origines de la philosophie",
+              "contenus": [
+                "Étymologie, spécificité du discours philosophique par rapport au mythe, à la religion et à la magie",
+                "L'étonnement philosophique, le doute méthodique et le rôle de la raison"
+              ]
+            },
+            {
+              "theme": "Philosophie et société",
+              "contenus": [
+                "Utilité et rôle du philosophe dans la cité et le développement",
+                "La question de la philosophie africaine (débats sur l'ethnophilosophie, la négritude et l'émancipation intellectuelle)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Logique et argumentation",
+          "themes": [
+            {
+              "theme": "Les principes de la logique classique (aristotélicienne)",
+              "contenus": [
+                "Les lois de la pensée (principe d'identité, de non-contradiction, du tiers exclu, de raison suffisante)",
+                "Les concepts, les jugements et les propositions"
+              ]
+            },
+            {
+              "theme": "Le raisonnement",
+              "contenus": [
+                "Le syllogisme (structure, règles et modes valides) et les sophismes",
+                "L'argumentation et la rhétorique (construction d'une réflexion cohérente)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Méthodologie des épreuves écrites",
+          "description": "Préparation au Probatoire",
+          "themes": [
+            {
+              "theme": "La dissertation philosophique",
+              "contenus": [
+                "Analyse du sujet (définition des termes, problématisation)",
+                "Élaboration du plan (introduction, développement dialectique, conclusion)"
+              ]
+            },
+            {
+              "theme": "Le commentaire de texte philosophique",
+              "contenus": [
+                "Étude de la thèse de l'auteur, du problème soulevé, de la structure argumentative et de l'intérêt philosophique"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "modules": [
+        {
+          "titre": "Étude de la langue et outils d'analyse (toutes séries)",
+          "themes": [
+            {
+              "theme": "Sémantique et lexique",
+              "contenus": [
+                "Champ lexical et champ sémique",
+                "Dénotation, connotation et visée argumentative",
+                "Figures de style (d'analogie, d'opposition, d'amplification, d'atténuation)"
+              ]
+            },
+            {
+              "theme": "Grammaire du texte et de la phrase",
+              "contenus": [
+                "Énonciation (embrayeurs, modalisateurs, statut du locuteur)",
+                "Connecteurs logiques et chronologiques",
+                "Progression thématique (à thème constant, linéaire, à thème dérivé)",
+                "Les types et formes de phrases au service de l'argumentation"
+              ]
+            },
+            {
+              "theme": "Actes de parole et pragmatique",
+              "contenus": [
+                "Registres de langue (courant, soutenu, familier)",
+                "Registres littéraires (tragique, comique, lyrique, pathétique, satirique, épique, polémique)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Expression écrite / techniques de rédaction",
+          "description": "Préparation directe aux épreuves du Probatoire",
+          "themes": [
+            {
+              "theme": "Séries C, D et TI (Épreuve de Français)",
+              "contenus": [
+                "Contraction de texte / Résumé de texte et discussion : analyse d'un texte argumentatif contemporain",
+                "Technique du résumé au 1/4 de la longueur initiale (avec marge de plus ou moins 10%)",
+                "Rédaction d'une discussion (mini-dissertation sur le thème du texte)",
+                "Commentaire composé : analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre)",
+                "Élaboration d'un plan détaillé (2 à 3 axes de lecture) avec centrage sur la forme et le fond"
+              ]
+            },
+            {
+              "theme": "Série A (Épreuves de Langue et Littérature) — exigences renforcées",
+              "contenus": [
+                "Dissertation littéraire : analyse d'un sujet portant sur la littérature, le rôle de l'écrivain, le théâtre, la poésie ou le roman",
+                "Construction d'un plan dialectique (Thèse / Antithèse / Synthèse) ou analytique",
+                "Mobilisation d'une culture littéraire vaste et citation précise d'œuvres au programme et hors-programme",
+                "Épreuve de Langue Française : évaluation approfondie de la grammaire, la stylistique et la pragmatique sur un corpus de textes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Littérature et œuvres au programme",
+          "description": "L'étude des œuvres intégrales se fait selon les grands axes littéraires définis pour le sous-cycle (Négritude, roman africain, théâtre classique/moderne, poésie). Les œuvres précises sont renouvelées périodiquement par arrêté ministériel du MINESEC.",
+          "themes": [
+            {
+              "theme": "Axes d'étude principaux",
+              "contenus": [
+                "Littérature africaine (génération des Indépendances et contemporaine) : roman africain (tradition/modernité, pouvoir politique, condition féminine), poésie engagée et mouvement de la Négritude (Césaire, Senghor, Damas)",
+                "Littérature française et francophone : théâtre classique ou moderne (Molière, Racine, Anouilh, Corneille) ou théâtre africain (Guillaume Oyônô Mbia), roman réaliste/naturaliste du XIXe siècle ou romanciers francophones modernes"
+              ]
+            },
+            {
+              "theme": "Œuvres au programme de l'année en cours",
+              "contenus": [
+                "Roman/Récit — Balafon, Engelbert Mveng : poésie / littérature africaine du patrimoine, exploration de l'identité, des traditions et du dialogue entre culture africaine et foi",
+                "Roman — Au cœur des ténèbres (Heart of Darkness), Joseph Conrad : roman moderne, étude du colonialisme, de la condition humaine et du voyage psychologique",
+                "Théâtre — Le Lion et la Perle, Wole Soyinka : comédie dramatique / théâtre africain, confrontation entre tradition africaine et modernité occidentale (Baroka, Lakunle, Sidi)",
+                "Poésie — Les Chants de la forêt ou recueils poétiques au choix du sous-cycle : poésie lyrique et engagée, célébration de la nature et mémoire collective"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

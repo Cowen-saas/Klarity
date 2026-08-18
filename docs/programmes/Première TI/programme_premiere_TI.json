@@ -1,0 +1,570 @@
+{
+  "classe": "Première TI",
+  "filiere": "Technologies de l'Information (TI)",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "programmation": {
+      "modules": [
+        {
+          "titre": "Algorithmique et notions fondamentales",
+          "themes": [
+            {
+              "theme": "Notions de base",
+              "contenus": [
+                "Variable, constante",
+                "Types de données simples : entier, réel, caractère, booléen"
+              ]
+            },
+            {
+              "theme": "Structures de contrôle",
+              "contenus": [
+                "Séquentielles : affectation, lecture (lire), écriture (écrire)",
+                "Conditionnelles / sélectives : Si...Alors...Sinon, Selon...Cas",
+                "Répétitives / itératives : Tant que, Répéter...Jusqu'à, Pour"
+              ]
+            },
+            {
+              "theme": "Structures de données linéaires",
+              "contenus": [
+                "Tableaux à une dimension (vecteurs) : déclaration, parcours, recherche, tri simple (tri par sélection, tri à bulles)",
+                "Tableaux à deux dimensions (matrices) : initialisation, lecture, affichage, opérations de base"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Programmation structurée en langage C",
+          "themes": [
+            {
+              "theme": "Syntaxe du langage C",
+              "contenus": [
+                "Structure générale d'un programme C (#include, main())",
+                "Directives du préprocesseur et déclarations",
+                "Entrées/Sorties : printf() et scanf()",
+                "Implémentation des structures de contrôle en C (if, switch, while, do-while, for)"
+              ]
+            },
+            {
+              "theme": "Fonctions et procédures (modularité)",
+              "contenus": [
+                "Déclaration, définition et appel de fonctions",
+                "Passage de paramètres : par valeur et par adresse (introduction aux pointeurs)",
+                "Portée des variables (locales vs globales)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Initiation à la programmation web (côté client)",
+          "themes": [
+            {
+              "theme": "HTML5",
+              "contenus": [
+                "Structuration de pages web : balises de texte, formulaires, tableaux, liens, média"
+              ]
+            },
+            {
+              "theme": "CSS3",
+              "contenus": [
+                "Mise en forme, sélecteurs, styles de texte, couleurs, bordures",
+                "Disposition (Flexbox de base)"
+              ]
+            },
+            {
+              "theme": "JavaScript (bases)",
+              "contenus": [
+                "Syntaxe de base, variables, fonctions simples",
+                "Gestion des événements (onclick, onsubmit) pour la validation de formulaires"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "reseaux": {
+      "modules": [
+        {
+          "titre": "Généralités et topologies des réseaux",
+          "themes": [
+            {
+              "theme": "Notions de base",
+              "contenus": [
+                "Définition, objectifs et avantages des réseaux informatiques",
+                "Classification des réseaux par portée géographique : PAN, LAN, MAN, WAN"
+              ]
+            },
+            {
+              "theme": "Topologies de réseaux",
+              "contenus": [
+                "Topologies physiques : Bus, Étoile, Anneau, Maillée, Hybride (caractéristiques, avantages et inconvénients)",
+                "Topologies logiques : Ethernet, Token Ring",
+                "Modes de transmission : Simplex, Half-Duplex, Full-Duplex ; transmissions synchrone et asynchrone"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Architectures et modèles de référence",
+          "themes": [
+            {
+              "theme": "Modèle de référence OSI",
+              "contenus": [
+                "Rôle et fonctions des 7 couches (Physique, Liaison de données, Réseau, Transport, Session, Présentation, Application)",
+                "Notions d'encapsulation et de désencapsulation des données (PDU : Bit, Trame, Paquet, Segment, Donnée)"
+              ]
+            },
+            {
+              "theme": "Modèle TCP/IP",
+              "contenus": [
+                "Rôle et correspondance des 4 couches avec le modèle OSI",
+                "Comparaison synthétique entre le modèle OSI et le modèle TCP/IP"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Équipements et supports de transmission",
+          "themes": [
+            {
+              "theme": "Supports de transmission filaires",
+              "contenus": [
+                "Câbles à paires torsadées (UTP, STP, FTP, catégories) et connecteurs (RJ45)",
+                "Câbles coaxiaux (BNC) et fibre optique (monomode/multimode, avantages)",
+                "Réalisation et test de câbles réseau (câble droit et câble croisé selon les normes T568A et T568B)"
+              ]
+            },
+            {
+              "theme": "Équipements d'interconnexion",
+              "contenus": [
+                "Cartes réseau (NIC), répéteurs, hubs (concentrateurs), switches (commutateurs), routeurs, ponts (bridges), points d'accès Wi-Fi",
+                "Fonctionnement au niveau des couches OSI respectives"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Adressage IPv4 (bases) et protocoles",
+          "themes": [
+            {
+              "theme": "Adressage IPv4",
+              "contenus": [
+                "Structure d'une adresse IPv4 (32 bits, notation décimale pointée)",
+                "Classes d'adresses IPv4 (A, B, C, D, E)",
+                "Adresses privées vs adresses publiques ; adresses particulières (loopback, broadcast, réseau)",
+                "Masque de sous-réseau par défaut (Default Subnet Mask)"
+              ]
+            },
+            {
+              "theme": "Protocoles fondamentaux",
+              "contenus": [
+                "IP, ARP, RARP, ICMP (commandes de diagnostic : ping, ipconfig/ifconfig)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "systeme_information": {
+      "modules": [
+        {
+          "titre": "Analyse et conception des systèmes d'information (méthode Merise)",
+          "volume_horaire_estime": "30h",
+          "themes": [
+            {
+              "theme": "Introduction aux systèmes d'information",
+              "contenus": [
+                "Concepts de base : Donnée, Information, Système, Système d'Information (SI), Système de Décision, Système Opérant",
+                "Fonctions d'un SI : collecte, stockage, traitement, diffusion",
+                "Démarche d'informatisation d'une organisation"
+              ]
+            },
+            {
+              "theme": "Le Modèle Conceptuel des Données (MCD)",
+              "contenus": [
+                "Concepts fondamentaux : Entité (ou Individu), Association (ou Relation), Propriété (ou Attribut), Identifiant (ou Clé primaire)",
+                "Cardinalités (0,1 ; 1,1 ; 0,n ; 1,n)",
+                "Règles de gestion et d'accès aux données",
+                "Élaboration et validation d'un MCD à partir d'un cahier des charges ou d'un dictionnaire de données"
+              ]
+            },
+            {
+              "theme": "Le Modèle Organisationnel / Logique des Données (MLD)",
+              "contenus": [
+                "Passage du MCD au MLD relationnel (règles de transformation des entités, associations 1:N et N:N)",
+                "Concepts du modèle relationnel : Table, Clé primaire, Clé étrangère, Domaines",
+                "Clés primaires composées et contraintes d'intégrité référentielle"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Bases de données et langage SQL",
+          "volume_horaire_estime": "25h",
+          "themes": [
+            {
+              "theme": "Généralités sur les SGBD",
+              "contenus": [
+                "Rôle et architecture d'un SGBD (MySQL, PostgreSQL, MS Access, SQLite)",
+                "Différence entre fichier plat et base de données relationnelle"
+              ]
+            },
+            {
+              "theme": "Langage de Définition de Données (LDD)",
+              "contenus": [
+                "Création de bases de données (CREATE DATABASE)",
+                "Création de tables avec contraintes (CREATE TABLE, PRIMARY KEY, FOREIGN KEY, NOT NULL)",
+                "Modification et suppression de structures (ALTER TABLE, DROP TABLE)"
+              ]
+            },
+            {
+              "theme": "Langage de Manipulation de Données (LMD)",
+              "contenus": [
+                "Insertion de données (INSERT INTO)",
+                "Modification de données (UPDATE)",
+                "Suppression de données (DELETE)"
+              ]
+            },
+            {
+              "theme": "Langage d'Interrogation de Données (LID)",
+              "contenus": [
+                "Requêtes de sélection simples (SELECT ... FROM ... WHERE)",
+                "Tri et filtrage des résultats (ORDER BY, LIKE, IN, BETWEEN)",
+                "Opérateurs logiques (AND, OR, NOT)",
+                "Requêtes multi-tables (jointures simples : INNER JOIN)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Dynamique et traitement des systèmes d'information",
+          "volume_horaire_estime": "15h",
+          "themes": [
+            {
+              "theme": "Le Modèle Conceptuel des Traitements (MCT)",
+              "contenus": [
+                "Concepts clés : Événement (déclencheur/résultat), Opération, Synchrone/Asynchrone, Règles d'émission, Règles de synchronisation (ET, OU)",
+                "Modélisation de la dynamique d'un système à l'aide des MCT",
+                "Découpage du système d'information en processus et procédures"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Évaluation et pratique (TP)",
+          "themes": [
+            {
+              "theme": "Ateliers pratiques sur SGBD / outils CASE",
+              "contenus": [
+                "Pratique de la modélisation à l'aide d'outils CASE (ex : WinDesign, Looping, PowerAMC ou JMerise)",
+                "Implémentation réelle d'une base de données sous un SGBD (ex : MySQL/PHPMyAdmin)",
+                "Rédaction et exécution de requêtes SQL sur des cas d'étude d'organisations réelles (gestion de stock, gestion d'établissement scolaire, gestion de bibliothèque)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "physique": {
+      "modules": [
+        {
+          "titre": "Électrocinétique et composants électroniques (cœur du programme)",
+          "themes": [
+            {
+              "theme": "Lois fondamentales des circuits",
+              "contenus": [
+                "Lois de Kirchhoff (loi des nœuds, loi des mailles)"
+              ]
+            },
+            {
+              "theme": "Composants passifs",
+              "contenus": [
+                "Résistances, condensateurs (charge et décharge, constante de temps τ = RC)",
+                "Bobines d'inductance (comportement en régime permanent et transitoire)"
+              ]
+            },
+            {
+              "theme": "Composants semi-conducteurs de base",
+              "contenus": [
+                "Diode à jonction PN (caractéristique, redressement de tension)",
+                "Transistors bipolaires (notions de fonctionnement en commutateur/interrupteur)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Électromagnétisme et signal",
+          "themes": [
+            {
+              "theme": "Champs magnétiques et induction",
+              "contenus": [
+                "Notions fondamentales appliquées au stockage d'informations (disques durs magnétiques, transformateurs)"
+              ]
+            },
+            {
+              "theme": "Signaux électriques",
+              "contenus": [
+                "Signaux périodiques (période, fréquence, valeur crête, valeur efficace)",
+                "Oscillations et formes d'ondes (sinusoïdales, carrées, triangulaires)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Optique physique et ondes (application télécoms/fibre optique)",
+          "themes": [
+            {
+              "theme": "Optique géométrique",
+              "contenus": [
+                "Réflexion totale et réfraction (lois de Snell-Descartes)"
+              ]
+            },
+            {
+              "theme": "Application aux transmissions",
+              "contenus": [
+                "Principe de guidage de la lumière dans la fibre optique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Notions de mécanique",
+          "themes": [
+            {
+              "theme": "Travail, puissance et énergie",
+              "contenus": [
+                "Travail, puissance et énergie électrique/mécanique (rendement des systèmes informatiques et matériels)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mathematiques": {
+      "modules": [
+        {
+          "titre": "Arithmétique et systèmes de numération (spécifique TI)",
+          "themes": [
+            {
+              "theme": "Arithmétique entière",
+              "contenus": [
+                "Division euclidienne dans Z, divisibilité, critères de divisibilité"
+              ]
+            },
+            {
+              "theme": "Bases de numération",
+              "contenus": [
+                "Conversion entre bases de numération : base a (a ∈ {2, 3, 8, 10, 16})",
+                "Opérations élémentaires (addition, multiplication) en binaire et hexadécimal"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Algèbre et analyse",
+          "themes": [
+            {
+              "theme": "Équations et inéquations",
+              "contenus": [
+                "Second degré, systèmes d'équations dans R² et R³ (pivot de Gauss)"
+              ]
+            },
+            {
+              "theme": "Espaces vectoriels et algèbre linéaire",
+              "contenus": [
+                "Notion d'espace vectoriel sur R, sous-espaces vectoriels",
+                "Familles libres, familles génératrices et bases en dimension 2 ou 3"
+              ]
+            },
+            {
+              "theme": "Fonctions numériques",
+              "contenus": [
+                "Limites, continuité et dérivation",
+                "Étude de fonctions polynômes et rationnelles/homographiques",
+                "Asymptotes parallèles aux axes et obliques"
+              ]
+            },
+            {
+              "theme": "Suites numériques",
+              "contenus": [
+                "Suites arithmétiques et géométriques"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géométrie plane",
+          "themes": [
+            {
+              "theme": "Barycentres et lignes de niveau",
+              "contenus": [
+                "Barycentres et lignes de niveau"
+              ]
+            },
+            {
+              "theme": "Produit scalaire et géométrie analytique",
+              "contenus": [
+                "Produit scalaire et géométrie analytique (droites, cercles)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation de données et combinatoire",
+          "themes": [
+            {
+              "theme": "Dénombrement et combinatoire",
+              "contenus": [
+                "p-uplets, permutations, combinaisons (très utile pour l'analyse d'algorithmes)"
+              ]
+            },
+            {
+              "theme": "Statistiques",
+              "contenus": [
+                "Caractéristiques de position et de dispersion"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "modules": [
+        {
+          "titre": "Chimie des matériaux et polymères (spécifique TI)",
+          "themes": [
+            {
+              "theme": "Matériaux synthétiques pour le matériel informatique",
+              "contenus": [
+                "Les polymères thermoplastiques et thermoendurcis utilisés dans la fabrication des boîtiers, circuits imprimés et câbles",
+                "Réactions de polymérisation (addition et condensation de base)"
+              ]
+            },
+            {
+              "theme": "Notions de semi-conducteurs et matériaux de l'électronique",
+              "contenus": [
+                "Structure du silicium et du germanium",
+                "Notion de dopage (type N et type P) appliquée aux composants électroniques"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Notions de chimie organique de base",
+          "themes": [
+            {
+              "theme": "Hydrocarbures élémentaires",
+              "contenus": [
+                "Alcanes, alcènes (structure de base, sécurité liée à la manipulation des solvants et combustibles)"
+              ]
+            },
+            {
+              "theme": "Alcools et solvants",
+              "contenus": [
+                "Utilisation et dangers des solvants organiques industriels (nettoyage des composants électroniques)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Oxydoréduction et corrosion",
+          "themes": [
+            {
+              "theme": "Corrosion des métaux",
+              "contenus": [
+                "Oxydation des interconnexions et composants électriques, techniques de protection contre la rouille et l'oxydation des cartes mères"
+              ]
+            },
+            {
+              "theme": "Accumulateurs et batteries",
+              "contenus": [
+                "Principe de fonctionnement des batteries Lithium-Ion / Plomb utilisées dans les équipements informatiques et onduleurs (UPS)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "modules": [
+        {
+          "titre": "Étude de la langue et outils d'analyse (toutes séries)",
+          "themes": [
+            {
+              "theme": "Sémantique et lexique",
+              "contenus": [
+                "Champ lexical et champ sémique",
+                "Dénotation, connotation et visée argumentative",
+                "Figures de style (d'analogie, d'opposition, d'amplification, d'atténuation)"
+              ]
+            },
+            {
+              "theme": "Grammaire du texte et de la phrase",
+              "contenus": [
+                "Énonciation (embrayeurs, modalisateurs, statut du locuteur)",
+                "Connecteurs logiques et chronologiques",
+                "Progression thématique (à thème constant, linéaire, à thème dérivé)",
+                "Les types et formes de phrases au service de l'argumentation"
+              ]
+            },
+            {
+              "theme": "Actes de parole et pragmatique",
+              "contenus": [
+                "Registres de langue (courant, soutenu, familier)",
+                "Registres littéraires (tragique, comique, lyrique, pathétique, satirique, épique, polémique)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Expression écrite / techniques de rédaction",
+          "description": "Préparation directe aux épreuves du Probatoire",
+          "themes": [
+            {
+              "theme": "Séries C, D et TI (Épreuve de Français)",
+              "contenus": [
+                "Contraction de texte / Résumé de texte et discussion : analyse d'un texte argumentatif contemporain",
+                "Technique du résumé au 1/4 de la longueur initiale (avec marge de plus ou moins 10%)",
+                "Rédaction d'une discussion (mini-dissertation sur le thème du texte)",
+                "Commentaire composé : analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre)",
+                "Élaboration d'un plan détaillé (2 à 3 axes de lecture) avec centrage sur la forme et le fond"
+              ]
+            },
+            {
+              "theme": "Série A (Épreuves de Langue et Littérature) — exigences renforcées",
+              "contenus": [
+                "Dissertation littéraire : analyse d'un sujet portant sur la littérature, le rôle de l'écrivain, le théâtre, la poésie ou le roman",
+                "Construction d'un plan dialectique (Thèse / Antithèse / Synthèse) ou analytique",
+                "Mobilisation d'une culture littéraire vaste et citation précise d'œuvres au programme et hors-programme",
+                "Épreuve de Langue Française : évaluation approfondie de la grammaire, la stylistique et la pragmatique sur un corpus de textes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Littérature et œuvres au programme",
+          "description": "L'étude des œuvres intégrales se fait selon les grands axes littéraires définis pour le sous-cycle (Négritude, roman africain, théâtre classique/moderne, poésie). Les œuvres précises sont renouvelées périodiquement par arrêté ministériel du MINESEC.",
+          "themes": [
+            {
+              "theme": "Axes d'étude principaux",
+              "contenus": [
+                "Littérature africaine (génération des Indépendances et contemporaine) : roman africain (tradition/modernité, pouvoir politique, condition féminine), poésie engagée et mouvement de la Négritude (Césaire, Senghor, Damas)",
+                "Littérature française et francophone : théâtre classique ou moderne (Molière, Racine, Anouilh, Corneille) ou théâtre africain (Guillaume Oyônô Mbia), roman réaliste/naturaliste du XIXe siècle ou romanciers francophones modernes"
+              ]
+            },
+            {
+              "theme": "Œuvres au programme de l'année en cours",
+              "contenus": [
+                "Roman/Récit — Balafon, Engelbert Mveng : poésie / littérature africaine du patrimoine, exploration de l'identité, des traditions et du dialogue entre culture africaine et foi",
+                "Roman — Au cœur des ténèbres (Heart of Darkness), Joseph Conrad : roman moderne, étude du colonialisme, de la condition humaine et du voyage psychologique",
+                "Théâtre — Le Lion et la Perle, Wole Soyinka : comédie dramatique / théâtre africain, confrontation entre tradition africaine et modernité occidentale (Baroka, Lakunle, Sidi)",
+                "Poésie — Les Chants de la forêt ou recueils poétiques au choix du sous-cycle : poésie lyrique et engagée, célébration de la nature et mémoire collective"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

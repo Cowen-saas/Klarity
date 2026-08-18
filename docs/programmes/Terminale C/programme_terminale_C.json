@@ -1,0 +1,451 @@
+{
+  "classe": "Terminale C",
+  "filiere": "Série Scientifique",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "volume_horaire": "7 h / semaine",
+      "coefficient": 7,
+      "modules": [
+        {
+          "titre": "Nombres et structures",
+          "themes": [
+            {
+              "theme": "Nombres complexes",
+              "contenus": [
+                "Forme algébrique, forme trigonométrique et forme exponentielle",
+                "Opérations, conjugué, module et argument",
+                "Équations du second degré à coefficients réels ou complexes",
+                "Résolution d'équations du type zⁿ = a (racines n-ièmes)",
+                "Représentation géométrique : affixe d'un point, d'un vecteur ; interprétation géométrique du module et de l'argument d'un quotient",
+                "Applications à la trigonométrie (linéarisation, formules d'Euler et de Moivre)",
+                "Transformations du plan associées : traductions complexes des translations, homothéties, rotations et similitudes directes"
+              ]
+            },
+            {
+              "theme": "Arithmétique dans ℤ",
+              "contenus": [
+                "Divisibilité dans ℤ, division euclidienne, congruences dans ℤ et propriétés",
+                "Plus Grand Commun Diviseur (PGCD) et Plus Petit Commun Multiple (PPCM)",
+                "Théorème de Bézout, théorème de Gauss",
+                "Résolution dans ℤ² des équations diophantiennes du type ax + by = c",
+                "Systèmes de numération (changement de base)",
+                "Structures algébriques simples : groupes, anneaux, corps (notions de base)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Analyse",
+          "themes": [
+            {
+              "theme": "Suites numériques",
+              "contenus": [
+                "Raisonnement par récurrence",
+                "Suites majorées, minorées, bornées, monotones",
+                "Limite d'une suite, suites convergentes, suites divergentes",
+                "Théorèmes de convergence (théorèmes de comparaison, théorème des gendarmes)",
+                "Suites récurrentes du type u(n+1) = f(u(n)), suites adjacentes"
+              ]
+            },
+            {
+              "theme": "Fonctions numériques d'une variable réelle",
+              "contenus": [
+                "Limites et continuité : théorème des valeurs intermédiaires (TVI), image d'un intervalle par une fonction continue, prolongement par continuité, bijection",
+                "Dérivabilité : dérivée de la composée de deux fonctions, dérivée d'une fonction réciproque, théorème des accroissements finis et inégalité des accroissements finis",
+                "Étude de la fonction Logarithme népérien (ln) et des fonctions logarithmes de base a",
+                "Étude de la fonction Exponentielle (exp) et des fonctions puissances x ↦ xᵃ",
+                "Comparaison des fonctions ln x, eˣ et xⁿ au voisinage de +∞ (croissances comparées)",
+                "Branches infinies (asymptotes horizontales, verticales, obliques, directions paraboliques)",
+                "Tracé de courbes représentatives"
+              ]
+            },
+            {
+              "theme": "Intégration et primitives",
+              "contenus": [
+                "Notion de primitive d'une fonction sur un intervalle",
+                "Définition de l'intégrale d'une fonction continue sur [a, b]",
+                "Propriétés de l'intégrale (linéarité, relation de Chasles, positivité, intégration par ordre)",
+                "Valeur moyenne d'une fonction",
+                "Techniques de calcul d'intégrales : intégration par parties, changement de variable simple",
+                "Applications : calcul d'aires de surfaces planes et de volumes de solides de révolution"
+              ]
+            },
+            {
+              "theme": "Équations différentielles",
+              "contenus": [
+                "Équations différentielles linéaires du premier ordre : y′ + ay = 0 et y′ + ay = f(x)",
+                "Équations différentielles linéaires du second ordre à coefficients constants : ay″ + by′ + cy = 0 et ay″ + by′ + cy = f(x)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géométrie",
+          "themes": [
+            {
+              "theme": "Graphes et espaces vectoriels",
+              "contenus": [
+                "Espaces vectoriels de dimension finie sur ℝ (ℝ², ℝ³, ℝⁿ)",
+                "Sous-espaces vectoriels, familles libres, familles génératrices, bases, dimension",
+                "Applications linéaires : noyau (ker f), image (Im f), rang"
+              ]
+            },
+            {
+              "theme": "Géométrie vectorielle et analytique de l'espace",
+              "contenus": [
+                "Repères de l'espace, coordonnées d'un vecteur/point",
+                "Produit scalaire dans l'espace, norme, orthogonalité",
+                "Produit vectoriel : définition, propriétés, calcul des coordonnées, applications (calcul d'aires, vecteur normal à un plan)",
+                "Produit mixte et applications (calcul de volumes de tétraèdres/parallélépipèdes)",
+                "Représentations paramétriques et équations cartésiennes de droites et de plans",
+                "Distance d'un point à un plan, distance d'un point à une droite",
+                "Équation cartésienne d'une sphère, intersection d'une sphère avec un plan ou une droite"
+              ]
+            },
+            {
+              "theme": "Isométries et similitudes planes",
+              "contenus": [
+                "Isométries du plan (déplacements et antidéplacements) : décomposition, compositions",
+                "Similitudes directes du plan : centre, rapport, angle. Forme complexe et propriétés"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation de données et probabilités",
+          "themes": [
+            {
+              "theme": "Probabilités",
+              "contenus": [
+                "Conditionnement et indépendance : probabilité conditionnelle P_B(A), formule des probabilités totales, formule de Bayes",
+                "Variables aléatoires discrètes : loi de probabilité, fonction de répartition, espérance mathématique, variance, écart-type",
+                "Loi binomiale B(n, p), épreuves de Bernoulli"
+              ]
+            },
+            {
+              "theme": "Statistiques à deux variables",
+              "contenus": [
+                "Nuage de points, point moyen (x̄, ȳ)",
+                "Covariance Cov(X, Y)",
+                "Ajustement linéaire par la méthode des moindres carrés (droite de régression de Y en X)",
+                "Coefficient de corrélation linéaire r"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "physique": {
+      "volume_horaire": "~5 h / semaine",
+      "coefficient": 5,
+      "modules": [
+        {
+          "titre": "Mesures, incertitudes et vecteurs",
+          "themes": [
+            {
+              "theme": "Analyse dimensionnelle et incertitudes",
+              "contenus": [
+                "Analyse dimensionnelle : homogénéité des équations, unités SI du système international",
+                "Calcul des incertitudes : incertitude-type, incertitude élargie, incertitudes composées, écriture du résultat d'une mesure"
+              ]
+            },
+            {
+              "theme": "Outils vectoriels",
+              "contenus": [
+                "Dérivation et intégration de vecteurs position, vitesse et accélération dans différents systèmes de coordonnées (cartésiennes, cylindriques, repère de Frenet)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Mécanique",
+          "themes": [
+            {
+              "theme": "Cinématique et dynamique du point matériel",
+              "contenus": [
+                "Lois de Newton (1ère, 2ème et 3ème loi)",
+                "Mouvement d'un projectile dans un champ de pesanteur uniforme g (équations horaires, équation de la trajectoire, portée, flèche, conditions de tir)",
+                "Mouvement d'une particule chargée dans un champ électrostatique uniforme E et dans un champ magnétique uniforme B (déviation, trajectoire circulaire, force de Lorentz ; applications : déflecteur, spectromètre de masse, cyclotron)"
+              ]
+            },
+            {
+              "theme": "Mouvement des planètes et satellites",
+              "contenus": [
+                "Lois de Kepler (1ère, 2ème et 3ème loi)",
+                "Satellites artificiels de la Terre : vitesse de satellisation, période de révolution, orbite géostationnaire"
+              ]
+            },
+            {
+              "theme": "Mouvement de rotation d'un solide autour d'un axe fixe",
+              "contenus": [
+                "Moment d'inertie J_Δ, théorème de Huygens",
+                "Relation fondamentale de la dynamique en rotation (ΣM = J_Δ · θ″)",
+                "Travail, puissance et énergie cinétique de rotation (Ec = ½ J_Δ θ′²)"
+              ]
+            },
+            {
+              "theme": "Systèmes oscillants (oscillateurs mécaniques)",
+              "contenus": [
+                "Pendule élastique (horizontal, vertical, incliné) : équation différentielle, fréquence propre, énergie mécanique",
+                "Pendule pesant et pendule simple : équation différentielle des petites oscillations",
+                "Oscillations libres, amorties (régimes fluide, critique, pseudopériodique) et oscillations forcées (résonance d'amplitude)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Électricité et électromagnétisme",
+          "themes": [
+            {
+              "theme": "Induction électromagnétique",
+              "contenus": [
+                "Flux magnétique Φ, phénomène d'induction (lois de Faraday et de Lenz)",
+                "Auto-induction : inductance L d'un solénoïde, force électromotrice d'auto-induction (e = −L di/dt), énergie emmagasinée dans une bobine (E = ½ L i²)"
+              ]
+            },
+            {
+              "theme": "Circuits électriques en régime alternatif sinusoïdal",
+              "contenus": [
+                "Notion de tension et courant efficaces, déphasage, représentation de Fresnel",
+                "Étude des dipôles récepteurs (R, L, C) et de leurs associations",
+                "Circuit RLC série : impédance Z, loi d'Ohm en alternatif, étude de la résonance d'intensité (facteur de qualité Q, bande passante)",
+                "Puissance en régime alternatif : puissance active, facteur de puissance (cos φ)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Physique ondulatoire et optique",
+          "themes": [
+            {
+              "theme": "Ondes mécaniques progressives",
+              "contenus": [
+                "Propagation d'une onde le long d'une corde, à la surface de l'eau",
+                "Célérité, longueur d'onde λ, période T, fréquence N",
+                "Réflexion des ondes mécaniques et notion d'ondes stationnaires"
+              ]
+            },
+            {
+              "theme": "Optique ondulatoire",
+              "contenus": [
+                "Modèle ondulatoire de la lumière",
+                "Phénomène de diffraction de la lumière par une fente ou un trou",
+                "Interférences lumineuses (dispositif des fentes d'Young) : interfrange i, différence de marche δ, conditions d'interférences constructives et destructives, détermination de la longueur d'onde d'une source monochromatique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Physique atomique et nucléaire",
+          "themes": [
+            {
+              "theme": "Physique quantique et interaction lumière-matière",
+              "contenus": [
+                "Effet photoélectrique : dispositif expérimental, potentiel d'arrêt, fréquence seuil, équation d'Einstein (E = hν = W₀ + Ec,max)",
+                "Niveaux d'énergie dans les atomes : émission et absorption de photons, spectre de l'atome d'hydrogène"
+              ]
+            },
+            {
+              "theme": "Physique nucléaire",
+              "contenus": [
+                "Structure du noyau atomique (A, Z, N), isotopes, défaut de masse Δm, énergie de liaison El",
+                "Radioactivité naturelle (α, β⁻, β⁺, γ) : équations de désintégration, loi de décroissance radioactive (N(t) = N₀ e^(−λt)), demi-vie t½, activité A(t)",
+                "Réactions nucléaires provoquées : fission et fusion nucléaires, bilan énergétique (ΔE = Δm · c²)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "volume_horaire": "~2 h / semaine",
+      "coefficient": 2,
+      "modules": [
+        {
+          "titre": "Cinétique chimique",
+          "themes": [
+            {
+              "theme": "Vitesse de réaction",
+              "contenus": [
+                "Vitesse moyenne et vitesse instantanée de formation ou de disparition d'une espèce chimique",
+                "Méthodes d'étude expérimentale de la cinétique (dosages, pH-métrie, conductimétrie)"
+              ]
+            },
+            {
+              "theme": "Facteurs cinétiques",
+              "contenus": [
+                "Concentration initiale des réactifs, température du milieu réactionnel",
+                "Catalyse et catalyseurs (catalyse homogène, hétérogène, enzymatique)",
+                "Interprétation microscopique : chocs efficaces, énergie d'activation"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie des solutions et équilibres acido-basiques",
+          "themes": [
+            {
+              "theme": "Notion d'équilibre chimique",
+              "contenus": [
+                "Réactions totales et réactions limitées (équilibres chimiquement réversibles)",
+                "Taux d'avancement final τ"
+              ]
+            },
+            {
+              "theme": "Acides et bases selon Brønsted en solution aqueuse",
+              "contenus": [
+                "Autoprotolyse de l'eau, constante d'équilibre Ke et pKe",
+                "Acides forts et bases fortes : définitions, exemples (HCl, HNO₃, NaOH, KOH), calcul du pH",
+                "Acides faibles et bases faibles : constante d'acidité Ka et pKa du couple acide/base, constante d'équilibre Kr",
+                "Domaines de prédominance des espèces chimiques en fonction du pH"
+              ]
+            },
+            {
+              "theme": "Dosages acido-basiques",
+              "contenus": [
+                "Dosage d'un acide fort par une base forte et d'une base forte par un acide fort",
+                "Dosage d'un acide faible par une base forte (et vice versa) : courbe de neutralisation pH = f(Vb), point d'équivalence, demi-équivalence",
+                "Solutions tampons : définition, propriétés, préparation et rôle biologique/industriel"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie organique et de synthèse",
+          "themes": [
+            {
+              "theme": "Les acides carboxyliques et leurs dérivés",
+              "contenus": [
+                "Nomenclature et structure du groupe carboxyle",
+                "Chlorures d'acyle : obtention et réactivité",
+                "Anhydrides d'acide : obtention et réactivité",
+                "Esters : nomenclature, réaction d'estérification et d'hydrolyse (lente, limitée, athermique), contrôle du rendement (excès d'un réactif, élimination d'un produit)",
+                "Saponification des esters : réaction avec la soude/potasse, fabrication des savons et propriétés détergentes",
+                "Amides : nomenclature, obtention à partir des acides carboxyliques et de leurs dérivés"
+              ]
+            },
+            {
+              "theme": "Les acides α-aminés et la liaison peptidique",
+              "contenus": [
+                "Structure générale des acides α-aminés, stéréoisomérie (chiralité, carbone asymétrique, représentation de Fischer)",
+                "Amphion (zwitterion) et caractère amphotère des acides α-aminés, influence du pH",
+                "Formation de la liaison peptidique (dipeptides, tripeptides) et introduction à la structure des protéines"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
+      "series_scientifiques_techno": {
+        "series": ["C", "D", "TI"],
+        "volume_horaire": "~3 h / semaine",
+        "coefficient": "2 à 3",
+        "modules": [
+          {
+            "titre": "Étude de la langue et communication",
+            "themes": [
+              {
+                "theme": "Grammaire du texte et énonciation",
+                "contenus": [
+                  "Les marques de la présence du locuteur (modalisateurs, embrayeurs, indices d'énonciation)",
+                  "La syntaxe complexe et la structuration logique du discours",
+                  "Les types d'arguments (d'autorité, par analogie, déductif, inductif, ad hominem)",
+                  "Les connecteurs logiques, temporels et spatiaux au service de la démonstration"
+                ]
+              },
+              {
+                "theme": "Stylistique et pragmatique",
+                "contenus": [
+                  "Analyse des visées de communication (informer, convaincre, persuader, faire agir)",
+                  "Les registres de langue et registres littéraires (satirique, polémique, tragique, épidictique, lyrique)",
+                  "Les figures de style et leur impact argumentatif ou expressif"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Techniques de rédaction et d'expression écrite",
+            "description": "Préparation directe aux deux sujets au choix lors de l'épreuve du Baccalauréat",
+            "themes": [
+              {
+                "theme": "Sujet 1 — La contraction de texte et la discussion",
+                "contenus": [
+                  "Résumé / contraction : analyse d'un texte argumentatif contemporain (800 à 1000 mots), dégagement de la thèse, de la structure argumentative et réduction rigoureuse au 1/4 du texte d'origine (± 10%)",
+                  "Discussion : rédaction d'un essai structuré portant sur une problématique soulevée par le texte d'appui"
+                ]
+              },
+              {
+                "theme": "Sujet 2 — Le commentaire composé",
+                "contenus": [
+                  "Analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre ou essai)",
+                  "Élaboration d'un plan détaillé s'articulant autour de 2 ou 3 axes d'analyse (fond et forme)",
+                  "Rédaction d'une introduction complète, d'un développement structuré avec transitions et d'une conclusion synthétique"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Littérature et culture générale",
+            "themes": [
+              {
+                "theme": "Mouvements et analyse thématique",
+                "contenus": [
+                  "Étude des mouvements littéraires majeurs (Négritude, roman africain post-colonial, réalisme, romantisme, théâtre engagé)",
+                  "Analyse thématique d'œuvres au programme national pour nourrir la culture générale et les arguments de la discussion"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "serie_litteraire_A": {
+        "series": ["A"],
+        "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
+        "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
+        "modules": [
+          {
+            "titre": "Épreuve 1 — Langue française",
+            "description": "Ce module évalue la maîtrise scientifique et stylistique de la langue à partir d'un corpus de textes.",
+            "themes": [
+              {
+                "theme": "Grammaire, sémantique et stylistique",
+                "contenus": [
+                  "Énonciation et théorie des actes de parole (illocutoire, perlocutoire, présupposés et sous-entendus)",
+                  "Cohésion et cohérence textuelles (progression thématique, anaphores, cataphores, récurrences lexicales)",
+                  "Analyse stylistique approfondie des figures de rhétorique et des champs lexicaux",
+                  "Morphosyntaxe avancée et analyse des structures de phrases complexes"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Épreuve 2 — Littérature et dissertation littéraire",
+            "description": "Ce module repose sur la maîtrise des genres littéraires, de la critique et de l'histoire littéraire.",
+            "themes": [
+              {
+                "theme": "La dissertation littéraire",
+                "contenus": [
+                  "Traitement de sujets théoriques ou d'opinion portant sur la création littéraire, la fonction de la poésie, le rôle du théâtre, la valeur du roman ou la mission de l'écrivain",
+                  "Maîtrise des plans dialectiques (thèse, antithèse, synthèse) et analytiques",
+                  "Mobilisation obligatoire d'une vaste culture littéraire (exemples et citations d'œuvres africaines, françaises et francophones)"
+                ]
+              },
+              {
+                "theme": "Étude des œuvres intégrales au programme",
+                "contenus": [
+                  "Analyse linéaire et explications de textes extraits des œuvres inscrites au programme officiel",
+                  "Étude des contextes historiques, sociopolitiques et esthétiques des auteurs au programme"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

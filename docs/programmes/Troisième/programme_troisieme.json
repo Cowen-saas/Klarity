@@ -1,0 +1,314 @@
+{
+  "classe": "Troisième",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "volume_horaire": "4 à 5 h / semaine",
+      "coefficient": 4,
+      "modules": [
+        {
+          "titre": "Algèbre et arithmétique",
+          "themes": [
+            {
+              "theme": "Arithmétique et nombres réels",
+              "contenus": [
+                "Plus Grand Commun Diviseur (PGCD) et Plus Petit Commun Multiple (PPCM) : méthode du filtre d'Euclide et décomposition en facteurs premiers",
+                "Propriétés des fractions irréductibles",
+                "Propriétés des puissances et de la racine carrée (√a, √(a×b), √(a/b)), rationalisation des dénominateurs",
+                "Ensembles de nombres (ℕ, ℤ, 𝔻, ℚ, ℝ) et notations des intervalles"
+              ]
+            },
+            {
+              "theme": "Calcul littéral",
+              "contenus": [
+                "Développement, réduction et factorisation d'expressions algébriques",
+                "Utilisation des identités remarquables : (a + b)², (a − b)², (a − b)(a + b)"
+              ]
+            },
+            {
+              "theme": "Équations et inéquations",
+              "contenus": [
+                "Équations du 1er degré à une inconnue et équations se ramenant au produit nul : (ax + b)(cx + d) = 0",
+                "Inéquations du 1er degré à une inconnue et représentation graphique des solutions sur une droite graduée",
+                "Systèmes de deux équations du 1er degré à deux inconnues (2×2) : méthodes par substitution, par combinaison linéaire et résolution graphique",
+                "Problèmes d'application de la vie courante"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Traitement des données et fonctions",
+          "themes": [
+            {
+              "theme": "Statistiques",
+              "contenus": [
+                "Effectifs, fréquences, fréquences cumulées, effectifs cumulés croissants / décroissants",
+                "Regroupement en classes d'amplitude égale, centre de classe",
+                "Calcul de la moyenne statistique",
+                "Diagrammes (en bâtons, circulaires, semi-circulaires, histogrammes)"
+              ]
+            },
+            {
+              "theme": "Notion de fonction",
+              "contenus": [
+                "Fonctions affines (x ↦ ax + b) et fonctions linéaires (x ↦ ax)",
+                "Représentation graphique, coefficient directeur, ordonnée à l'origine"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géométrie du plan et de l'espace",
+          "themes": [
+            {
+              "theme": "Géométrie plane",
+              "contenus": [
+                "Théorème de Thalès et sa réciproque dans le triangle et le papillon",
+                "Théorème de Pythagore et sa réciproque",
+                "Trigonométrie dans le triangle rectangle : sinus, cosinus et tangente d'un angle aigu ; relation trigonométrique sin²x + cos²x = 1",
+                "Angles inscrits et angles au centre dans un cercle",
+                "Vecteurs et repérage orthonormal : coordonnées d'un vecteur, distance entre deux points, équation de droite"
+              ]
+            },
+            {
+              "theme": "Géométrie de l'espace",
+              "contenus": [
+                "Pyramide régulière et cône de révolution : description, calcul d'aires (latérale, totale) et de volumes",
+                "Sections planes de pyramides et de cônes (réductions, rapport de réduction k)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "pct": {
+      "nom_complet": "Physique - Chimie - Technologie",
+      "volume_horaire": "2 à 3 h / semaine",
+      "coefficient": 2,
+      "modules": [
+        {
+          "titre": "A. Physique",
+          "themes": [
+            {
+              "theme": "Mécanique",
+              "contenus": [
+                "Poids et masse d'un corps : distinction, relation P = m × g, mesure avec dynamomètre et balance",
+                "Masse volumique et densité : formules et déterminations expérimentales",
+                "Forces et équilibre : notion de force (point d'application, direction, sens, intensité), équilibre d'un solide soumis à deux ou trois forces non parallèles",
+                "Travail et puissance mécaniques : travail d'une force (W = F × d), puissance (P = W / t)"
+              ]
+            },
+            {
+              "theme": "Électricité",
+              "contenus": [
+                "Tension et courant alternatifs sinusoïdaux : caractéristiques (valeur maximale, valeur efficace, période T, fréquence f)",
+                "Puissance et énergie électriques : puissance consommée (P = U × I), énergie électrique (E = P × t), lecture du compteur électrique et facture d'électricité",
+                "Sécurité électrique : fusibles, disjoncteurs, prise de terre"
+              ]
+            },
+            {
+              "theme": "Optique",
+              "contenus": [
+                "Lentilles minces (convergentes et divergentes) : définition, centre optique, foyers, distance focale",
+                "Construction de l'image d'un objet par une lentille convergente : conditions d'obtention d'une image nette",
+                "L'œil et les instruments d'optique : modèle réduit de l'œil, anomalies de la vision (myopie, hypermétropie) et corrections, la loupe"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "B. Chimie et technologie",
+          "themes": [
+            {
+              "theme": "Les solutions aqueuses",
+              "contenus": [
+                "Notion de pH d'une solution (acide, neutre, basique), utilisation du papier pH ou pH-mètre",
+                "Réaction entre l'acide chlorhydrique et un métal (fer ou zinc)"
+              ]
+            },
+            {
+              "theme": "L'eau et l'air",
+              "contenus": [
+                "Électrolyse et synthèse de l'eau",
+                "Combustion des corps purs simples (carbone, soufre, fer) et des hydrocarbures (butane, méthane) dans le dioxygène"
+              ]
+            },
+            {
+              "theme": "Métallurgie et matériaux",
+              "contenus": [
+                "Réduction des oxydes de fer par le carbone (principe du haut-fourneau)",
+                "Les alliages usuels (acier, fonte, bronze)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "modules": [
+        {
+          "titre": "A. Étude de la langue et grammaire",
+          "themes": [
+            {
+              "theme": "Grammaire de la phrase et du texte",
+              "contenus": [
+                "La phrase complexe : subordination (complétives, circonstancielles de cause, conséquence, but, condition, concession, temps)",
+                "L'expression de la cause, de la conséquence, de l'opposition et de la condition",
+                "Concordance des temps à l'indicatif et au subjonctif",
+                "Les types et formes de phrases (affirmative, négative, passive, emphatique)"
+              ]
+            },
+            {
+              "theme": "Énonciation et stylistique",
+              "contenus": [
+                "Les indices d'énonciation (embrayeurs, modalisateurs de certitude ou d'incertitude)",
+                "Le discours direct, indirect et indirect libre",
+                "Les figures de style courantes : métaphore, comparaison, personnification, hyperbole, anaphore, antithèse",
+                "Les registres de texte : lyrique, comique, tragique, satirique, épidictique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "B. Expression écrite et techniques de rédaction",
+          "description": "Préparation aux différents sujets de rédaction du BEPC",
+          "themes": [
+            {
+              "theme": "Le récit / La narration complexifiée",
+              "contenus": [
+                "Structure du récit (schéma narratif : situation initiale, élément perturbateur, péripéties, élément d'équilibre, situation finale)",
+                "Insertion de descriptions, de portraits et de dialogues dans un récit"
+              ]
+            },
+            {
+              "theme": "Le texte argumentatif (initiation)",
+              "contenus": [
+                "Structure d'une argumentation : thèse, arguments, exemples",
+                "Rédaction d'une prise de position simple sur un sujet d'actualité, de société ou de culture"
+              ]
+            },
+            {
+              "theme": "La lettre officielle / Correspondance administrative",
+              "contenus": [
+                "Normes d'écriture d'une demande de permission, de réclamation ou d'autorisation"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "C. Littérature et lecture méthodique",
+          "themes": [
+            {
+              "theme": "Étude d'œuvres et lecture méthodique",
+              "contenus": [
+                "Étude guidée d'extraits d'œuvres littéraires africaines et francophones inscrites au programme du MINESEC pour la classe de 3ème",
+                "Entraînement à la lecture méthodique d'un texte (dégagement de l'idée générale, analyse des axes d'étude, interprétation des procédés littéraires)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "svt": {
+      "nom_complet": "Sciences de la Vie et de la Terre",
+      "volume_horaire": "2 h / semaine",
+      "coefficient": 2,
+      "modules": [
+        {
+          "titre": "Le monde vivant et la santé humaine",
+          "sous_titre": "Rénovation et maintien de l'organisme (nutrition et alimentation)",
+          "themes": [
+            {
+              "theme": "Les aliments et la digestion",
+              "contenus": [
+                "Groupes d'aliments, rôles des nutriments, transformation mécanique et chimique des aliments le long du tube digestif, rôle des enzymes digestives"
+              ]
+            },
+            {
+              "theme": "L'absorption intestinale",
+              "contenus": [
+                "Structure de la villosité intestinale et passage des nutriments dans le sang et la lymphe"
+              ]
+            },
+            {
+              "theme": "La respiration chez l'Homme",
+              "contenus": [
+                "Échanges gazeux au niveau des alvéoles pulmonaires, risques liés à la pollution et au tabagisme"
+              ]
+            },
+            {
+              "theme": "La circulation sanguine",
+              "contenus": [
+                "Composition du sang, structure et fonctionnement du cœur, double circulation (petite et grande circulation)"
+              ]
+            },
+            {
+              "theme": "L'excrétion urinaire",
+              "contenus": [
+                "Rôle des reins dans l'épuration du sang et le maintien de la constance du milieu intérieur"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Immunologie et santé",
+          "sous_titre": "Le système immunitaire et la défense de l'organisme",
+          "themes": [
+            {
+              "theme": "Micro-organismes et barrières naturelles",
+              "contenus": [
+                "Micro-organismes pathogènes et non pathogènes (bactéries, virus, champignons)",
+                "Barrières naturelles de l'organisme (peau, muqueuses)"
+              ]
+            },
+            {
+              "theme": "Réponses immunitaires",
+              "contenus": [
+                "Réponse immunitaire non spécifique (réaction inflammatoire, phagocytose)",
+                "Réponse immunitaire spécifique (lymphocytes B et lymphocytes T, mémoire immunitaire)"
+              ]
+            },
+            {
+              "theme": "Dysfonctionnements et MST/SIDA",
+              "contenus": [
+                "Dysfonctionnements du système immunitaire et MST / SIDA : structure du VIH, modes de transmission, prévention"
+              ]
+            },
+            {
+              "theme": "Moyens d'aide au système immunitaire",
+              "contenus": [
+                "Vaccination, sérothérapie, antibiotiques"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Géologie et gestion des risques naturels",
+          "sous_titre": "Tectonique des plaques et dynamique interne de la Terre",
+          "themes": [
+            {
+              "theme": "Structure interne de la Terre",
+              "contenus": [
+                "Structure interne du globe terrestre (croûte, manteau, noyau)"
+              ]
+            },
+            {
+              "theme": "Tectonique des plaques",
+              "contenus": [
+                "Théorie de la dérive des continents et tectonique des plaques (zones de divergence et de convergence)"
+              ]
+            },
+            {
+              "theme": "Séismes et volcanisme",
+              "contenus": [
+                "Origine des séismes (ondes, épicentre, foyer), différents types de volcans (effusifs, explosifs)",
+                "Prévention et gestion des risques géologiques majeurs"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

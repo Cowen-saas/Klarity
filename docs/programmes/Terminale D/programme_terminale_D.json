@@ -1,0 +1,347 @@
+{
+  "classe": "Terminale D",
+  "filiere": "Série Scientifique Expérimentale",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "mathematiques": {
+      "volume_horaire": "5 h / semaine",
+      "coefficient": 4,
+      "modules": [
+        {
+          "titre": "Nombres complexes",
+          "themes": [
+            {
+              "theme": "Formes et équations",
+              "contenus": [
+                "Forme algébrique : partie réelle, partie imaginaire, conjugué, égalité",
+                "Forme trigonométrique et exponentielle : module, argument, notation r·e^(iθ)",
+                "Équations dans ℂ : équations du 2nd degré à coefficients réels"
+              ]
+            },
+            {
+              "theme": "Interprétation géométrique",
+              "contenus": [
+                "Représentation des nombres complexes dans le plan rapporté à un repère orthonormé direct",
+                "Distance entre deux points AB = |z_B − z_A|",
+                "Calcul d'angles orientés arg[(z_C − z_A) / (z_B − z_A)]"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Analyse",
+          "themes": [
+            {
+              "theme": "Limites et continuité",
+              "contenus": [
+                "Calcul de limites, levée d'indéterminations",
+                "Continuité en un point, sur un intervalle, théorème des valeurs intermédiaires"
+              ]
+            },
+            {
+              "theme": "Dérivation et étude de fonctions",
+              "contenus": [
+                "Dérivée des fonctions usuelles et composées",
+                "Sens de variation, tableau de variations, extrémums",
+                "Asymptotes (horizontales, verticales, obliques)",
+                "Étude complète et représentation graphique de fonctions polynômes, fonctions rationnelles, fonctions logarithmes (ln) et fonctions exponentielles (exp)"
+              ]
+            },
+            {
+              "theme": "Suites numériques",
+              "contenus": [
+                "Suites arithmétiques et géométriques (termes généraux, sommes)",
+                "Convergence d'une suite, limite de qⁿ"
+              ]
+            },
+            {
+              "theme": "Primitives et calcul d'intégrales",
+              "contenus": [
+                "Primitives de fonctions usuelles",
+                "Intégrale d'une fonction continue : calcul par primitives, intégration par parties simple",
+                "Application au calcul d'aires de surfaces planes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Organisation de données et probabilités",
+          "themes": [
+            {
+              "theme": "Dénombrement (rappels)",
+              "contenus": [
+                "p-uplets, arrangements, permutations, combinaisons"
+              ]
+            },
+            {
+              "theme": "Probabilités sur un univers fini",
+              "contenus": [
+                "Événements, probabilité d'un événement, équiprobabilité",
+                "Probabilités conditionnelles, arbres pondérés, indépendance de deux événements",
+                "Variable aléatoire discrète : loi de probabilité, espérance, variance, écart-type",
+                "Schéma de Bernoulli et loi binomiale"
+              ]
+            },
+            {
+              "theme": "Statistiques à deux variables",
+              "contenus": [
+                "Série statistique double, tableau à double entrée",
+                "Nuage de points, ajustement affine par la méthode de Mayer et des moindres carrés"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "physique": {
+      "volume_horaire": "~3 h à 4 h / semaine",
+      "coefficient": 3,
+      "description": "Le programme de Terminale D reprend les thèmes majeurs de la série C en insistant sur l'analyse phénoménologique et qualitative, les bilans énergétiques et les applications médicales/biologiques.",
+      "modules": [
+        {
+          "titre": "Mécanique",
+          "themes": [
+            {
+              "theme": "Cinématique et dynamique du point matériel",
+              "contenus": [
+                "Lois de Newton et applications directes (mouvement rectiligne, plan incliné avec/sans frottement)",
+                "Mouvement des projectiles dans le champ de pesanteur uniforme g",
+                "Mouvement des satellites artificiels (lois de Kepler sous forme simplifiée, vitesse et période de révolution)"
+              ]
+            },
+            {
+              "theme": "Oscillateurs mécaniques simples",
+              "contenus": [
+                "Étude du pendule élastique et du pendule simple (équation différentielle, période propre T₀, conservation de l'énergie mécanique)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Électricité et électromagnétisme",
+          "themes": [
+            {
+              "theme": "Champs et forces",
+              "contenus": [
+                "Champ électrostatique et mouvement d'une particule chargée entre deux plaques condensatrices",
+                "Induction électromagnétique : loi de Lenz, f.é.m. induite, auto-induction et énergie dans une bobine"
+              ]
+            },
+            {
+              "theme": "Circuits en courant alternatif",
+              "contenus": [
+                "Composants R, L, C en alternatif sinusoïdal",
+                "Circuit RLC série : impédance, résonance d'intensité, puissance consommée et facteur de puissance"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Ondes et optique",
+          "themes": [
+            {
+              "theme": "Ondes mécaniques",
+              "contenus": [
+                "Périodicité spatiale et temporelle, longueur d'onde"
+              ]
+            },
+            {
+              "theme": "Optique ondulatoire",
+              "contenus": [
+                "Interférences lumineuses (fentes d'Young) et calcul de la longueur d'onde λ"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Physique atomique et nucléaire",
+          "themes": [
+            {
+              "theme": "Effet photoélectrique",
+              "contenus": [
+                "Interprétation photonique, bilan d'énergie"
+              ]
+            },
+            {
+              "theme": "Physique nucléaire",
+              "contenus": [
+                "Radioactivité (α, β, γ), équations bilan (conservation du nombre de masse et de charge)",
+                "Décroissance radioactive, période radioactive t½",
+                "Bilan énergétique des réactions de fission et de fusion"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "volume_horaire": "~2 h à 3 h / semaine",
+      "coefficient": "2 à 3",
+      "description": "Le programme de Terminale D reprend l'ensemble des notions de la série C avec un accent renforcé sur la manipulation expérimentale, la stœchiométrie des dosages et les applications biologiques.",
+      "modules": [
+        {
+          "titre": "Cinétique chimique",
+          "themes": [
+            {
+              "theme": "Vitesse de réaction et facteurs cinétiques",
+              "contenus": [
+                "Notions de vitesse de réaction et facteurs cinétiques (température, concentration, catalyseur)",
+                "Interprétation des courbes d'évolution des concentrations au cours du temps"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie en solution aqueuse",
+          "themes": [
+            {
+              "theme": "Lois des équilibres acido-basiques",
+              "contenus": [
+                "Acides et bases (forts et faibles), constante Ka et pKa",
+                "Calculs de pH des solutions d'acides forts, bases fortes, acides faibles et bases faibles"
+              ]
+            },
+            {
+              "theme": "Titrages et dosages",
+              "contenus": [
+                "Courbes de suivi pH-métrique et colorimétrique (choix de l'indicateur coloré approprié)",
+                "Détermination expérimentale de la concentration d'une solution inconnue à l'équivalence",
+                "Rôle et importance des solutions tampons dans les milieux biologiques (ex. le sang)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie organique appliquée et biomolécules",
+          "themes": [
+            {
+              "theme": "Les fonctions organiques dérivées des acides",
+              "contenus": [
+                "Réactions d'estérification et d'hydrolyse (bilan de matière, constante d'équilibre)",
+                "Saponification et chimie des corps gras (triglycérides, savons)"
+              ]
+            },
+            {
+              "theme": "Les acides α-aminés",
+              "contenus": [
+                "Structure des acides α-aminés naturels",
+                "Notion de zwitterion et solubilité",
+                "Synthèse des dipeptides et importance biologique des protéines"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
+      "series_scientifiques_techno": {
+        "series": ["C", "D", "TI"],
+        "volume_horaire": "~3 h / semaine",
+        "coefficient": "2 à 3",
+        "modules": [
+          {
+            "titre": "Étude de la langue et communication",
+            "themes": [
+              {
+                "theme": "Grammaire du texte et énonciation",
+                "contenus": [
+                  "Les marques de la présence du locuteur (modalisateurs, embrayeurs, indices d'énonciation)",
+                  "La syntaxe complexe et la structuration logique du discours",
+                  "Les types d'arguments (d'autorité, par analogie, déductif, inductif, ad hominem)",
+                  "Les connecteurs logiques, temporels et spatiaux au service de la démonstration"
+                ]
+              },
+              {
+                "theme": "Stylistique et pragmatique",
+                "contenus": [
+                  "Analyse des visées de communication (informer, convaincre, persuader, faire agir)",
+                  "Les registres de langue et registres littéraires (satirique, polémique, tragique, épidictique, lyrique)",
+                  "Les figures de style et leur impact argumentatif ou expressif"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Techniques de rédaction et d'expression écrite",
+            "description": "Préparation directe aux deux sujets au choix lors de l'épreuve du Baccalauréat",
+            "themes": [
+              {
+                "theme": "Sujet 1 — La contraction de texte et la discussion",
+                "contenus": [
+                  "Résumé / contraction : analyse d'un texte argumentatif contemporain (800 à 1000 mots), dégagement de la thèse, de la structure argumentative et réduction rigoureuse au 1/4 du texte d'origine (± 10%)",
+                  "Discussion : rédaction d'un essai structuré portant sur une problématique soulevée par le texte d'appui"
+                ]
+              },
+              {
+                "theme": "Sujet 2 — Le commentaire composé",
+                "contenus": [
+                  "Analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre ou essai)",
+                  "Élaboration d'un plan détaillé s'articulant autour de 2 ou 3 axes d'analyse (fond et forme)",
+                  "Rédaction d'une introduction complète, d'un développement structuré avec transitions et d'une conclusion synthétique"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Littérature et culture générale",
+            "themes": [
+              {
+                "theme": "Mouvements et analyse thématique",
+                "contenus": [
+                  "Étude des mouvements littéraires majeurs (Négritude, roman africain post-colonial, réalisme, romantisme, théâtre engagé)",
+                  "Analyse thématique d'œuvres au programme national pour nourrir la culture générale et les arguments de la discussion"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "serie_litteraire_A": {
+        "series": ["A"],
+        "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
+        "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
+        "modules": [
+          {
+            "titre": "Épreuve 1 — Langue française",
+            "description": "Ce module évalue la maîtrise scientifique et stylistique de la langue à partir d'un corpus de textes.",
+            "themes": [
+              {
+                "theme": "Grammaire, sémantique et stylistique",
+                "contenus": [
+                  "Énonciation et théorie des actes de parole (illocutoire, perlocutoire, présupposés et sous-entendus)",
+                  "Cohésion et cohérence textuelles (progression thématique, anaphores, cataphores, récurrences lexicales)",
+                  "Analyse stylistique approfondie des figures de rhétorique et des champs lexicaux",
+                  "Morphosyntaxe avancée et analyse des structures de phrases complexes"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Épreuve 2 — Littérature et dissertation littéraire",
+            "description": "Ce module repose sur la maîtrise des genres littéraires, de la critique et de l'histoire littéraire.",
+            "themes": [
+              {
+                "theme": "La dissertation littéraire",
+                "contenus": [
+                  "Traitement de sujets théoriques ou d'opinion portant sur la création littéraire, la fonction de la poésie, le rôle du théâtre, la valeur du roman ou la mission de l'écrivain",
+                  "Maîtrise des plans dialectiques (thèse, antithèse, synthèse) et analytiques",
+                  "Mobilisation obligatoire d'une vaste culture littéraire (exemples et citations d'œuvres africaines, françaises et francophones)"
+                ]
+              },
+              {
+                "theme": "Étude des œuvres intégrales au programme",
+                "contenus": [
+                  "Analyse linéaire et explications de textes extraits des œuvres inscrites au programme officiel",
+                  "Étude des contextes historiques, sociopolitiques et esthétiques des auteurs au programme"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

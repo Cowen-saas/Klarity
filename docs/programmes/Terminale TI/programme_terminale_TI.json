@@ -1,0 +1,573 @@
+{
+  "classe": "Terminale TI",
+  "filiere": "Technologies de l'Information (TI)",
+  "pays": "Cameroun",
+  "usage": "Base de connaissance curriculaire pour le tuteur IA Klarity",
+  "matieres": {
+    "programmation": {
+      "modules": [
+        {
+          "titre": "Programmation avancée en C",
+          "themes": [
+            {
+              "theme": "Pointeurs et allocation dynamique",
+              "contenus": [
+                "Concept de pointeur, arithmétique des pointeurs, lien entre pointeurs et tableaux",
+                "Allocation dynamique de mémoire : malloc(), free(), sizeof"
+              ]
+            },
+            {
+              "theme": "Structures de données composées et fichiers",
+              "contenus": [
+                "Structures (struct) et types personnalisés (typedef)",
+                "Traitement des fichiers en C : ouverture (fopen), lecture/écriture textuelle et binaire (fprintf, fscanf, fread, fwrite), fermeture (fclose)"
+              ]
+            },
+            {
+              "theme": "Structures de données évoluées",
+              "contenus": [
+                "Listes chaînées simples (création, insertion, suppression, parcours)",
+                "Notions sur les piles (LIFO) et files (FIFO)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Initiation à la programmation orientée objet (POO)",
+          "themes": [
+            {
+              "theme": "Concepts fondamentaux de la POO",
+              "contenus": [
+                "Notions de classe, objet, attributs et méthodes",
+                "Instanciation, constructeurs et destructeurs",
+                "Principes clés : encapsulation (public, private, protected), héritage simple, polymorphisme"
+              ]
+            },
+            {
+              "theme": "Mise en œuvre pratique (Java ou C++)",
+              "contenus": [
+                "Écriture de classes et création d'objets",
+                "Implémentation de l'héritage et de la redéfinition de méthodes"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Programmation web dynamique (côté serveur)",
+          "themes": [
+            {
+              "theme": "PHP (Hypertext Preprocessor)",
+              "contenus": [
+                "Syntaxe de base, variables, structures de contrôle en PHP",
+                "Récupération des données de formulaires (méthodes GET et POST)",
+                "Gestion des sessions ($_SESSION) et des cookies ($_COOKIE)"
+              ]
+            },
+            {
+              "theme": "Interconnexion Web et base de données",
+              "contenus": [
+                "Connexion à un SGBD MySQL/MariaDB depuis PHP (via PDO ou mysqli)",
+                "Exécution de requêtes SQL (SELECT, INSERT, UPDATE, DELETE) à partir de scripts PHP",
+                "Réalisation d'une application web dynamique simple (ex : système de connexion/authentification, gestion d'utilisateurs ou catalogue de produits)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "reseaux": {
+      "modules": [
+        {
+          "titre": "Adressage IPv4 avancé et introduction à IPv6",
+          "themes": [
+            {
+              "theme": "Subnetting (découpage en sous-réseaux)",
+              "contenus": [
+                "Calcul de masques de sous-réseau sur mesure (FLSM - Fixed Length Subnet Mask)",
+                "Détermination de l'adresse réseau, de l'adresse de diffusion (broadcast) et de la plage d'adresses hôtes valides",
+                "Technique VLSM (Variable Length Subnet Mask / CIDR)"
+              ]
+            },
+            {
+              "theme": "Adressage IPv6",
+              "contenus": [
+                "Nécessité et limites d'IPv4",
+                "Structure et représentation d'une adresse IPv6 (128 bits, notation hexadécimale)",
+                "Types d'adresses IPv6 (Unicast, Multicast, Anycast)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Protocoles de services et architecture client-serveur",
+          "themes": [
+            {
+              "theme": "Services réseau fondamentaux",
+              "contenus": [
+                "DHCP (Dynamic Host Configuration Protocol) : attribution dynamique d'adresses IP (processus DORA)",
+                "DNS (Domain Name System) : résolution de noms de domaine en adresses IP et vice-versa",
+                "FTP / HTTP / HTTPS / SMTP / POP3 / IMAP : services de transfert de fichiers, web et messagerie électronique"
+              ]
+            },
+            {
+              "theme": "Architecture Client-Serveur vs Peer-to-Peer (P2P)",
+              "contenus": [
+                "Différences, avantages, administration centralisée"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Routage et commutation (notions d'administration)",
+          "themes": [
+            {
+              "theme": "Commutation (Switching)",
+              "contenus": [
+                "Fonctionnement d'un switch (table d'adresses MAC)",
+                "Notion de Réseau Local Virtuel (VLAN) : définition, utilité, types de ports (Access/Trunk)"
+              ]
+            },
+            {
+              "theme": "Routage (Routing)",
+              "contenus": [
+                "Rôle du routeur et table de routage",
+                "Routage statique (configuration de routes par défaut et routes statiques)",
+                "Introduction au routage dynamique (notions sur RIP, OSPF)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Sécurité et maintenance des réseaux",
+          "themes": [
+            {
+              "theme": "Sécurité des réseaux",
+              "contenus": [
+                "Menaces courantes (Intrusion, Spoofing, Phishing, Déni de service - DoS)",
+                "Équipements et techniques de protection : Pare-feu (Firewall), serveur Proxy, antivirus réseau, chiffrement (WEP, WPA2, WPA3 pour le Wi-Fi)",
+                "Notion de Réseau Privé Virtuel (VPN)"
+              ]
+            },
+            {
+              "theme": "Pratique et simulation (TP sur Cisco Packet Tracer)",
+              "contenus": [
+                "Conception et simulation de topologies réseau",
+                "Interconnexion de sous-réseaux à l'aide de switches et routeurs",
+                "Test et dépannage de la connectivité réseau (traceroute/tracert, netstat, nslookup)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "systeme_information": {
+      "modules": [
+        {
+          "titre": "Approfondissement de la conception avec la méthode Merise",
+          "themes": [
+            {
+              "theme": "Le Modèle Logique des Traitements (MLT)",
+              "contenus": [
+                "Concepts fondamentaux : Poste de travail, Tâche, Procédure organisée",
+                "Passage du MCT (Modèle Conceptuel des Traitements) au MLT",
+                "Répartition des traitements entre l'homme et la machine (postes automatisés vs postes manuels)"
+              ]
+            },
+            {
+              "theme": "Le Modèle Physique des Données (MPD)",
+              "contenus": [
+                "Passage du MLD (Modèle Logique des Données) au MPD",
+                "Choix du SGBD cible et optimisation des structures physiques",
+                "Notions d'indexation, de clé, de contraintes physiques et de volume de stockage"
+              ]
+            },
+            {
+              "theme": "Le Modèle Physique des Traitements (MPT)",
+              "contenus": [
+                "Découpage en programmes, modules, écrans et états d'impression",
+                "Architecture logicielle des traitements"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Bases de données avancées et langage SQL",
+          "themes": [
+            {
+              "theme": "Requêtes SQL avancées (LID)",
+              "contenus": [
+                "Fonctions d'agrégation (SUM, AVG, MIN, MAX, COUNT)",
+                "Groupement de données et filtrage sur agrégats (GROUP BY, HAVING)",
+                "Jointures complexes (INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN)",
+                "Sous-requêtes imbriquées (requêtes synchronisées et non synchronisées)"
+              ]
+            },
+            {
+              "theme": "Sécurité, contrôle et intégrité des données",
+              "contenus": [
+                "Langage de Contrôle de Données (LCD) : gestion des utilisateurs et des privilèges (GRANT, REVOKE)",
+                "Langage de Contrôle des Transactions (TCL) : propriétés ACID d'une transaction, validation et annulation (COMMIT, ROLLBACK)",
+                "Notions de vues (CREATE VIEW) pour la sécurité et la simplification des accès"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Initiation à la modélisation orientée objet (UML)",
+          "themes": [
+            {
+              "theme": "Introduction à la modélisation objet",
+              "contenus": [
+                "Différences entre l'approche systémique (Merise) et l'approche orientée objet (UML)",
+                "Concepts fondamentaux de l'orienté objet : Classe, Objet, Attribut, Méthode, Encapsulation, Héritage, Polymorphisme"
+              ]
+            },
+            {
+              "theme": "Diagrammes UML fondamentaux",
+              "contenus": [
+                "Diagramme de Cas d'Utilisation (Use Case Diagram) : acteurs, cas d'utilisation, relations (<<include>>, <<extend>>, généralisation)",
+                "Diagramme de Classes : classes, attributs, opérations, associations, multiplicités, agrégation et composition",
+                "Diagramme de Séquence : lignes de vie, messages (synchrones, asynchrones, retours), fragments combinés simples"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Écosystème des systèmes d'information et sécurité",
+          "themes": [
+            {
+              "theme": "Architecture des systèmes d'information",
+              "contenus": [
+                "Architectures matérielles et logicielles : Centralisée, Client-Serveur (2 tiers, 3 tiers, N tiers), architectures Web et Cloud",
+                "Intégration des SI : Progiciels de Gestion Intégrés (PGI / ERP), Gestion de la Relation Client (CRM)"
+              ]
+            },
+            {
+              "theme": "Sécurité et gouvernance du SI",
+              "contenus": [
+                "Menaces et vulnérabilités d'un SI (attaques réseau, vols de données, défaillances matérielles)",
+                "Politique de sécurité : sauvegarde/restauration (Backup/Restore), plans de continuité d'activité (PCA), chiffrement des données"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Travaux pratiques (TP) et projet SI",
+          "themes": [
+            {
+              "theme": "Pratique sur outils CASE et SGBDR",
+              "contenus": [
+                "Modélisation complète d'un projet SI sous un outil CASE (ex : JMerise, PowerAMC, StarUML, WinDesign)",
+                "Implémentation et administration sous un SGBD relationnel (ex : MySQL, PostgreSQL)",
+                "Écriture de requêtes complexes et création de scripts SQL pour la création et la gestion d'une base de données d'entreprise"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mathematiques": {
+      "volume_horaire": "5 h / semaine",
+      "coefficient": 5,
+      "modules": [
+        {
+          "titre": "Arithmétique et cryptographie",
+          "themes": [
+            {
+              "theme": "Arithmétique entière",
+              "contenus": [
+                "Divisibilité dans ℤ, division euclidienne, congruences modulo n"
+              ]
+            },
+            {
+              "theme": "Théorème de Bézout et Gauss",
+              "contenus": [
+                "Applications au calcul d'inverses modulaires"
+              ]
+            },
+            {
+              "theme": "Applications informatiques",
+              "contenus": [
+                "Algorithmes de cryptographie simples (chiffre de César, chiffrement affine, introduction au système RSA)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Algèbre linéaire et matricielle",
+          "themes": [
+            {
+              "theme": "Matrices",
+              "contenus": [
+                "Définition, types de matrices (carrée, diagonale, identité)",
+                "Opérations : addition, multiplication par un scalaire, produit matriciel",
+                "Déterminant d'une matrice 2×2 et 3×3",
+                "Inverse d'une matrice carrée A⁻¹",
+                "Résolution de systèmes d'équations linéaires par la méthode matricielle"
+              ]
+            },
+            {
+              "theme": "Graphes et réseaux",
+              "contenus": [
+                "Vocabulaire des graphes (sommets, arêtes, degré, chaîne, cycle)",
+                "Matrice d'adjacence d'un graphe",
+                "Parcours de graphes (algorithme de Dijkstra pour la recherche du plus court chemin)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Analyse",
+          "themes": [
+            {
+              "theme": "Fonctions numériques",
+              "contenus": [
+                "Limites, continuité, dérivation",
+                "Étude de fonctions logarithmes (ln) et exponentielles (exp)",
+                "Croissances comparées applicables à l'analyse de complexité algorithmique",
+                "Intégration : primitives et calcul d'intégrales simples"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Probabilités et combinatoire",
+          "themes": [
+            {
+              "theme": "Combinatoire",
+              "contenus": [
+                "Permutations, combinaisons, arrangements"
+              ]
+            },
+            {
+              "theme": "Probabilités discrètes",
+              "contenus": [
+                "Conditionnement, arbres de décision, loi binomiale"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "francais": {
+      "series_concernees": ["A", "C", "D", "TI"],
+      "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
+      "series_scientifiques_techno": {
+        "series": ["C", "D", "TI"],
+        "volume_horaire": "~3 h / semaine",
+        "coefficient": "2 à 3",
+        "modules": [
+          {
+            "titre": "Étude de la langue et communication",
+            "themes": [
+              {
+                "theme": "Grammaire du texte et énonciation",
+                "contenus": [
+                  "Les marques de la présence du locuteur (modalisateurs, embrayeurs, indices d'énonciation)",
+                  "La syntaxe complexe et la structuration logique du discours",
+                  "Les types d'arguments (d'autorité, par analogie, déductif, inductif, ad hominem)",
+                  "Les connecteurs logiques, temporels et spatiaux au service de la démonstration"
+                ]
+              },
+              {
+                "theme": "Stylistique et pragmatique",
+                "contenus": [
+                  "Analyse des visées de communication (informer, convaincre, persuader, faire agir)",
+                  "Les registres de langue et registres littéraires (satirique, polémique, tragique, épidictique, lyrique)",
+                  "Les figures de style et leur impact argumentatif ou expressif"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Techniques de rédaction et d'expression écrite",
+            "description": "Préparation directe aux deux sujets au choix lors de l'épreuve du Baccalauréat",
+            "themes": [
+              {
+                "theme": "Sujet 1 — La contraction de texte et la discussion",
+                "contenus": [
+                  "Résumé / contraction : analyse d'un texte argumentatif contemporain (800 à 1000 mots), dégagement de la thèse, de la structure argumentative et réduction rigoureuse au 1/4 du texte d'origine (± 10%)",
+                  "Discussion : rédaction d'un essai structuré portant sur une problématique soulevée par le texte d'appui"
+                ]
+              },
+              {
+                "theme": "Sujet 2 — Le commentaire composé",
+                "contenus": [
+                  "Analyse méthodique d'un extrait de texte littéraire (poésie, roman, théâtre ou essai)",
+                  "Élaboration d'un plan détaillé s'articulant autour de 2 ou 3 axes d'analyse (fond et forme)",
+                  "Rédaction d'une introduction complète, d'un développement structuré avec transitions et d'une conclusion synthétique"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Littérature et culture générale",
+            "themes": [
+              {
+                "theme": "Mouvements et analyse thématique",
+                "contenus": [
+                  "Étude des mouvements littéraires majeurs (Négritude, roman africain post-colonial, réalisme, romantisme, théâtre engagé)",
+                  "Analyse thématique d'œuvres au programme national pour nourrir la culture générale et les arguments de la discussion"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "serie_litteraire_A": {
+        "series": ["A"],
+        "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
+        "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
+        "modules": [
+          {
+            "titre": "Épreuve 1 — Langue française",
+            "description": "Ce module évalue la maîtrise scientifique et stylistique de la langue à partir d'un corpus de textes.",
+            "themes": [
+              {
+                "theme": "Grammaire, sémantique et stylistique",
+                "contenus": [
+                  "Énonciation et théorie des actes de parole (illocutoire, perlocutoire, présupposés et sous-entendus)",
+                  "Cohésion et cohérence textuelles (progression thématique, anaphores, cataphores, récurrences lexicales)",
+                  "Analyse stylistique approfondie des figures de rhétorique et des champs lexicaux",
+                  "Morphosyntaxe avancée et analyse des structures de phrases complexes"
+                ]
+              }
+            ]
+          },
+          {
+            "titre": "Épreuve 2 — Littérature et dissertation littéraire",
+            "description": "Ce module repose sur la maîtrise des genres littéraires, de la critique et de l'histoire littéraire.",
+            "themes": [
+              {
+                "theme": "La dissertation littéraire",
+                "contenus": [
+                  "Traitement de sujets théoriques ou d'opinion portant sur la création littéraire, la fonction de la poésie, le rôle du théâtre, la valeur du roman ou la mission de l'écrivain",
+                  "Maîtrise des plans dialectiques (thèse, antithèse, synthèse) et analytiques",
+                  "Mobilisation obligatoire d'une vaste culture littéraire (exemples et citations d'œuvres africaines, françaises et francophones)"
+                ]
+              },
+              {
+                "theme": "Étude des œuvres intégrales au programme",
+                "contenus": [
+                  "Analyse linéaire et explications de textes extraits des œuvres inscrites au programme officiel",
+                  "Étude des contextes historiques, sociopolitiques et esthétiques des auteurs au programme"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "physique": {
+      "volume_horaire": "~2 h / semaine",
+      "coefficient": "2 à 3",
+      "description": "Le programme de Terminale TI est orienté vers la physique appliquée aux réseaux de télécommunication, aux signaux et à l'électronique de puissance.",
+      "modules": [
+        {
+          "titre": "Signal et télécommunications",
+          "themes": [
+            {
+              "theme": "Signaux électriques et transport d'information",
+              "contenus": [
+                "Chaîne de transmission d'information (émetteur, canal, récepteur)",
+                "Analyse spectrale d'un signal (fondamental et harmoniques)"
+              ]
+            },
+            {
+              "theme": "Modulation et démodulation",
+              "contenus": [
+                "Modulation d'amplitude (AM) : principe, taux de modulation m, spectre de fréquences, surmodulation",
+                "Modulation de fréquence (FM) : notions de base et comparaison avec l'AM",
+                "Démodulation d'amplitude : détection d'enveloppe (filtre passe-bas, filtre passe-haut)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Optique appliquée et transmission guidée",
+          "themes": [
+            {
+              "theme": "Propagation de la lumière et guidage",
+              "contenus": [
+                "Lois de Snell-Descartes pour la réfraction, réflexion totale",
+                "Principe de la fibre optique : fibre à saut d'indice, fibre à gradient d'indice, modes de propagation",
+                "Atténuation et dispersion dans une fibre optique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Circuits électroniques et oscillateurs",
+          "themes": [
+            {
+              "theme": "Oscillateurs électriques",
+              "contenus": [
+                "Circuit LC idéal et circuit RLC amorti",
+                "Oscillateurs entretenus (principe de la boucle de réaction)"
+              ]
+            },
+            {
+              "theme": "Convertisseurs d'énergie électrique",
+              "contenus": [
+                "Redressement de tension (diodes), filtrage (condensateur), hacheurs et onduleurs (notions simples d'alimentation des machines informatiques)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chimie": {
+      "volume_horaire": "~1 h à 2 h / semaine",
+      "coefficient": 2,
+      "description": "Le programme de Chimie en Terminale TI se concentre sur les matériaux, l'énergie chimique renouvelable et la protection des composants matériels des systèmes informatiques.",
+      "modules": [
+        {
+          "titre": "Stockage chimique de l'énergie",
+          "themes": [
+            {
+              "theme": "Générateurs électrochimiques",
+              "contenus": [
+                "Principe des piles chimiques usuelles (piles salines, alcalines) et des accumulateurs rechargeables (plomb, lithium-ion)",
+                "Réactions d'oxydoréduction aux électrodes pendant la charge et la décharge",
+                "Autonomie, capacité d'une batterie (Ah) et dimensionnement pour équipements informatiques et onduleurs",
+                "Piles à combustible : principe de fonctionnement de la pile à hydrogène"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Matériaux et protection contre la corrosion",
+          "themes": [
+            {
+              "theme": "Corrosion des métaux et alliages",
+              "contenus": [
+                "Mécanisme électrochimique de la corrosion humide de l'acier et des puces/circuits imprimés",
+                "Conséquences sur les composants électroniques et liaisons métalliques"
+              ]
+            },
+            {
+              "theme": "Techniques de protection",
+              "contenus": [
+                "Protection passive : revêtements (peintures, vernis de tropicalisation des cartes mères)",
+                "Protection active : protection cathodique par anode sacrificielle et courant imposé, galvanisation"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Chimie des polymères et matériaux électroniques",
+          "themes": [
+            {
+              "theme": "Polymères synthétiques industriels",
+              "contenus": [
+                "Classification : thermoplastiques, thermodurcissables, élastomères utilisés pour les boîtiers, gaines de câbles et supports de puces",
+                "Réactions de polymérisation (polyaddition et polycondensation)",
+                "Dégradation, recyclage et normes environnementales des déchets d'équipements électriques et électroniques (DEEE)"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
