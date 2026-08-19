@@ -1,0 +1,90 @@
+# Services Docker Compose (développement) — cahier des charges §3.1.
+# `worker` runs the same application image as `app`, in a separate process dedicated
+# to BullMQ queues (correction, quiz, notifications, rétention) — this materializes
+# the sync/async split required by §8.1. `adminer` is optional dev tooling only.
+#
+# Explicit project name: avoids colliding with unrelated pre-existing Docker
+# volumes already present on dev machines under the default "klarity" project
+# name (Compose defaults to the directory basename otherwise).
+name: klarity-dev
+
+services:
+  app:
+    build: .
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-klarity}:${POSTGRES_PASSWORD:-klarity}@postgres:5432/${POSTGRES_DB:-klarity}?schema=public
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: npm run worker:dev
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-klarity}:${POSTGRES_PASSWORD:-klarity}@postgres:5432/${POSTGRES_DB:-klarity}?schema=public
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-klarity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-klarity}
+      POSTGRES_DB: ${POSTGRES_DB:-klarity}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-klarity} -d ${POSTGRES_DB:-klarity}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # -- optionnel dev -- interface d'administration légère pour Postgres en local (§3.1)
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
