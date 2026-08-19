@@ -1,0 +1,725 @@
+// ============================================================================
+// KLARITY — Schéma Prisma
+// Généré à partir du Cahier des charges technique v1.26 (§4)
+// Plateforme éducative IA — 3ème, 1ère, Terminale (Cameroun)
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum NiveauClasse {
+  TROISIEME
+  PREMIERE
+  TERMINALE
+}
+
+enum Filiere {
+  A
+  C
+  D
+  TI
+}
+
+enum Langue {
+  FR
+  EN
+}
+
+enum StatutCompteEleve {
+  ACTIF
+  INACTIF_NOTIFIE
+  ANONYMISE
+}
+
+enum AdminRole {
+  SUPERADMIN
+  ADMIN
+}
+
+enum CanalNotificationPreference {
+  SMS
+  WHATSAPP
+}
+
+enum FrequenceNotification {
+  HEBDOMADAIRE
+  MENSUEL
+  CRITIQUE_UNIQUEMENT
+}
+
+enum TypeExamen {
+  BEPC
+  PROBATOIRE
+  BAC
+}
+
+enum TypeExerciceCorrection {
+  DISSERTATION_PHILO
+  DISSERTATION_LITTERAIRE
+  CONTRACTION_TEXTE
+  DISCUSSION
+}
+
+enum StatutTentative {
+  EN_ATTENTE
+  EN_TRAITEMENT
+  TERMINE
+  ERREUR
+}
+
+enum MotifSignalement {
+  LECTURE_ILLISIBLE
+  BAREME_INCORRECT
+  AUTRE
+}
+
+enum OrigineQuiz {
+  JOURNALIER
+  CIBLE
+}
+
+enum CanalSessionActivite {
+  WEB
+  WHATSAPP // réservé post-MVP (§1.2) — seul WEB est produit au MVP
+}
+
+enum RoleMessageChat {
+  ELEVE
+  ASSISTANT
+}
+
+enum PlanAbonnement {
+  GRATUIT
+  PREMIUM
+}
+
+enum StatutAbonnement {
+  ACTIF
+  EXPIRE
+}
+
+enum PayeurRole {
+  PARENT
+  ELEVE
+}
+
+enum MethodePaiement {
+  MOBILE_MONEY // valeur unique (v1.6, paiement carte retiré) — conservé en enum pour extension future sans migration
+}
+
+enum StatutPaiement {
+  EN_ATTENTE
+  REUSSI
+  ECHEC
+  REMBOURSE
+}
+
+enum TypeUsageIA {
+  CHAT
+  QUIZ
+  CORRECTION
+  VIDEO_FILTRAGE
+}
+
+enum ModeleIA {
+  HAIKU
+  SONNET
+}
+
+enum TypeEvenementAudit {
+  LOGIN_FAIL
+  OTP_FAIL
+  PIN_FAIL
+  IDOR_BLOCKED
+  WEBHOOK_INVALID
+  COMPTE_INACTIF_DETECTE
+  COMPTE_ANONYMISE_AUTO
+  COMPTE_ANONYMISE_MANUEL
+}
+
+// ============================================================================
+// §4.1 — COMPTES ET AUTHENTIFICATION
+// ============================================================================
+
+model Eleve {
+  id        String @id @default(cuid())
+  nom       String
+  codeEleve String @unique // format ELE-XXX-XXX, généré par source d'aléa cryptographique
+
+  classe  NiveauClasse
+  filiere Filiere? // A/C/D/TI — nullable, jamais renseigné pour un élève de 3ème (§2.1, §4.1)
+  langue  Langue   @default(FR)
+
+  pinHash               String // jamais le PIN en clair
+  pinTentativesEchouees Int       @default(0)
+  pinVerrouilleJusqua   DateTime?
+
+  statutCompte               StatutCompteEleve @default(ACTIF)
+  derniereActiviteLe         DateTime?
+  dateNotificationInactivite DateTime?
+  dateAnonymisation          DateTime?
+
+  createdAt DateTime @default(now())
+
+  liensParent       ParentEleveLink[]
+  consultePar       Parent[] // parents pour qui cet élève est le "dernier consulté" (§2.2.1)
+  tentativesEpreuve TentativeEpreuve[]
+  correctionsDetail CorrectionDetail[]
+  lacunes           Lacune[]
+  quiz              Quiz[]
+  conversationsChat ConversationChat[]
+  abonnements       Abonnement[]
+  sessionsActivite  SessionActivite[]
+  usagesIA          UsageIA[]
+
+  @@index([statutCompte, derniereActiviteLe]) // jobs hebdo de rétention (§2.9, §4.7)
+  @@map("eleves")
+}
+
+model Parent {
+  id        String @id @default(cuid())
+  telephone String @unique // identifiant de connexion + canal OTP/WhatsApp
+
+  createdAt         DateTime  @default(now())
+  derniereConnexion DateTime?
+
+  dernierEleveConsulteId String?
+  dernierEleveConsulte   Eleve?  @relation(fields: [dernierEleveConsulteId], references: [id], onDelete: SetNull)
+
+  liensEleve      ParentEleveLink[]
+  preferenceNotif NotificationPreference?
+
+  @@map("parents")
+}
+
+// Matérialise le lien vérifié parent↔élève — le dashboard parent n'affiche rien tant que cette ligne n'existe pas (§4.1)
+model ParentEleveLink {
+  id String @id @default(cuid())
+
+  parentId String
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  eleveId  String
+  eleve    Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  codeUtilise String // code élève saisi au moment de la liaison
+  dateLiaison DateTime @default(now())
+
+  @@unique([parentId, eleveId])
+  @@map("parent_eleve_links")
+}
+
+// Résumés de progression (§2.2.3) — n'affecte ni l'OTP ni le rappel de renouvellement (toujours envoyé)
+model NotificationPreference {
+  id String @id @default(cuid())
+
+  parentId String @unique
+  parent   Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  canal     CanalNotificationPreference @default(SMS)
+  frequence FrequenceNotification       @default(HEBDOMADAIRE)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+// Jamais de code en clair en base ; expiration courte, usage unique (réf. sécurité §2)
+model OtpVerification {
+  id          String   @id @default(cuid())
+  telephone   String
+  codeOtpHash String
+  expiration  DateTime
+  utilise     Boolean  @default(false)
+  tentatives  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([telephone])
+  @@map("otp_verifications")
+}
+
+model Admin {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  motDePasseHash  String
+  twoFactorSecret String // 2FA obligatoire (réf. sécurité §2)
+  role            AdminRole @default(ADMIN)
+
+  createdAt DateTime @default(now())
+
+  epreuvesAjoutees           Epreuve[]
+  datesExamenAjoutees        DateExamen[]
+  exemplesCorrectionAjoutes  ExempleCorrection[]
+  programmesOfficielsAjoutes ProgrammeOfficiel[]
+  correctionsOverridees      CorrectionDetail[]
+
+  @@map("admins")
+}
+
+// ============================================================================
+// §4.2 — CONTENU PÉDAGOGIQUE
+// ============================================================================
+
+// Périmètre complet (v1.7) : couvre toutes les matières du programme, y compris
+// celles sans banque d'épreuves, pour servir de sélecteur au chat généraliste (§2.1)
+model Matiere {
+  id  String @id @default(cuid())
+  nom String @unique
+
+  classesConcernees NiveauClasse[] // ex: {TROISIEME}, {PREMIERE, TERMINALE}
+  filiereRequise    Filiere[] // sous-ensemble de {A,C,D,TI} ; tableau vide = aucune restriction de série (v1.21)
+  banqueDisponible  Boolean        @default(false) // true => référençable par Epreuve/ExempleCorrection/ProgrammeOfficiel
+
+  epreuves            Epreuve[]
+  videos              Video[]
+  exemplesCorrection  ExempleCorrection[]
+  programmesOfficiels ProgrammeOfficiel[]
+  correctionsDetail   CorrectionDetail[]
+  lacunes             Lacune[]
+  quiz                Quiz[]
+  conversationsChat   ConversationChat[]
+  usagesIA            UsageIA[]
+
+  @@map("matieres")
+}
+
+model Epreuve {
+  id String @id @default(cuid())
+
+  matiereId String
+  matiere   Matiere @relation(fields: [matiereId], references: [id])
+
+  classe  NiveauClasse
+  filiere Filiere? // A/C/D/TI — null uniquement pour la 3ème (§4.3, v1.14)
+
+  titre         String
+  anneeScolaire String // ex: "2026-2027"
+
+  fichePdfKey         String // clé R2 (jamais d'URL publique stockée en dur)
+  corrigeReferenceKey String // clé R2, accès restreint
+
+  ajouteParAdminId String
+  ajouteParAdmin   Admin  @relation(fields: [ajouteParAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  tentatives        TentativeEpreuve[]
+  correctionsDetail CorrectionDetail[]
+  conversationsChat ConversationChat[]
+
+  @@index([classe, filiere, matiereId]) // banque d'épreuves filtrée par série (§4.7)
+  @@map("epreuves")
+}
+
+// Alimentée exclusivement par le pipeline automatisé (§2.5) — aucune écriture manuelle admin
+model Video {
+  id String @id @default(cuid())
+
+  titre           String
+  providerVideoId String // identifiant YouTube uniquement, lecture via youtube-nocookie.com
+
+  matiereId      String
+  matiere        Matiere       @relation(fields: [matiereId], references: [id])
+  notionAssociee String // clé de correspondance avec Lacune.notion
+  classe         NiveauClasse?
+  filiere        Filiere?
+  langue         Langue        @default(FR)
+
+  sourceAutomatisee Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([notionAssociee])
+  @@map("videos")
+}
+
+// Cache applicatif (Redis-backed en pratique) — évite de re-consommer l'API YouTube/LLM (§2.5, §4.2)
+model LacuneVideoCache {
+  id             String   @id @default(cuid())
+  notionCle      String   @unique
+  videoIdsJson   Json
+  dateExpiration DateTime
+
+  @@map("lacune_video_cache")
+}
+
+// Une ligne par type d'examen et par année scolaire (§4.2)
+model DateExamen {
+  id String @id @default(cuid())
+
+  typeExamen         TypeExamen
+  anneeScolaire      String // ex: "2026-2027"
+  dateExamen         DateTime? // prime sur datePeriodeEstimee dès qu'elle est connue
+  datePeriodeEstimee String? // ex: "courant juin 2027"
+
+  ajouteParAdminId String
+  ajouteParAdmin   Admin  @relation(fields: [ajouteParAdminId], references: [id])
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([typeExamen, anneeScolaire])
+  @@map("dates_examen")
+}
+
+// ============================================================================
+// §4.2.2 — EXEMPLES DE CORRECTION (RAG few-shot Français / Philosophie série A)
+// ============================================================================
+
+// Pas de champ filiere (v1.15) : le barème méthodologique officiel est identique
+// quelle que soit la série — seul le contenu des épreuves varie (cf. Epreuve.filiere)
+model ExempleCorrection {
+  id String @id @default(cuid())
+
+  matiereId    String
+  matiere      Matiere                @relation(fields: [matiereId], references: [id])
+  typeExercice TypeExerciceCorrection
+
+  enonceModele         String @db.Text
+  baremeStructure      Json
+  exempleReponseModele String @db.Text
+  notesMethodologiques String @db.Text
+  langue               Langue @default(FR)
+
+  ajouteParAdminId String
+  ajouteParAdmin   Admin  @relation(fields: [ajouteParAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([matiereId, typeExercice])
+  @@map("exemples_correction")
+}
+
+// ============================================================================
+// §4.2.3 — PROGRAMMES OFFICIELS
+// Double usage : (1) contexte système des appels IA (chat + correction),
+// (2) taxonomie de référence pour Lacune.notion / pointsManques[].notion / Video.notionAssociee
+// contenuStructure porte directement la structure de nos fichiers JSON (Matière → Module → Thème)
+// ============================================================================
+
+model ProgrammeOfficiel {
+  id String @id @default(cuid())
+
+  matiereId String
+  matiere   Matiere      @relation(fields: [matiereId], references: [id])
+  classe    NiveauClasse // jamais optionnelle (v1.26) — différenciateur de contenu au même titre que filiere
+  filiere   Filiere? // null pour les matières communes à toutes les séries, ou pour la 3ème
+
+  contenuStructure Json // tableau de modules { titre, themes: [{ titre, contenus: [...] }] } — reprend nos JSON tels quels
+  fichierSourceKey String? // clé R2 du document source original (ex. .docx OBC), référence admin uniquement
+  versionSource    String? // ex: "OBC 2026"
+  langue           Langue  @default(FR)
+
+  ajouteParAdminId String
+  ajouteParAdmin   Admin  @relation(fields: [ajouteParAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // NB : Postgres traite NULL comme distinct dans une contrainte unique — plusieurs lignes
+  // (matiereId, classe, filiere=NULL) resteraient possibles ; à surveiller en seed (§4.7).
+  @@unique([matiereId, classe, filiere])
+  @@map("programmes_officiels")
+}
+
+// ============================================================================
+// §4.3 — SUIVI PÉDAGOGIQUE DE L'ÉLÈVE
+// ============================================================================
+
+model TentativeEpreuve {
+  id String @id @default(cuid())
+
+  eleveId   String
+  eleve     Eleve   @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  epreuveId String
+  epreuve   Epreuve @relation(fields: [epreuveId], references: [id])
+
+  numeroTentative Int // seule la tentative n°1 déclenche un appel Sonnet réel (§2.1, §6.4)
+  photoUploadKeys Json // tableau ordonné de clés R2, une par page photographiée (upload multi-pages, v1.10)
+
+  statut StatutTentative @default(EN_ATTENTE)
+
+  dateSoumission DateTime  @default(now())
+  dateTraitement DateTime?
+
+  // NB : pas de champ `note` ici (retiré v1.23) — la note est systématiquement lue
+  // depuis CorrectionDetail via (epreuveId, eleveId), jamais dupliquée ici.
+
+  @@index([eleveId])
+  @@index([statut])
+  @@map("tentatives_epreuve")
+}
+
+// Une seule ligne par couple (élève, épreuve) — la première correction fait foi (§2.1, v1.1)
+model CorrectionDetail {
+  id String @id @default(cuid())
+
+  epreuveId String
+  epreuve   Epreuve @relation(fields: [epreuveId], references: [id])
+  eleveId   String
+  eleve     Eleve   @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  matiereId String
+  matiere   Matiere @relation(fields: [matiereId], references: [id])
+
+  note          Float? // note calculée par l'IA
+  pointsForts   Json // liste libre
+  pointsManques Json // tableau structuré d'objets { notion, detail } — v1.5, taxonomie partagée avec Lacune.notion
+
+  feedbackDetaille String @db.Text
+  modeleIA         String @default("claude-sonnet")
+  tokensInput      Int    @default(0)
+  tokensOutput     Int    @default(0)
+
+  // Signalement (§2.8, v1.2)
+  signalee                  Boolean           @default(false)
+  motifSignalement          MotifSignalement?
+  commentaireEleve          String?           @db.Text
+  noteOverride              Float? // prime sur `note` dès qu'il est renseigné par un admin
+  justificationOverride     String?           @db.Text
+  overrideParAdminId        String?
+  overrideParAdmin          Admin?            @relation(fields: [overrideParAdminId], references: [id])
+  dateSignalement           DateTime?
+  dateTraitementSignalement DateTime?
+
+  createdAt DateTime @default(now())
+
+  lacunesCreees Lacune[]
+
+  @@unique([epreuveId, eleveId])
+  @@index([signalee, dateTraitementSignalement]) // file de revue admin (§2.3, §2.8)
+  @@map("corrections_detail")
+}
+
+// Créée/mise à jour immédiatement à chaque correction, à partir de CorrectionDetail.pointsManques (§2.1, v1.5)
+model Lacune {
+  id String @id @default(cuid())
+
+  eleveId   String
+  eleve     Eleve   @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  matiereId String
+  matiere   Matiere @relation(fields: [matiereId], references: [id])
+
+  notion         String // même taxonomie que CorrectionDetail.pointsManques[].notion et Video.notionAssociee
+  niveauMaitrise Int    @default(0) // 0-100, calcul déterministe (ratio réponses correctes/total), sans appel IA (v1.12)
+
+  sourceTentativeId String? // trace la tentative ayant révélé la lacune (historique, non conditionnant)
+  sourceCorrection  CorrectionDetail? @relation(fields: [sourceTentativeId], references: [id])
+
+  dateDetection DateTime @default(now())
+  dateMiseAJour DateTime @updatedAt
+  resolu        Boolean  @default(false)
+
+  quizCibles    Quiz[]
+  quizQuestions QuizQuestion[]
+
+  @@index([eleveId]) // lecture très fréquente (quiz journalier + dashboard parent)
+  @@map("lacunes")
+}
+
+model Quiz {
+  id String @id @default(cuid())
+
+  eleveId   String
+  eleve     Eleve   @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  matiereId String
+  matiere   Matiere @relation(fields: [matiereId], references: [id])
+
+  dateGeneration DateTime @default(now())
+  statut         String   @default("EN_COURS") // valeurs non figées dans le cahier des charges
+  score          Float?
+
+  origine       OrigineQuiz @default(JOURNALIER)
+  lacuneCibleId String?
+  lacuneCible   Lacune?     @relation(fields: [lacuneCibleId], references: [id]) // renseigné uniquement si origine=CIBLE (v1.11)
+
+  questions QuizQuestion[]
+
+  @@map("quiz")
+}
+
+model QuizQuestion {
+  id String @id @default(cuid())
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  lacuneId String?
+  lacune   Lacune? @relation(fields: [lacuneId], references: [id]) // mesure la résolution effective d'une lacune
+
+  enonce       String  @db.Text
+  choixJson    Json
+  bonneReponse String
+  reponseEleve String?
+  correcte     Boolean?
+
+  @@map("quiz_questions")
+}
+
+model SessionActivite {
+  id String @id @default(cuid())
+
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  dateDebut     DateTime
+  dateFin       DateTime?
+  dureeSecondes Int?
+  canal         CanalSessionActivite @default(WEB)
+
+  @@index([eleveId])
+  @@map("sessions_activite")
+}
+
+// ============================================================================
+// §4.4 — CHAT-TUTEUR IA
+// ============================================================================
+
+model ConversationChat {
+  id String @id @default(cuid())
+
+  eleveId   String
+  eleve     Eleve    @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  matiereId String // obligatoire dans les deux modes (v1.4)
+  matiere   Matiere  @relation(fields: [matiereId], references: [id])
+  epreuveId String? // NULL = chat par matière ; renseigné = chat contextualisé à l'épreuve (v1.4)
+  epreuve   Epreuve? @relation(fields: [epreuveId], references: [id])
+
+  titre String?
+
+  createdAt DateTime @default(now())
+
+  messages MessageChat[]
+
+  @@index([eleveId])
+  @@map("conversations_chat")
+}
+
+model MessageChat {
+  id String @id @default(cuid())
+
+  conversationId String
+  conversation   ConversationChat @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role         RoleMessageChat
+  contenu      String          @db.Text // sanitized avant stockage (réf. sécurité §6)
+  modeleIA     String          @default("claude-haiku")
+  tokensInput  Int             @default(0)
+  tokensOutput Int             @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@map("messages_chat")
+}
+
+// ============================================================================
+// §4.5 — ABONNEMENT ET PAIEMENT (CamerPay — Mobile Money uniquement)
+// ============================================================================
+
+model Abonnement {
+  id String @id @default(cuid())
+
+  eleveId String
+  eleve   Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  plan   PlanAbonnement   @default(GRATUIT)
+  statut StatutAbonnement @default(ACTIF)
+
+  dateDebut DateTime  @default(now())
+  dateFin   DateTime?
+
+  prixApplique Decimal? @db.Decimal(10, 2) // figé au moment du paiement, jamais recalculé a posteriori (§2.4.1)
+
+  renouvellementAuto         Boolean   @default(false)
+  dateProchainRenouvellement DateTime?
+  rappelEnvoye               Boolean   @default(false) // remis à false à chaque nouveau cycle de facturation
+
+  paiements Paiement[]
+
+  @@index([dateProchainRenouvellement, rappelEnvoye]) // job quotidien de rappel (§5.5)
+  @@map("abonnements")
+}
+
+model Paiement {
+  id String @id @default(cuid())
+
+  abonnementId String
+  abonnement   Abonnement @relation(fields: [abonnementId], references: [id])
+
+  payeurTelephone String
+  payeurRole      PayeurRole // distingue parent/élève, indépendamment du numéro utilisé (v1.1, §2.6)
+
+  montant Decimal @db.Decimal(10, 2)
+  devise  String  @default("XAF")
+
+  methode           MethodePaiement @default(MOBILE_MONEY)
+  statut            StatutPaiement  @default(EN_ATTENTE)
+  referenceCamerPay String
+  idempotencyKey    String          @unique // garantit qu'un même webhook ne peut créditer qu'une seule fois
+
+  datePaiement DateTime @default(now())
+
+  @@index([statut])
+  @@map("paiements")
+}
+
+// Journal immuable (append-only) — inclut les webhooks rejetés pour signature invalide
+model WebhookLog {
+  id String @id @default(cuid())
+
+  provider         String  @default("CAMERPAY")
+  payloadBrut      Json
+  signatureValide  Boolean
+  traitementStatut String
+
+  createdAt DateTime @default(now())
+
+  @@map("webhook_logs")
+}
+
+// ============================================================================
+// §4.6 — MONITORING, COÛTS IA ET SÉCURITÉ
+// ============================================================================
+
+model UsageIA {
+  id String @id @default(cuid())
+
+  eleveId   String? // nullable pour VIDEO_FILTRAGE (mutualisable par notion via le cache, v1.23)
+  eleve     Eleve?   @relation(fields: [eleveId], references: [id])
+  matiereId String?
+  matiere   Matiere? @relation(fields: [matiereId], references: [id])
+
+  typeUsage TypeUsageIA
+  modele    ModeleIA
+
+  tokensInput  Int     @default(0)
+  tokensOutput Int     @default(0)
+  coutEstime   Decimal @db.Decimal(10, 6)
+
+  date DateTime @default(now())
+
+  @@index([eleveId])
+  @@map("usages_ia")
+}
+
+model AuditLogSecurite {
+  id String @id @default(cuid())
+
+  typeEvenement TypeEvenementAudit
+  utilisateurId String? // peut pointer vers un compte déjà anonymisé, sans casser la traçabilité
+  ip            String? // nullable : événements parfois issus d'un job cron
+  details       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([typeEvenement, createdAt])
+  @@map("audit_log_securite")
+}
