@@ -48,6 +48,45 @@ vocabulary. `docs/baremes/*.txt` holds official grading rubrics for French/Philo
 few-shot prompts, which are **not** filière-specific (the methodology barème is the same across series; only the
 exam content varies).
 
+### Tuteur IA (chat) vs. Correction IA (upload pipeline) — three code paths, no implicit bridge between them
+
+These get conflated because both are "the AI talking to a student," but per the cahier des charges (§2.1, §4.4,
+§6.2 — the tie-breaker doc, v1.27) there are **three distinct paths behind two features**, each routed through a
+different `AIProvider` method and a different model. Route by **which method is called and which entry point the
+request came from**, never by inspecting message/image content, and never let one silently fall back into
+another:
+
+| | Chat général (mode 1) | Chat contextualisé (mode 2) | Correction IA |
+|---|---|---|---|
+| `AIProvider` method | `chat(messages, contexteMatiere)` | `chat(messages, contexteMatiere, contexteEpreuve)` | `corrigerCopie(imageKeys, epreuveRef, bareme, exemplesFewShot?)` |
+| Modèle | `ModeleIA.Haiku` | `ModeleIA.Haiku` | `ModeleIA.Sonnet` + vision |
+| Déclencheur | Élève ouvre une conversation par matière, sans épreuve précise | Élève consulte une épreuve ou une correction déjà produite — l'énoncé + le corrigé sont injectés comme `contexteEpreuve` | Upload d'une copie photographiée, uniquement pour `numeroTentative == 1` |
+| Matières | Tout le programme de la classe/filière, y compris hors banque (`banqueDisponible = false`) — c'est la *seule* surface pour Anglais/Histoire-Géo | Uniquement les matières avec `banqueDisponible = true` | Uniquement les matières avec `banqueDisponible = true` |
+| `ConversationChat` shape | `epreuveId = NULL`, `matiereId` obligatoire | `epreuveId` renseigné, `matiereId` obligatoire | n/a — pas un `ConversationChat` |
+| Sortie | Texte conversationnel libre + vidéo(s) recommandée(s) par notion | Texte conversationnel libre (peut référencer le corrigé) + vidéo(s) recommandée(s) — **ne produit jamais de note** | `note` chiffrée + `CorrectionDetail` structuré, RAG-grounded contre `docs/baremes/*.txt` / `ExempleCorrection` |
+| Writes to data model | Rien dans `TentativeEpreuve` / `CorrectionDetail` / `Lacune` | Rien dans `TentativeEpreuve` / `CorrectionDetail` / `Lacune` — even though it may read/discuss an existing correction | `TentativeEpreuve`, `CorrectionDetail`, and (via the daily quiz) `Lacune` |
+
+`epreuveId` on `ConversationChat` is the *only* field distinguishing chat mode 1 from mode 2 — `matiereId` is
+required in both. Mode 2 being available on a correction screen does **not** mean chat can trigger or redo a
+correction; it only means an already-produced `CorrectionDetail` can be handed to `chat()` as read-only context.
+
+Non-negotiables when implementing any of the three:
+- The chat endpoint (`chat()`, either mode) must never accept an image upload and forward it into
+  `corrigerCopie()`, and must never itself produce a `note` or write a `CorrectionDetail` row.
+- `corrigerCopie()` must never fall back to a conversational chat reply if vision extraction fails or is
+  ambiguous — surface an explicit error/retry state instead of improvising an answer.
+- The three must not share a request handler, a queue, or a system prompt. Route by which endpoint/UI surface
+  the request came in on (and, for chat, whether `contexteEpreuve` was supplied), not by classifying the payload.
+- In the UI, the affordance that starts a correction (upload button / "Envoie ta copie") must be visually and
+  structurally distinct from either chat mode's entry point — not nested inside the same widget or reachable as
+  a chat action ("send me a photo and I'll grade it" is exactly the kind of implicit bridge this rules out).
+- **Known gap as of the current maquettes** (`docs/maquettes/screenshots/`): mode 2 (chat contextualisé à une
+  épreuve) has no visual entry point anywhere in the mockup set — the correction-result screen
+  (`08_resultat_correction_detaillee.png`) only exposes "Recommencer l'épreuve" and "Signaler cette correction,"
+  and the standalone Tuteur IA screen (`05_chat_tuteur_ia.png`) only shows mode 1. Don't assume mode 2 is
+  unreachable in the UI just because no current maquette shows it — it's a spec requirement (§2.1) that the
+  mockups haven't caught up to yet; check with the user/design before deciding how it surfaces.
+
 ### Auth model — deliberately two-tier, low-entropy-first-factor
 
 - Student signs up with name + classe + filière only, receives a crypto-random `ELE-XXX-XXX` code (never
