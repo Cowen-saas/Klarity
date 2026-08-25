@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 20 août 2026_
+_Dernière mise à jour : 25 août 2026_
 
 ## 1. Où en est le projet, dans l'ensemble
 
@@ -43,8 +43,9 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
     établit le `ParentEleveLink` a posteriori dès la première vérification réussie.
   - Provider `admin` — email + mot de passe + TOTP obligatoire (2FA).
   - `src/middleware.ts` applique le cloisonnement de rôle par préfixe de route
-    (`/admin`, `/parent`, `/eleve`) côté serveur — la vérification d'appartenance à la
-    ressource précise (IDOR) reste à faire par route en Phase 1+.
+    (`/admin`, `/parent`, `/eleve`) côté serveur, via `src/lib/auth/session.ts` — la
+    vérification d'appartenance à la ressource précise (IDOR) reste à faire par route en
+    Phase 1+ (voir §5, item ouvert).
 
 ### Anticipation Phase 1 (déjà en avance sur la roadmap)
 Le CDC recommande explicitement de respecter les interfaces `AIProvider` et `PaymentProvider`
@@ -80,7 +81,77 @@ chaque changement de fond — dernière mise à jour après la clarification Tut
 ci-dessus. Sert de garde-fou pour repérer les incohérences entre maquettes, CDC et code au fil
 du développement.
 
-## 4. Prochaine étape concrète
+## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
+
+Avant de passer en Phase 1, audit point par point de la checklist §10 du CDC — pas une relecture
+de code, mais des tests réels : stack Docker démarrée, comptes de test seedés en base avec les
+vraies fonctions de hash du code (`bcryptjs`, `otplib`), endpoints tapés en HTTP (`curl`),
+résultats vérifiés en base après coup.
+
+| Item checklist §10 | Statut | Preuve |
+|---|---|---|
+| Docker Compose (app, worker, postgres, redis) | ✅ | 5 conteneurs up ; bug de build trouvé et corrigé (voir ci-dessous) |
+| `prisma validate` + `prisma migrate dev` | ✅ testé | `prisma validate` → schéma valide ; `prisma migrate status` → à jour, 1 migration appliquée, 27 tables réelles vérifiées |
+| Connexion élève (code + PIN) | ✅ testé bout en bout | Bon PIN → session JWT `role: ELEVE` réelle ; mauvais PIN → rejeté, `pinTentativesEchouees` incrémenté en base, `AuditLogSecurite(PIN_FAIL)` créé |
+| Connexion parent (code + téléphone + OTP) | ✅ testé bout en bout | OTP réel généré/loggé, login → session `role: PARENT`, `ParentEleveLink` créé a posteriori en base |
+| Connexion admin (email + mot de passe + TOTP) | ✅ testé bout en bout | Code TOTP réel généré via `otplib`, login → session `role: ADMIN` |
+| Rôles ADMIN/PARENT/ELEVE — cloisonnement middleware | ✅ **corrigé puis testé bout en bout** | Voir ci-dessous — était cassé (500 sur toute route protégée), maintenant vérifié sur les 3 rôles × 3 zones |
+
+### Bug trouvé et corrigé : middleware de cloisonnement de rôle cassé
+
+`src/middleware.ts` tourne en Edge Runtime et importait `auth` depuis `src/auth.ts`, qui embarque
+les 3 providers Credentials — dont `src/lib/auth/otp.ts` (`import { randomInt } from
+"node:crypto"`). L'Edge Runtime ne sait pas bundler les modules Node natifs, donc **le middleware
+ne compilait même pas** (`UnhandledSchemeError: Reading from "node:crypto"`) : toute requête vers
+`/admin`, `/parent` ou `/eleve` renvoyait 500 au lieu du redirect/gate attendu. Le cloisonnement
+de rôle n'avait donc jamais réellement protégé quoi que ce soit, malgré un code source correct.
+
+**Correction appliquée** : extraction d'un helper allégé `src/lib/auth/session.ts` qui décode le
+JWT de session directement via `getToken()` (`next-auth/jwt`, lui-même compatible Edge) au lieu
+d'importer toute la config NextAuth. `middleware.ts` est réécrit en middleware Next.js simple
+(plus de wrapper `auth(...)`) qui appelle `getMiddlewareSession(req)`.
+
+**Retest après correction** — sessions fraîches (élève/parent/admin) contre les 3 zones :
+- Aucune session → `/admin` : **307 → `/connexion`** ✅
+- Session ELEVE → `/admin`, `/parent` (mauvais rôle) : **307 → `/connexion`** ✅
+- Session ELEVE → `/eleve`, session PARENT → `/parent`, session ADMIN → `/admin` (bon rôle) :
+  **laissé passer par le middleware** (pas de redirect) ✅
+- Logs applicatifs confirmés propres après redémarrage du conteneur :
+  `✓ Compiled /middleware in 2.7s (177 modules)` — plus aucune trace de `node:crypto`.
+
+### Nouveau bug trouvé pendant le retest (hors périmètre de cette correction, à tracer)
+
+Une fois le middleware corrigé et le rôle validé, les requêtes "bon rôle → laissé passer"
+tombent quand même en 500 **après** le middleware, au niveau du rendu de page — y compris sur
+`/` (page non protégée). Cause : `Cannot find module '../lightningcss.linux-x64-musl.node'`
+(le binaire natif de `lightningcss`, utilisé par Tailwind v4, n'est pas résolu correctement sur
+l'image `node:22-alpine`/musl). **Aucune page ne peut donc se rendre actuellement dans le
+conteneur Docker**, y compris la page d'accueil `Hello world!`. C'est un problème distinct du
+cloisonnement de rôle (qui, lui, fonctionne — la preuve est le comportement de redirect
+correct/incorrect selon le rôle) mais bloquant pour tout travail UI de Phase 1.
+
+### Rappel : piège du volume anonyme `node_modules`
+
+Trouvé plus tôt dans cet audit (déjà corrigé) : `docker-compose.yml` monte `node_modules` en
+volume anonyme, qui **survit à un `docker compose build`** — un rebuild d'image seul ne suffit
+pas si le volume anonyme existant est réutilisé. Nécessite `docker compose up
+--force-recreate --renew-anon-volumes` pour que de nouvelles dépendances ajoutées à
+`package.json` soient effectivement prises en compte dans le conteneur. À garder en tête pour
+tout futur ajout de dépendance.
+
+## 5. Ouvert / à surveiller (pas oublié, juste pas encore adressé)
+
+1. 🔴 **`lightningcss` / Tailwind v4 cassé sur l'image Docker** (musl) — aucune page ne se rend
+   actuellement. À corriger avant de commencer le travail UI de Phase 1 (inscription élève).
+2. 🟡 **IDOR non implémenté** — explicitement différé par le CDC à la Phase 1+, quand les
+   premières routes API métier (`/api/eleve/[id]`, `/api/lacunes/[id]`, ...) existeront. Rien à
+   tester en Phase 0 (aucune route de ce type n'existe), mais point de vigilance non négociable
+   (réf. sécurité §5) à ne pas oublier à l'écriture de ces routes.
+3. 🟡 **Environnement de dev non surveillé en continu** — le stack Docker avait tourné 31h sans
+   qu'aucun flux ne soit exercé avant cet audit ; rien ne garantit qu'un futur ajout de
+   dépendance ne retombe pas dans le piège du volume anonyme (§4 ci-dessus) si on l'oublie.
+
+## 6. Prochaine étape concrète
 
 **Démarrer la Phase 1 — Cœur pédagogique (mock IA), en commençant par l'inscription élève
 (§2.1).**
@@ -90,6 +161,10 @@ il n'existe encore aucun moyen de *créer* un compte `Eleve` — donc aucun des 
 (banque d'épreuves, upload de copie, chat, quiz, dashboard parent) n'est exerçable de bout en
 bout tant que l'inscription n'existe pas. Concrètement :
 
+0. **Préalable** : corriger le blocage `lightningcss` (§4/§5 ci-dessus) — aucun écran ne peut se
+   rendre dans le conteneur Docker tant que ce n'est pas réglé, ce qui bloque le point 1
+   ci-dessous dès qu'il touche du rendu de page (les routes API pures, elles, ne sont pas
+   affectées).
 1. Écran + route d'inscription élève : nom, classe (3ème/1ère/Terminale), filière (A/C/D/TI,
    uniquement si 1ère/Terminale) → génération d'un code `ELE-XXX-XXX` cryptographiquement
    aléatoire (jamais `Math.random()`) → définition du PIN à 4 chiffres.
