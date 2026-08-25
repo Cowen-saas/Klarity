@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 25 août 2026_
+_Dernière mise à jour : 25 août 2026 (soir)_
 
 ## 1. Où en est le projet, dans l'ensemble
 
@@ -119,16 +119,30 @@ d'importer toute la config NextAuth. `middleware.ts` est réécrit en middleware
 - Logs applicatifs confirmés propres après redémarrage du conteneur :
   `✓ Compiled /middleware in 2.7s (177 modules)` — plus aucune trace de `node:crypto`.
 
-### Nouveau bug trouvé pendant le retest (hors périmètre de cette correction, à tracer)
+### Bug trouvé et corrigé : `lightningcss` / Tailwind v4 cassé sur l'image Docker
 
-Une fois le middleware corrigé et le rôle validé, les requêtes "bon rôle → laissé passer"
-tombent quand même en 500 **après** le middleware, au niveau du rendu de page — y compris sur
-`/` (page non protégée). Cause : `Cannot find module '../lightningcss.linux-x64-musl.node'`
-(le binaire natif de `lightningcss`, utilisé par Tailwind v4, n'est pas résolu correctement sur
-l'image `node:22-alpine`/musl). **Aucune page ne peut donc se rendre actuellement dans le
-conteneur Docker**, y compris la page d'accueil `Hello world!`. C'est un problème distinct du
-cloisonnement de rôle (qui, lui, fonctionne — la preuve est le comportement de redirect
-correct/incorrect selon le rôle) mais bloquant pour tout travail UI de Phase 1.
+Trouvé pendant le retest du middleware ci-dessus : une fois le rôle validé, les requêtes "bon
+rôle → laissé passer" tombaient quand même en 500 **après** le middleware, au niveau du rendu
+de page — y compris sur `/` (page non protégée). Cause : `Cannot find module
+'../lightningcss.linux-x64-musl.node'`.
+
+**Diagnostic** : `package-lock.json` n'a jamais eu la variante musl de `lightningcss` (utilisé
+par Tailwind v4) résolue — seulement `lightningcss-linux-x64-gnu` (glibc), signe que le lockfile
+a été généré sur un hôte glibc. `npm ci` sur l'image `node:22-alpine` (musl) ne peut installer
+que ce que le lockfile a résolu pour la plateforme courante ; comme rien n'y correspond pour
+musl, le binaire natif manquait purement et simplement — aucune page ne pouvait se rendre.
+
+**Correction appliquée** : bascule du `Dockerfile` de `node:22-alpine` vers
+`node:22-bookworm-slim` (Debian, glibc) — fait correspondre l'image à ce que le lockfile a déjà
+résolu, sans toucher au lockfile lui-même. Ajout aussi de `apt-get install openssl` (l'image
+slim ne l'a pas par défaut ; sans lui, Prisma se rabat silencieusement sur une version d'OpenSSL
+devinée au lieu de la détecter réellement — signalé par son propre message d'avertissement).
+
+**Retest** : `GET /` → 200, HTML réel avec le CSS Tailwind compilé et lié
+(`/_next/static/css/app/layout.css`, 200, 8782 octets de contenu réel) ; `prisma migrate status`
+tourne sans plus aucun avertissement OpenSSL ; conteneur `worker` toujours sain (connexion Redis
+confirmée en logs) ; redirect du middleware revérifié sans régression après le changement
+d'image de base.
 
 ### Rappel : piège du volume anonyme `node_modules`
 
@@ -141,15 +155,16 @@ tout futur ajout de dépendance.
 
 ## 5. Ouvert / à surveiller (pas oublié, juste pas encore adressé)
 
-1. 🔴 **`lightningcss` / Tailwind v4 cassé sur l'image Docker** (musl) — aucune page ne se rend
-   actuellement. À corriger avant de commencer le travail UI de Phase 1 (inscription élève).
-2. 🟡 **IDOR non implémenté** — explicitement différé par le CDC à la Phase 1+, quand les
+1. 🟡 **IDOR non implémenté** — explicitement différé par le CDC à la Phase 1+, quand les
    premières routes API métier (`/api/eleve/[id]`, `/api/lacunes/[id]`, ...) existeront. Rien à
    tester en Phase 0 (aucune route de ce type n'existe), mais point de vigilance non négociable
    (réf. sécurité §5) à ne pas oublier à l'écriture de ces routes.
-3. 🟡 **Environnement de dev non surveillé en continu** — le stack Docker avait tourné 31h sans
-   qu'aucun flux ne soit exercé avant cet audit ; rien ne garantit qu'un futur ajout de
-   dépendance ne retombe pas dans le piège du volume anonyme (§4 ci-dessus) si on l'oublie.
+2. 🟡 **Environnement de dev non surveillé en continu** — le stack Docker avait tourné 31h sans
+   qu'aucun flux ne soit exercé avant l'audit du 25 août ; rien ne garantit qu'un futur ajout de
+   dépendance ne retombe pas dans le piège du volume anonyme `node_modules` (§4 ci-dessus) si on
+   l'oublie.
+
+_(Le blocage `lightningcss`/Tailwind v4 qui figurait ici a été corrigé le 25 août — voir §4.)_
 
 ## 6. Prochaine étape concrète
 
@@ -159,12 +174,9 @@ tout futur ajout de dépendance.
 C'est le point de blocage naturel : l'authentification (Phase 0) est prête côté connexion, mais
 il n'existe encore aucun moyen de *créer* un compte `Eleve` — donc aucun des flux de Phase 1
 (banque d'épreuves, upload de copie, chat, quiz, dashboard parent) n'est exerçable de bout en
-bout tant que l'inscription n'existe pas. Concrètement :
+bout tant que l'inscription n'existe pas. Le blocage `lightningcss` qui empêchait tout rendu de
+page est maintenant corrigé (§4), donc plus rien ne bloque le travail UI ci-dessous. Concrètement :
 
-0. **Préalable** : corriger le blocage `lightningcss` (§4/§5 ci-dessus) — aucun écran ne peut se
-   rendre dans le conteneur Docker tant que ce n'est pas réglé, ce qui bloque le point 1
-   ci-dessous dès qu'il touche du rendu de page (les routes API pures, elles, ne sont pas
-   affectées).
 1. Écran + route d'inscription élève : nom, classe (3ème/1ère/Terminale), filière (A/C/D/TI,
    uniquement si 1ère/Terminale) → génération d'un code `ELE-XXX-XXX` cryptographiquement
    aléatoire (jamais `Math.random()`) → définition du PIN à 4 chiffres.
