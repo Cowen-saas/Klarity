@@ -2,6 +2,20 @@
 
 _Dernière mise à jour : 27 août 2026_
 
+## 🔴 Bloquant avant mise en production
+
+- **Documents légaux non finalisés** — `docs/legal/Klarity_CGU.docx`,
+  `Klarity_Mentions_Legales.docx` et `Klarity_Politique_Confidentialite.docx` sont en **version
+  1.0**, contiennent des champs non remplis (raison sociale, forme juridique, siège social,
+  RCCM/NIU, représentant légal...) et **n'ont pas été validés par un avocat inscrit au Barreau du
+  Cameroun** — chaque document le stipule lui-même en en-tête ("Document à faire valider... avant
+  publication"). Les Mentions Légales interdisent explicitement toute collecte de données réelles
+  d'Élèves ou ouverture commerciale tant que cette identification n'est pas complète (Article 1).
+  **À compléter et faire valider juridiquement avant tout déploiement public.** Le footer de la
+  landing page (`src/components/landing/LandingFooter.tsx`) renvoie pour l'instant directement vers
+  ces `.docx` tels quels (décision actée avec l'utilisateur le 27 août : lien de téléchargement du
+  document source plutôt qu'une page web reformatant un texte encore provisoire).
+
 ## 1. Où en est le projet, dans l'ensemble
 
 Le cadrage produit et technique est consolidé (cahier des charges v1.28,
