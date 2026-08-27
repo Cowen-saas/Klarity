@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* Design system Klarity (docs/maquettes/screenshots/00_design_system.png) */
+@theme {
+  --color-fond: #eef2f6;
+  --color-surface: #ffffff;
+  --color-texte: #16211f;
+  --color-texte-muted: #5b6b70;
+  --color-border: #dbe3e8;
+
+  --color-primary: #0e6b57;
+  --color-primary-dark: #0a5647;
+  --color-primary-light: #d9efe7;
+
+  --color-accent: #d98c2b;
+  --color-accent-light: #fdecd2;
+
+  --color-success: #2f8f4e;
+  --color-success-light: #dcf3e2;
+
+  --color-danger: #c23b3b;
+  --color-danger-light: #fbe2e2;
+
+  --font-sans: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-plex-serif), ui-serif, Georgia, serif;
+}
+
+body {
+  background-color: var(--color-fond);
+  color: var(--color-texte);
+}
