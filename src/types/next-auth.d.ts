@@ -16,6 +16,7 @@ declare module "@auth/core/types" {
     id: string;
     role: ActeurRole;
     adminRole?: AdminSubRole;
+    nom?: string;
     codeEleve?: string;
     classe?: string;
     filiere?: string | null;
@@ -36,6 +37,7 @@ declare module "@auth/core/jwt" {
   interface JWT {
     role?: ActeurRole;
     adminRole?: AdminSubRole;
+    nom?: string;
     codeEleve?: string;
     classe?: string;
     filiere?: string | null;

@@ -44,5 +44,10 @@ export async function POST(request: Request) {
   }
   // TODO Phase 2+ : brancher le vrai fournisseur SMS (§3) une fois sélectionné.
 
-  return NextResponse.json({ envoye: true });
+  // Hors production uniquement : évite d'avoir à relayer le code par les logs
+  // Docker pendant les tests manuels. Jamais renvoyé en production — le SMS
+  // réel (§3) reste le seul canal une fois le fournisseur branché.
+  const codeDevMock = process.env.NODE_ENV !== "production" ? code : undefined;
+
+  return NextResponse.json({ envoye: true, codeDevMock });
 }

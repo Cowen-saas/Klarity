@@ -98,6 +98,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: eleve.id,
           role: "ELEVE",
+          nom: eleve.nom,
           codeEleve: eleve.codeEleve,
           classe: eleve.classe,
           filiere: eleve.filiere,
@@ -200,6 +201,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = user.role;
         token.adminRole = user.adminRole;
+        token.nom = user.nom;
         token.codeEleve = user.codeEleve;
         token.classe = user.classe;
         token.filiere = user.filiere;
@@ -231,6 +233,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.sub as string;
       session.user.role = token.role as ActeurRole;
       session.user.adminRole = token.adminRole;
+      session.user.nom = token.nom;
       session.user.codeEleve = token.codeEleve;
       session.user.classe = token.classe;
       session.user.filiere = token.filiere;
