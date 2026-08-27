@@ -29,6 +29,8 @@ import {
   CalendarCheck,
   CalendarBlank,
   Warning,
+  Camera,
+  Robot,
 } from "@phosphor-icons/react";
 
 /**
@@ -65,3 +67,10 @@ export const IconWhatsapp = WhatsappLogo;
 export const IconCalendarCheck = CalendarCheck;
 export const IconCalendarBlank = CalendarBlank;
 export const IconWarning = Warning;
+export const IconCamera = Camera;
+/**
+ * Réservée exclusivement à la Correction IA (étape "Corrigé généré par l'IA") --
+ * cf. CDC §2.1.1 : ne jamais réutiliser ce glyphe sur une surface de chat/Tuteur IA,
+ * pour ne pas laisser croire que le Tuteur IA produit lui-même une correction chiffrée.
+ */
+export const IconRobot = Robot;
