@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 27 août 2026_
+_Dernière mise à jour : 28 août 2026_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -402,7 +402,66 @@ et `/connexion` en 200 avec le nouveau panneau sombre (`#0e1512`) et les textes 
 dans le HTML rendu. Rendu visuel réel (clic dans Chrome) toujours pas vérifié faute d'outils
 navigateur (§5).
 
-## 12. Prochaine étape concrète
+## 13. Landing page (`/`), skill `run-klarity`, et stabilisation Docker (27–28 août 2026)
+
+### Landing page livrée et vérifiée
+Fidèle à `docs/maquettes/screenshots/01_landing_page.png` : hero, widget de démo Tuteur IA
+(pastille étoile verte identique à la nav/au chat — jamais l'icône robot), section "Comment ça
+marche" en 4 étapes (icône robot réservée exclusivement à l'étape 2 "Corrigé généré par l'IA").
+Cette distinction résout l'ambiguïté `[AMBIGUOUS]` que le graphe Graphify avait déjà repérée de
+lui-même entre ces deux nœuds, et matérialise l'exigence CDC §2.1.1 (§3 ci-dessus).
+
+- Nouveaux fichiers : `src/app/page.tsx` (réécrit), `src/components/landing/{LandingHeader,Hero,
+  TuteurDemoWidget,HowItWorks,LandingFooter}.tsx`, `src/components/icons.tsx` (ajout
+  `IconCamera`/`IconRobot` — ce dernier documenté comme réservé exclusivement à la Correction IA,
+  jamais une surface de chat).
+- Boutons "Créer un compte"/"Commencer gratuitement" → `/inscription`, "Connexion" → `/connexion`,
+  aucun lien admin.
+- Footer légal : décision actée avec l'utilisateur — lien de téléchargement direct des `.docx`
+  sources plutôt qu'une page web reformatant un contenu encore provisoire (voir le bandeau
+  bloquant en tête de ce document).
+- **Vérifié bout en bout** : 6 routes en 200 (`/`, `/connexion`, `/inscription`, les 3
+  `/legal/*.docx`) via `curl` contre le conteneur Docker `app`. Pas de vérification visuelle pixel
+  réelle — aucun outil navigateur disponible dans cette session (§5).
+
+### Skill `run-klarity` créé puis recadré en solution de secours
+Pendant le développement de la landing page, `npm install`/le serveur de dev cassaient de façon
+répétée et déroutante quand exécutés depuis le chemin UNC `\\wsl.localhost\...` (seul chemin que
+Windows expose vers ce repo) : le postinstall de `@prisma/client` (spawné via `cmd.exe`) refuse un
+cwd UNC, la résolution des loaders internes de Next.js/webpack casse contre une racine UNC, son
+watcher de fichiers (Watchpack) sature les logs d'erreurs `EISDIR`. Contournement trouvé : Node
+natif installé directement dans WSL (`~/.local/node`, sans sudo), piloté depuis Windows via
+`wsl.exe`, capturé comme skill projet (`.claude/skills/run-klarity/`, `SKILL.md` + `smoke.sh`,
+driver vérifié bout en bout : `setup`/`start`/`check`/`stop`).
+
+**Décision actée ensuite avec l'utilisateur : Docker Compose reste la référence pour le
+développement quotidien** — cohérent avec la Phase 0 déjà validée et la cible de déploiement du
+CDC §3/§10 (worker/Postgres/Redis restent de toute façon en Docker). Le skill est donc recadré
+explicitement en solution de secours, à n'utiliser que si Docker lui-même est bloqué sur cette
+session Windows/UNC précise — jamais comme remplacement permanent. Bug trouvé au passage :
+l'extraction du PID via `ps | awk '{print $2}'` se corrompt en traversant la frontière argv de
+`wsl.exe` (imprime la colonne USER au lieu du PID) — corrigé avec `pgrep`, qui n'a pas besoin
+d'extraction de champ.
+
+### Deux causes racines distinctes du blocage Docker, résolues
+En rebasculant sur Docker après les tests natifs WSL, le conteneur `app` (qui tournait sans
+interruption depuis 2 jours) ne répondait plus :
+1. **Résidu de fichiers `.next` appartenant à `root`** — créés par cette instance du conteneur
+   `app` avant que le volume anonyme sur `.next` (piège déjà documenté en §4) soit pleinement
+   effectif pour elle ; sans lien avec les tests natifs WSL de cette session. Nettoyé via un
+   conteneur `alpine` jetable (`docker run --rm -v .:/app -w /app alpine rm -rf .next`) puis
+   `docker compose up --force-recreate --renew-anon-volumes`.
+2. **Image Docker elle-même périmée** — construite avant l'ajout de `@phosphor-icons/react` à
+   `package.json` (utilisé par la nouvelle landing page), donc le volume `node_modules`
+   fraîchement recréé se réamorçait depuis une image obsolète (`Module not found: Can't resolve
+   '@phosphor-icons/react'`). `--force-recreate --renew-anon-volumes` seul ne suffit pas dans ce
+   cas — nécessite un vrai `docker compose build` avant.
+
+Retesté après coup : conteneur `app` sain, 6 routes en 200 sur `http://localhost:3000`, aucun
+fichier résiduel appartenant à `root` sous le répertoire du projet (hors le point de montage
+`.next` lui-même, normal et sans impact).
+
+## 14. Prochaine étape concrète
 
 1. Rendu visuel réel (comparaison pixel avec les maquettes) dans Chrome dès que les outils
    navigateur sont disponibles dans une session — toujours pas le cas jusqu'ici (§5).
@@ -410,5 +469,7 @@ navigateur (§5).
    (`session.user.email = token.email` — `token.email` est `string | undefined`, le type de
    session l'attend `string`) ; sans impact fonctionnel observé jusqu'ici mais à nettoyer avant
    d'ajouter d'autres champs de session.
-3. Quand la banque d'épreuves (source Supabase tierce) devient accessible : upload/correction,
+3. Compléter et faire valider juridiquement les 3 documents légaux avant tout déploiement public
+   (voir le bandeau bloquant en tête de ce document).
+4. Quand la banque d'épreuves (source Supabase tierce) devient accessible : upload/correction,
    chat mode 2, lacunes réelles, quiz — tout ce qui était explicitement hors scope de §8.
