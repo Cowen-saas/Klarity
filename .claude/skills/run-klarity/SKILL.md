@@ -1,14 +1,26 @@
 ---
 name: run-klarity
-description: Build, run, and drive Klarity (the Next.js app). Use when asked to start Klarity, run its dev server, install/build it, or check that a route/page works. Also load this before troubleshooting any npm/node/git command that hangs or errors mysteriously on this repo.
+description: FALLBACK ONLY for when Docker Compose is blocked on this Windows/UNC session — Docker Compose (`docker compose up`) remains Klarity's primary day-to-day dev workflow. Use this skill's native-WSL-Node driver to start/build/check the Next.js app only if `docker compose up` itself fails to launch or fails to serve on this specific machine.
 ---
+
+**Docker Compose is the project's primary way to run Klarity day-to-day** —
+`docker compose up -d` (app + worker + postgres + redis), matching Phase 0 and
+the CDC's deployment target (§3, §10). The worker/postgres/redis are Docker
+regardless, so partially running just `app` natively defeats the point and
+reintroduces the exact file-ownership conflicts this skill exists to avoid
+(see Gotchas). **Reach for this skill only when Docker itself is blocked** on
+this specific Windows/UNC session — e.g. the daemon won't respond, or a build
+fails for reasons unrelated to app code — as a documented, already-debugged
+fallback rather than rediscovering the fix from scratch.
 
 Klarity is a Next.js 15 web app. This repo's working tree lives on a path Windows
 only reaches through the `\\wsl.localhost\Ubuntu\...` UNC mount — but Node, npm,
-and git are all fundamentally broken against that UNC path (see Gotchas). Every
-command in this skill instead runs **natively inside WSL**, dispatched via
+and git are all fundamentally broken against that UNC path (see Gotchas). This
+fallback driver runs **natively inside WSL** instead, dispatched via
 `wsl.exe -d Ubuntu -- bash -c '...'`, against the real filesystem path
-`/home/cowen/projects/klarity`.
+`/home/cowen/projects/klarity` — bypassing Docker (and its `app` container)
+entirely, which is exactly why it must not be left running alongside Docker
+(same port, same `.next`/`node_modules` paths on the host — see Gotchas).
 
 The driver is `.claude/skills/run-klarity/smoke.sh` — a curl-based smoke script.
 There is no `chromium-cli` (or any headless browser) installed in this
@@ -82,6 +94,16 @@ apply since the server runs detached; use `smoke.sh stop` instead.
 
 ## Gotchas
 
+- **Don't run this alongside `docker compose up`.** Both want port 3000 (this
+  driver falls back to 3001 when 3000 is taken, which is usually *because*
+  Docker's `app` container already holds it), and both write into
+  `.next`/`node_modules` on the same host path — Docker's are anonymous
+  volumes so they don't collide with a native run's files directly, but
+  running native Node against the same bind-mounted directory Docker also
+  writes to is exactly the kind of split-brain state that produces
+  root-owned-file conflicts (see below). `smoke.sh stop` before switching
+  back to `docker compose up`.
+
 - **npm's `cmd.exe`-spawned lifecycle scripts reject a UNC cwd.** Any
   `postinstall`/`preinstall` script (Prisma's included) fails with `UNC paths
   are not supported. Defaulting to Windows directory.` if npm runs against
@@ -103,9 +125,21 @@ apply since the server runs detached; use `smoke.sh stop` instead.
 - **`pkill -f ...` through `wsl.exe -d Ubuntu -- bash -c` is flaky** —
   observed to intermittently return odd exit codes (seen: `15`) even when
   guarded by `|| true`, sometimes on the very same command that returned `1`
-  (the normal "no match") a moment earlier. `smoke.sh stop` avoids `pkill`
-  entirely and uses `ps aux | grep ... | awk '{print $2}' | xargs -r kill`
-  instead, which was reliable in testing.
+  (the normal "no match") a moment earlier.
+- **`ps aux | awk '{print $2}'` to extract a PID gets mangled** crossing the
+  wsl.exe Windows-argv boundary — confirmed empirically: it printed the
+  `USER` column (`cowen`) instead of the PID column, causing `kill` to fail
+  with `kill: failed to parse argument: 'cowen'`. Exact quoting root cause
+  wasn't fully pinned down (single-quoting the awk program should in theory
+  survive intact through nested `bash -c` calls, but doesn't in practice
+  here). `smoke.sh stop` avoids both `pkill` and `ps|awk` and uses
+  `kill $(pgrep -f 'next-server')` instead — `pgrep` needs no field
+  extraction at all, sidestepping the bug class, and was reliable in
+  repeated testing.
+- **wsl.exe itself has occasional real connectivity hiccups** beyond the
+  quoting issues above — trivial commands (`ps`, `pgrep`) sometimes just
+  hang for the full timeout, or a `Wsl/Service/0x8007274c` connection error
+  appears. Unrelated to this project; retry the command.
 - **A backgrounded+disowned process can die silently right after launch.**
   `setsid nohup node ... & disown -a` alone isn't enough — if the
   `wsl.exe -- bash -c '...'` script ends immediately after, the session can

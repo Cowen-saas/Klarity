@@ -85,9 +85,12 @@ case "$cmd" in
     ;;
 
   stop)
-    # Avoid pkill here -- observed to intermittently return odd exit codes
-    # through wsl.exe even with `|| true`. Plain ps + awk + kill is reliable.
-    wrun "ps aux | grep 'next-server\\|node node_modules/next/dist/bin/next' | grep -v grep | awk '{print \$2}' | xargs -r kill" || true
+    # Avoid pkill (intermittently returns odd exit codes through wsl.exe even
+    # with `|| true`) and avoid ps+awk+xargs (the awk '{print $2}' field
+    # extraction gets mangled crossing the wsl.exe Windows-argv boundary --
+    # confirmed empirically: it printed the USER column instead of the PID).
+    # pgrep needs no field extraction, sidestepping the whole bug class.
+    wrun "kill \$(pgrep -f 'next-server') 2>/dev/null || true"
     echo "Stopped."
     ;;
 
