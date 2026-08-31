@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 28 août 2026_
+_Dernière mise à jour : 31 août 2026_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -461,7 +461,43 @@ Retesté après coup : conteneur `app` sain, 6 routes en 200 sur `http://localho
 fichier résiduel appartenant à `root` sous le répertoire du projet (hors le point de montage
 `.next` lui-même, normal et sans impact).
 
-## 14. Prochaine étape concrète
+## 14. Vérification post-incident Docker/Prisma et clarification port 3000 vs 3001 (29–31 août 2026)
+
+### Moteur Docker Desktop devenu injoignable, redémarré
+Audit demandé par l'utilisateur (conteneurs + images) : `docker compose ps`, `docker images` et même
+`docker version` renvoyaient tous une 500 (`request returned 500 Internal Server Error ... check if
+the server supports the requested API version`), alors que les process Docker Desktop
+(`Docker Desktop.exe`, `com.docker.backend.exe`, `docker-agent.exe`) tournaient toujours d'après
+`tasklist`. Le moteur backend était planté silencieusement, pas juste lent. **Correction appliquée**
+(confirmée avec l'utilisateur avant d'agir, action jugée disruptive) : arrêt forcé de tout l'arbre de
+processus Docker Desktop (`taskkill /F /T`) puis relance de l'exécutable ; le moteur a répondu à
+nouveau après ~30s. Les 5 conteneurs étaient tous passés `Exited (255)` pendant la coupure (attendu),
+remontés sains via `docker compose up -d` — `app` `Ready in 4.9s`, `worker` reconnecté à Redis,
+`postgres`/`redis` healthy, `/`, `/connexion`, `/inscription` revérifiés en 200. Images (`klarity-dev-
+app`, `klarity-dev-worker`, `postgres:16-alpine`, `redis:7-alpine`, `adminer`, `alpine`) toutes
+intactes, aucune reconstruction nécessaire — l'incident était uniquement l'engine, pas les images/
+volumes. Pas de cause racine identifiée côté Klarity (comportement Docker Desktop lui-même) ; à
+garder en tête comme mode de panne possible si `docker compose` recommence à échouer bizarrement.
+
+### `prisma migrate status` re-vérifié
+`prisma migrate status` (1 migration, `20260819070754_init`) → **à jour**, aucun drift ; `prisma
+validate` → schéma valide. Rien à corriger. Deux avertissements non-bloquants relevés au passage :
+`package.json#prisma` (config du seed) est déprécié en faveur d'un futur `prisma.config.ts`, et une
+mise à jour majeure Prisma existe (6.19.3 → 8.0.0-rc.12, release candidate — pas de bascule prévue
+sans plan de migration dédié).
+
+### Clarification port 3000 (Docker) vs 3001 (fallback natif `run-klarity`)
+Signalement utilisateur "l'application ne se lance pas sur le navigateur" en visitant
+`localhost:3001` → connexion refusée. Diagnostic : `docker-compose.yml` ne mappe **que** `3000:3000`
+pour `app` (aucun service Docker n'écoute sur 3001) ; le port 3001 n'existe que dans le skill de
+secours `.claude/skills/run-klarity/` (`SKILL.md`, `smoke.sh`) — c'est le port de repli que Next.js
+choisit tout seul quand son driver natif WSL trouve le 3000 déjà occupé, documenté comme tel dans ce
+skill. Tant que Docker Compose est la référence quotidienne (décision actée en §13), le port à utiliser
+est **`http://localhost:3000`**, jamais 3001 — 3001 ne répond que si le fallback natif a été lancé en
+plus. Pas un bug applicatif ; simple rappel à faire quand ce fallback a été utilisé une fois et que
+le réflexe 3001 reste.
+
+## 15. Prochaine étape concrète
 
 1. Rendu visuel réel (comparaison pixel avec les maquettes) dans Chrome dès que les outils
    navigateur sont disponibles dans une session — toujours pas le cas jusqu'ici (§5).
