@@ -16,9 +16,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Fonctionnalités", href: "/#comment-ca-marche" },
   { label: "Épreuves" },
   { label: "Tarifs", href: "/abonnement" },
-  // ?from=/parent réutilise le mécanisme déjà présent dans ConnexionForm
-  // (roleDepuisFrom) pour ouvrir directement sur l'onglet Parent.
-  { label: "Parents", href: "/connexion?from=/parent" },
+  // role=PARENT ouvre directement sur l'onglet Parent et le verrouille
+  // (l'onglet Élève est grisé, non cliquable) — spécifique à ce point
+  // d'entrée ; from=/parent reste le mécanisme de redirection post-connexion.
+  { label: "Parents", href: "/connexion?from=/parent&role=PARENT" },
 ];
 
 export function LandingHeader() {

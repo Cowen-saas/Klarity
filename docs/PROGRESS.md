@@ -915,3 +915,14 @@ n'affiche plus rien à droite (juste le logo Klarity) ; les liens "Connexion"/"C
 restent affichés pour un visiteur non connecté. Vérifié via `curl` : absent en mode anonyme, absent
 aussi pour une session `?compte=1` réellement authentifiée (en-tête droit vide dans les deux cas
 connectés). Compte de test supprimé après coup.
+
+### Lien "Parents" de la landing — onglet Élève verrouillé (31 août 2026)
+
+Demande de suivi directe : le lien "Parents" doit lui aussi verrouiller l'onglet non choisi sur
+`/connexion`, comme le fait déjà le chooser d'abonnement, mais uniquement pour ce point d'entrée.
+`LandingHeader.tsx` — href passé de `/connexion?from=/parent` à
+`/connexion?from=/parent&role=PARENT` : réutilise tel quel le mécanisme de verrouillage déjà en
+place (§ "Onglet Élève/Parent verrouillé..." plus haut), aucun nouveau code nécessaire. Vérifié :
+tous les autres liens/redirections vers `/connexion` du projet passés en revue (`grep` sur tout
+`src/`) — aucun ne porte de paramètre `role`, donc aucun n'est affecté par ce changement ; `/connexion`
+sans paramètre reste sans verrouillage.
