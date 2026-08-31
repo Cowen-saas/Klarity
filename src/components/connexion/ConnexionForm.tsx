@@ -39,9 +39,8 @@ export function ConnexionForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const roleParam = searchParams.get("role");
-  const [role, setRole] = useState<Role>(
-    roleParam === "PARENT" || roleParam === "ELEVE" ? roleParam : roleDepuisFrom(from)
-  );
+  const roleVerrouille = roleParam === "PARENT" || roleParam === "ELEVE";
+  const [role, setRole] = useState<Role>(roleVerrouille ? roleParam : roleDepuisFrom(from));
   const [parentEtape, setParentEtape] = useState<"demande" | "verification">("demande");
 
   const panneau = role === "ELEVE" ? PANNEAU.ELEVE.default : PANNEAU.PARENT[parentEtape];
@@ -81,6 +80,7 @@ export function ConnexionForm() {
         )}
         <RoleSwitcher
           value={role}
+          locked={roleVerrouille}
           onChange={(next) => {
             setRole(next);
             setParentEtape("demande");

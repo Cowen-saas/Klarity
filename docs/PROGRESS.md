@@ -697,3 +697,52 @@ Comportement final :
   la date formatée et absence du lien de paiement dans le HTML, y compris un accès direct forcé à
   `/abonnement/paiement?eleve=...` (rebond 307 vers `/abonnement`). Comptes de test supprimés après
   coup.
+
+### Faux positif investigué : "le chooser saute directement au paiement" — pas un bug de code, purge complète des données de test (31 août 2026)
+
+Signalement utilisateur en clic réel : depuis `/abonnement`, "Choisir Premium" enchaînait
+directement les étapes de paiement sans jamais montrer le chooser élève/parent ni exiger de
+connexion. Investigation des 3 pistes demandées :
+1. Le lien "Choisir Premium" est un `<Link>` serveur, son `href` est calculé côté serveur à partir
+   de `auth()` — aucune logique client à contourner.
+2. `/abonnement/eleve-ou-parent` s'affiche et fonctionne normalement (re-vérifié) ; `/abonnement`
+   n'est même pas dans le matcher du middleware (`/admin`, `/parent`, `/eleve` uniquement) — aucun
+   raccourci possible à ce niveau.
+3. **Cause réelle trouvée en base** : un élève de test "Aicha MVONDO" (`ELE-8U8-CEG`) avait été créé
+   le matin même à 08:33 et avait déjà payé avec succès (mock) à 09:46 — donc une session NextAuth
+   bien réelle et valide (cookie 30 jours, `REFRESH_TOKEN_TTL_SECONDS`, volontairement long pour ne
+   pas resaisir le PIN à chaque visite, §2.7 CDC) était encore active dans le navigateur utilisé pour
+   le test. Le serveur a donc correctement traité la requête comme authentifiée et sauté le
+   chooser — comportement attendu pour un utilisateur déjà connecté, pas un défaut. Aucun changement
+   de code : re-vérifié avec une requête strictement sans cookie (équivalent serveur d'une navigation
+   privée) → chooser bien retourné, jamais de lien direct vers le paiement.
+- **Purge complète des données de test** demandée par l'utilisateur, effectuée : les 9 `Eleve` et 2
+  `Parent` de test (accumulés sur plusieurs sessions, §7 à §16) supprimés avec tout ce qui en
+  dépendait (`Abonnement`, `Paiement`, `ConversationChat`/`MessageChat`) — confirmé à 0 partout après
+  coup. Les comptes `Admin` (`admin@klarity.com` et `seed@klarity.local`) explicitement épargnés et
+  revérifiés intacts. 2 lignes `UsageIA` orphelines ont vu leur `eleveId` passer à `NULL` (comportement
+  du schéma lui-même, `ON DELETE SET NULL`, pas une trace de test oubliée — cohérent avec l'intention
+  documentée de préserver l'audit de coût même après suppression d'un compte).
+
+### Onglet Élève/Parent verrouillé quand `/connexion` est atteint avec `role` explicite (31 août 2026)
+
+Demande de suivi : sur `/connexion?...&role=PARENT|ELEVE` (depuis le chooser d'abonnement), l'onglet
+non choisi doit être grisé et non cliquable, pas seulement pré-sélectionné — l'utilisateur ne doit
+pas pouvoir changer de rôle depuis un écran déjà contextualisé par un choix fait à l'étape
+précédente. Ne s'applique que si `role` est présent explicitement ; un accès normal à `/connexion`
+(ex. lien "Connexion" de la landing, ou `?from=/parent` seul comme le lien "Parents" du §13) garde
+les deux onglets cliquables, comportement inchangé.
+
+- **`RoleSwitcher.tsx`** — nouvelle prop `locked` : quand vraie, le bouton de l'onglet inactif reçoit
+  `disabled` + `aria-disabled="true"` et perd son `onClick`, distinct visuellement (`cursor-not-allowed`,
+  texte très atténué) du simple survol non actif habituel.
+- **`ConnexionForm.tsx`** — `roleVerrouille = roleParam === "PARENT" || roleParam === "ELEVE"`,
+  passé tel quel à `RoleSwitcher`. Une valeur de `role` invalide ou absente retombe sur l'ancienne
+  heuristique `roleDepuisFrom(from)`, non verrouillée.
+- **Vérifié via inspection du HTML rendu côté serveur** (le composant est un client component rendu
+  dans un `<Suspense>`, donc le premier rendu serveur porte déjà le bon état — pas de flash avant
+  hydratation) : `role=PARENT` → bouton "Élève" avec `disabled=""` présent dans le HTML brut, formulaire
+  Parent actif ; `role=ELEVE` → bouton "Parent" `disabled=""`, formulaire Élève actif ; `from=/parent`
+  seul (sans `role`) → aucun bouton `disabled`, comportement historique intact. Toujours aucun outil
+  de clic navigateur disponible dans cette session (§5/§15 point 1) — vérification par inspection du
+  HTML servi, pas par clic réel, signalé comme tel plutôt que présenté comme testé en navigateur.
