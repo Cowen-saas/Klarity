@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 31 août 2026_
+_Dernière mise à jour : 31 août 2026 (Phase 2 — Paiement, voir §16)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -28,6 +28,11 @@ données, avec une fidélité visuelle pixel aux maquettes desktop (voir §6 à 
 dépend du contenu réel des épreuves (banque d'épreuves — source externe Supabase pas encore
 accessible, upload/correction, chat mode 2, lacunes réelles, quiz) reste hors scope tant que cette
 source de données n'est pas branchée.
+
+Phase 2 (§2.4, §2.6, §5 du CDC — Paiement) est maintenant construite en mode mock (§16) :
+parcours complet Choisir formule → Paiement Mobile Money → Vérification → abonnement Premium
+actif en base, pour un élève payeur solo et pour un parent payeur, avec idempotence webhook
+testée explicitement et IDOR couvert sur toutes les routes par ID.
 
 Le dépôt est maintenant sur GitHub (`git@github.com:Cowen-saas/Klarity.git`, branche `main`),
 avec authentification SSH configurée.
@@ -500,12 +505,109 @@ le réflexe 3001 reste.
 ## 15. Prochaine étape concrète
 
 1. Rendu visuel réel (comparaison pixel avec les maquettes) dans Chrome dès que les outils
-   navigateur sont disponibles dans une session — toujours pas le cas jusqu'ici (§5).
-2. Corriger l'erreur `tsc` résiduelle et préexistante dans `src/auth.ts:241`
-   (`session.user.email = token.email` — `token.email` est `string | undefined`, le type de
-   session l'attend `string`) ; sans impact fonctionnel observé jusqu'ici mais à nettoyer avant
-   d'ajouter d'autres champs de session.
+   navigateur sont disponibles dans une session — toujours pas le cas jusqu'ici (§5), y compris
+   pour les 4 nouveaux écrans de paiement livrés en §16 (vérifiés par `curl`/contenu HTML rendu,
+   jamais cliqués dans un vrai navigateur).
+2. ~~Corriger l'erreur `tsc` résiduelle dans `src/auth.ts:241`~~ — fait en §16 (assignation
+   `session.user.email` rendue conditionnelle) ; `npx tsc --noEmit` dans le conteneur est propre.
 3. Compléter et faire valider juridiquement les 3 documents légaux avant tout déploiement public
    (voir le bandeau bloquant en tête de ce document).
 4. Quand la banque d'épreuves (source Supabase tierce) devient accessible : upload/correction,
    chat mode 2, lacunes réelles, quiz — tout ce qui était explicitement hors scope de §8.
+5. Job BullMQ de rappel de renouvellement (§5.5 du CDC) — cron quotidien J-3 avant
+   `dateProchainRenouvellement`, bascule `ACTIF → EXPIRE` après le délai de grâce — explicitement
+   hors scope de la tâche Phase 2 traitée en §16 (qui couvrait §2.4/§2.6/§5.1-§5.4, pas §5.5) ;
+   à faire quand les canaux SMS/WhatsApp sortants seront branchés.
+6. `CamerPaySandboxProvider`/`CamerPayLiveProvider` (§5.3) dès obtention de l'accès CamerPay —
+   l'endpoint `/api/paiement/webhook` et l'interface `PaymentProvider` sont déjà prêts à les
+   recevoir sans retravail (§16).
+
+## 16. Phase 2 — Paiement Mobile Money en mode mock (31 août 2026)
+
+Construit contre §2.4, §2.6 et §5.1-§5.4 du CDC (§5.5, le job de rappel de renouvellement, est
+explicitement hors scope — voir §15 point 5). CamerPay n'étant pas accessible en live, toute la
+chaîne tourne en `PAYMENT_MODE=mock`, déjà en place depuis la Phase 0 (`src/lib/payment/`,
+inchangé dans son interface `PaymentProvider` à 3 méthodes) — seule la couche applicative
+(routes, file d'attente, écrans) est nouvelle.
+
+- **Modèles `Abonnement`/`Paiement`/`WebhookLog`** (§4.5) — déjà présents dans `schema.prisma`
+  depuis la migration initiale (`20260819070754_init`) ; `prisma migrate status` confirme aucun
+  drift, aucune migration supplémentaire nécessaire.
+- **`src/lib/payment/tarification.ts`** — `determinerPeriodeTarifaire(date)` (§2.4.1) : NOEL
+  (déc-jan-fév) et PAQUES (avr-mai-juin) à 3000 FCFA, NORMALE à 5000 FCFA, calculée uniquement
+  côté serveur. `obtenirTarifPremium()` l'enveloppe pour l'affichage (prix + réduction).
+- **Simulation du délai Mobile Money** (§5.2 : "simule REUSSI/ECHEC après un court délai") —
+  décision d'architecture : plutôt que d'ajouter une méthode hors-interface à
+  `MockPaymentProvider` (ce qui aurait fait fuiter un concept mock-only dans l'interface
+  `PaymentProvider` fixée par le CDC à 3 méthodes), le délai est simulé côté application via une
+  nouvelle file BullMQ (`src/lib/queue/paiement.ts`, `paiement-mock-webhook`, délai fixe 3s pour
+  des tests manuels reproductibles) consommée par un nouveau processor dans
+  `src/worker/index.ts` — premier vrai processor BullMQ du projet (jusqu'ici le worker ne faisait
+  que maintenir la connexion Redis). Le processor rejoue exactement le même chemin qu'un vrai
+  webhook CamerPay (`src/lib/payment/webhook-handler.ts::traiterWebhookPaiement`), donc aucun
+  retravail ne sera nécessaire au passage sandbox/live (§5.3) — seul `PaymentProvider` change.
+- **Convention de test REUSSI/ECHEC** — un numéro Mobile Money se terminant par `0` simule un
+  échec, tout autre numéro réussit (choix arbitraire documenté dans le code et affiché à l'écran
+  en dev uniquement via `NODE_ENV !== "production"`, même gating que l'indice OTP mock du §7).
+- **Routes API** :
+  - `POST /api/paiement/initier` — résout `eleveId`/`payeurRole` selon le rôle appelant (§2.6 :
+    élève payeur solo, ou parent payeur pour un enfant lié — IDOR vérifié via
+    `ParentEleveLink`), calcule le tarif serveur, crée l'`Abonnement` s'il n'existe pas encore,
+    appelle `PaymentProvider.initierPaiement()`, crée le `Paiement` (`idempotencyKey` = sessionId
+    du provider, connu dès l'initiation), planifie le webhook mock. Rate-limité par IP et par
+    élève (même utilitaire `checkRateLimit` que l'inscription/OTP). Refuse (409) si l'élève a
+    déjà un abonnement Premium actif.
+  - `GET /api/paiement/[id]` — statut pour le polling de l'écran de vérification.
+  - `POST /api/paiement/webhook` — endpoint réel que CamerPay appellera en sandbox/live (§5.3),
+    déjà fonctionnel et testé (signature invalide → 401 + `AuditLogSecurite(WEBHOOK_INVALID)`),
+    simplement pas encore exercé en pratique tant que CamerPay n'existe qu'en mode mock.
+  - **IDOR** (`src/lib/payment/idor.ts`, `chargerPaiementAutorise`) — un `Paiement` n'a pas de
+    propriétaire direct ; remonte jusqu'à `Abonnement.eleve` et vérifie l'appartenance (élève
+    lui-même, ou parent avec `ParentEleveLink` vérifié), factorisé entre la route de statut et la
+    page serveur de vérification pour éviter un flash de chargement.
+- **Idempotence** (`src/lib/payment/webhook-handler.ts::traiterWebhookPaiement`) — un
+  `Paiement` qui a déjà quitté `EN_ATTENTE` ne déclenche plus jamais d'écriture sur `Abonnement`
+  à un replay ; seul un `WebhookLog(traitementStatut: "DEJA_TRAITE")` est ajouté. **Testé
+  explicitement** : webhook mock signé rejoué deux fois d'affilée sur le même paiement déjà
+  crédité → `DEJA_TRAITE` les deux fois, un seul `WebhookLog(CREDITE)` en base, `Abonnement`
+  toujours à `prixApplique = 5000`, jamais recrédité.
+- **Écrans** (`src/app/abonnement/`, `src/components/abonnement/`), skill `ui-ux-pro-max`,
+  fidèles à `14_choisissez_votre_formule.png` à `17_verification_paiement.png` :
+  - `/abonnement` — cartes Gratuit/Premium (prix et badge -X% dynamiques selon la période
+    tarifaire), tableau comparatif, sélecteur d'enfant si le parent a plusieurs liens (fallback
+    sur `dernierEleveConsulteId`, même convention que le dashboard parent). Hors shell
+    élève/parent (comme `/inscription`/`/connexion`) puisqu'accessible depuis les deux espaces
+    (§2.6) ; lien "Abonnement" ajouté aux deux sidebars (`EleveShell`/`ParentShell`, icône déjà
+    disponible `IconCreditCard`, pas besoin de badge "Bientôt" puisque réel dès maintenant).
+  - `/abonnement/paiement` — écrans 15+16 fusionnés en un seul wizard client (choix du moyen,
+    unique de toute façon, puis formulaire Mobile Money) plutôt que deux pages séparées, pour
+    éviter un clic sans alternative réelle — déviation mineure documentée ici, pas dans le code.
+  - `/abonnement/verification/[id]` — polling toutes les 1,5s, les 3 états de l'écran 17
+    (vérification/confirmé/échoué), "Réessayer"/"Utiliser un autre numéro" renvoient tous deux
+    vers un nouveau essai de paiement plutôt que de tenter de rouvrir le `Paiement` déjà clos par
+    l'idempotence (cohérent avec le comportement réel Mobile Money : un échec est une nouvelle
+    tentative, pas une réouverture).
+  - `PaiementStepper` — nouveau composant (numérotation 1-4 Formule/Paiement/Vérification/
+    Confirmation), distinct de `StepProgress` (barre à segments de l'inscription) car la maquette
+    de paiement utilise un patron visuel différent.
+- **Bug préexistant corrigé au passage** : `src/auth.ts:241` (`session.user.email = token.email`,
+  `tsc` en échec depuis §14) — assignation rendue conditionnelle (`if (token.email) ...`), même
+  patron que la ligne `token.error` juste en dessous. `npx tsc --noEmit` dans le conteneur est
+  maintenant propre sur tout le projet.
+- **Vérifié end-to-end via `curl`** contre `klarity-dev-app-1`/`klarity-dev-worker-1` (pas de
+  rendu Chrome réel, voir §5/§15 point 1) : 4 élèves de test + 1 parent de test, tous supprimés
+  après coup.
+  - Élève payeur solo, numéro se terminant par un chiffre ≠ 0 → `EN_ATTENTE` puis (après le délai
+    de 3s) `REUSSI`, `Abonnement` passé `PREMIUM`/`ACTIF`/`prixApplique = 5000`.
+  - Élève payeur solo, numéro terminant par `0` → `ECHEC`, `Abonnement` resté `GRATUIT`.
+  - Parent payeur pour un enfant lié → `Paiement.payeurRole = PARENT`, succès identique ;
+    initiation refusée (400) sans `eleveId`, refusée (403 + `AuditLogSecurite(IDOR_BLOCKED)`)
+    pour un `eleveId` non lié.
+  - Élève tentant de lire le statut du paiement d'un autre élève → 404 générique +
+    `AuditLogSecurite(IDOR_BLOCKED)` (jamais un 403 qui confirmerait l'existence de la ressource,
+    même patron que le chat §8).
+  - Webhook signé avec une signature invalide → 401 + `AuditLogSecurite(WEBHOOK_INVALID)`, aucune
+    écriture sur `Paiement`/`Abonnement`.
+  - Idempotence (ci-dessus) — un seul crédit malgré 2 replays du même webhook signé.
+  - Logs des deux conteneurs (`app`, `worker`) propres sur toute la session de test — 4 jobs
+    mock traités (`2× CREDITE`, `1× ECHEC_PAIEMENT`, `1× CREDITE` pour le parcours parent).

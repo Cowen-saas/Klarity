@@ -238,7 +238,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.classe = token.classe;
       session.user.filiere = token.filiere;
       session.user.telephone = token.telephone;
-      session.user.email = token.email;
+      if (token.email) session.user.email = token.email;
       session.accessTokenExpires = token.accessTokenExpires;
       if (token.error) session.error = token.error;
       return session;

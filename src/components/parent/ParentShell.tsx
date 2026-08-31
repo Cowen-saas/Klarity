@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
-import { IconChart, IconPencil, IconBulb, IconClock, IconBell, IconSettings } from "@/components/icons";
+import { IconChart, IconPencil, IconBulb, IconClock, IconBell, IconSettings, IconCreditCard } from "@/components/icons";
 import { KlarityLogo } from "@/components/ui/KlarityLogo";
 
 interface NavItem {
@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/parent/lacunes", label: "Lacunes", icon: IconBulb, disabled: true },
   { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock, disabled: true },
   { href: "/parent/notifications", label: "Notifications", icon: IconBell },
+  { href: "/abonnement", label: "Abonnement", icon: IconCreditCard },
   { href: "/parent/parametres", label: "Paramètres", icon: IconSettings, disabled: true },
 ];
 
