@@ -865,3 +865,45 @@ régression.
     seul ; toujours aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1).
   - Comptes de test supprimés après coup (sauf le compte "Aicha MVONDO" déjà signalé au tour
     précédent, laissé intact).
+
+### `/abonnement` — la landing publique ne doit plus jamais refléter une session existante (31 août 2026)
+
+Suivi utilisateur après test réel : depuis la landing, "Tarifs" → "Choisir Premium" renvoyait
+toujours directement vers la suite du paiement, et "Gratuit" s'affichait comme "Formule actuelle"
+— parce que le navigateur avait une session active (compte "NOUMBOU Cowen", créé lors d'un test
+précédent) que la page utilisait silencieusement. Décision actée avec l'utilisateur, plus stricte
+que le tour précédent (où garder ce comportement avait été confirmé) : **`/abonnement` atteint
+depuis la landing ne doit plus jamais tenir compte d'une session existante, quelle qu'elle soit** —
+revenir sur la page d'accueil doit remettre à zéro l'expérience, comme un tout nouveau visiteur,
+même si le navigateur reste techniquement connecté. Les deux boutons (Gratuit et Premium) doivent
+alors renvoyer vers l'écran de choix élève/parent (`/abonnement/eleve-ou-parent`), jamais
+directement vers /inscription ou un paiement.
+
+- **Nouveau marqueur explicite `?compte=1`** — seule condition qui active désormais la vue
+  personnalisée (badge "Formule actuelle", bandeau "déjà Premium", lien de paiement direct avec
+  l'`eleveId` de la session). Sans ce marqueur, `session` n'est même plus lue côté serveur
+  (`auth()` n'est appelé que si `compte === "1"`) : impossible d'afficher quoi que ce soit de
+  personnalisé par erreur, la page est structurellement générique par défaut.
+  - Lien "Tarifs" de la landing (`LandingHeader.tsx`) → `/abonnement` **sans** paramètre, inchangé
+    — c'est justement ce chemin qui doit rester générique.
+  - Lien "Abonnement" des sidebars authentifiées (`EleveShell.tsx`, `ParentShell.tsx`) → mis à jour
+    vers `/abonnement?compte=1`, pour préserver l'expérience personnalisée utile depuis le tableau
+    de bord (état réel, paiement direct sans repasser par le chooser) — seul ce point d'entrée
+    interne y a droit désormais.
+  - `isActive()` des deux sidebars ajusté pour comparer le chemin sans la query string (sinon le
+    lien "Abonnement" ne se serait plus jamais marqué actif).
+  - Le sélecteur multi-enfants (parent avec plusieurs liens) propage `compte=1` dans ses propres
+    liens de navigation interne, pour ne pas retomber en mode générique en changeant d'enfant.
+- **`hrefGratuit` en mode générique** change aussi de cible : auparavant `/inscription` direct,
+  maintenant `/abonnement/eleve-ou-parent` comme Premium — un visiteur anonyme choisissant
+  "Gratuit" passe désormais aussi par le choix élève/parent (connexion ou inscription), cohérent
+  avec la demande explicite de l'utilisateur pour les deux boutons.
+- **Vérifié via `curl`** avec un compte de test réellement authentifié (session valide) :
+  `/abonnement` sans `compte=1` → aucune trace de "Formule actuelle", les deux boutons
+  ("Continuer gratuitement" et "Choisir Premium") pointent vers `/abonnement/eleve-ou-parent`,
+  aucun lien de paiement direct dans le HTML — **identique à un visiteur anonyme, malgré la
+  session active** ; `/abonnement?compte=1` avec la même session → personnalisation présente
+  (`Formule actuelle`, lien `/abonnement/paiement?eleve=<id réel>`) ; lien "Tarifs" de la landing
+  confirmé sans paramètre ; lien "Abonnement" des sidebars confirmé avec `?compte=1`. Compte de
+  test supprimé après coup. Toujours aucun outil de clic navigateur disponible dans cette session
+  (§5/§15 point 1).

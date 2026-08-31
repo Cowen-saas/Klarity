@@ -20,7 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/eleve/epreuves", label: "Épreuves", icon: IconDocument, disabled: true },
   { href: "/eleve/lacunes", label: "Mes lacunes", icon: IconBulb, disabled: true },
   { href: "/eleve/quiz", label: "Quiz", icon: IconPencil, disabled: true },
-  { href: "/abonnement", label: "Abonnement", icon: IconCreditCard },
+  { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },
   { href: "/eleve/profil", label: "Profil", icon: IconUser },
 ];
 
@@ -51,7 +51,8 @@ export function EleveShell({ children }: { children: ReactNode }) {
 }
 
 function isActive(pathname: string, href: string): boolean {
-  return href === "/eleve" ? pathname === "/eleve" : pathname.startsWith(href);
+  const base = href.split("?")[0];
+  return base === "/eleve" ? pathname === "/eleve" : pathname.startsWith(base);
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {

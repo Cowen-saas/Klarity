@@ -28,15 +28,26 @@ const LIGNES_COMPARATIF: Array<{ label: string; gratuit: string; premium: string
 ];
 
 /**
- * Grille tarifaire publique (§2.4, §2.6) — accessible sans session (lien
- * "Tarifs" de la landing). Un visiteur non connecté ne voit que la grille :
- * cliquer "Choisir Premium"/"Continuer gratuitement" sans session renvoie
- * vers /connexion (Premium) ou /inscription (Gratuit), jamais directement
- * vers un paiement — /abonnement/paiement exige sa propre session pour éviter
- * qu'un visiteur anonyme déclenche un paiement sans compte identifiable.
+ * Grille tarifaire (§2.4, §2.6). Deux points d'entrée distincts, volontairement
+ * traités différemment :
+ *  - Landing publique ("Tarifs") → `/abonnement` sans paramètre : toujours la
+ *    vue générique, jamais personnalisée par une session existante, même si
+ *    le navigateur a une session active — décision explicite de l'utilisateur
+ *    après avoir constaté qu'un compte de test resté connecté faisait croire
+ *    à une fuite de session ("la plateforme reste bloquée sur tel compte").
+ *    Les deux boutons (Gratuit et Premium) renvoient alors systématiquement
+ *    vers `/abonnement/eleve-ou-parent`, jamais directement vers /inscription
+ *    ou un paiement.
+ *  - Nav interne authentifiée (sidebar `EleveShell`/`ParentShell`) →
+ *    `/abonnement?compte=1` : seul ce marqueur explicite active la vue
+ *    personnalisée (état "déjà Premium", lien de paiement direct) — jamais
+ *    déduit implicitement d'une session qui existerait par ailleurs.
  */
 export default async function AbonnementPage({ searchParams }: PageProps<"/abonnement">) {
-  const session = await auth();
+  const { compte, eleve: eleveParam } = await searchParams;
+  const modeCompte = compte === "1";
+
+  const session = modeCompte ? await auth() : null;
   const authentifie = !!session && !session.error && (session.user.role === "ELEVE" || session.user.role === "PARENT");
 
   let eleveId: string | null = null;
@@ -62,7 +73,6 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
         </div>
       );
     }
-    const { eleve: eleveParam } = await searchParams;
     const idParam = Array.isArray(eleveParam) ? eleveParam[0] : eleveParam;
     const idsLies = new Set(liens.map((l) => l.eleveId));
     eleveId =
@@ -90,7 +100,7 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
   const pourcentageReduction = Math.round((tarif.reduction / tarif.prixNormal) * 100);
 
   const hrefGratuit = !authentifie
-    ? "/inscription"
+    ? "/abonnement/eleve-ou-parent"
     : abonnement && abonnement.plan !== "GRATUIT"
       ? session!.user.role === "PARENT"
         ? `/parent?eleve=${eleveId}`
@@ -106,7 +116,7 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
             {selecteurEnfants.liens.map((enfant) => (
               <Link
                 key={enfant.id}
-                href={`/abonnement?eleve=${enfant.id}`}
+                href={`/abonnement?compte=1&eleve=${enfant.id}`}
                 className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition-colors ${
                   enfant.id === selecteurEnfants!.selectedId
                     ? "border-primary bg-primary-light text-primary"

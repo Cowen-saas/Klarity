@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/parent/lacunes", label: "Lacunes", icon: IconBulb, disabled: true },
   { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock, disabled: true },
   { href: "/parent/notifications", label: "Notifications", icon: IconBell },
-  { href: "/abonnement", label: "Abonnement", icon: IconCreditCard },
+  { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },
   { href: "/parent/parametres", label: "Paramètres", icon: IconSettings, disabled: true },
 ];
 
@@ -46,7 +46,8 @@ export function ParentShell({ children }: { children: ReactNode }) {
 }
 
 function isActive(pathname: string, href: string): boolean {
-  return href === "/parent" ? pathname === "/parent" : pathname.startsWith(href);
+  const base = href.split("?")[0];
+  return base === "/parent" ? pathname === "/parent" : pathname.startsWith(base);
 }
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
