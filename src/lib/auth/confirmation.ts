@@ -1,21 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { verifyPin, PIN_MAX_ATTEMPTS, PIN_LOCKOUT_MINUTES } from "@/lib/auth/pin";
-import { verifyOtp, OTP_MAX_ATTEMPTS } from "@/lib/auth/otp";
 
 /**
  * Re-vérification légère avant validation finale d'un paiement (§2.6, §5.4 —
  * renforcement au-delà du minimum spécifié, demandé explicitement par
  * l'utilisateur : "même principe qu'une banque qui redemande un code avant
- * un virement, même si la session est déjà active"). Confirme uniquement que
- * la personne qui valide est bien celle qui connaît le PIN/OTP du compte —
- * ne crée ni ne modifie aucune session/token NextAuth, et ne partage pas de
- * code avec `src/auth.ts` (le mécanisme reste isolé à l'étape paiement,
- * pour ne jamais risquer une régression sur la connexion elle-même).
+ * un virement, même si la session est déjà active"). **Uniquement pour un
+ * élève payeur** — un parent a déjà franchi une vérification forte à la
+ * connexion (OTP SMS, §2.2) et n'a pas besoin d'en repasser une pour payer.
+ * Confirme uniquement que la personne qui valide est bien celle qui connaît
+ * le PIN du compte — ne crée ni ne modifie aucune session/token NextAuth, et
+ * ne partage pas de code avec `src/auth.ts` (le mécanisme reste isolé à
+ * l'étape paiement, pour ne jamais risquer une régression sur la connexion
+ * elle-même).
  *
  * Réutilise volontairement les mêmes compteurs que la connexion
- * (`Eleve.pinTentativesEchouees`/`pinVerrouilleJusqua`, `OtpVerification.
- * tentatives`) — un blocage ici verrouille aussi la connexion, comportement
- * voulu (§7 : le rate limiting protège le compte, pas une action isolée).
+ * (`Eleve.pinTentativesEchouees`/`pinVerrouilleJusqua`) — un blocage ici
+ * verrouille aussi la connexion, comportement voulu (§7 : le rate limiting
+ * protège le compte, pas une action isolée).
  */
 
 export type ResultatConfirmation = { ok: true } | { ok: false; error: string; status: 401 | 404 | 423 };
@@ -56,34 +58,5 @@ export async function verifierPinConfirmation(eleveId: string, pin: string): Pro
   }
 
   await prisma.eleve.update({ where: { id: eleveId }, data: { pinTentativesEchouees: 0, pinVerrouilleJusqua: null } });
-  return { ok: true };
-}
-
-export async function verifierOtpConfirmation(telephone: string, otp: string): Promise<ResultatConfirmation> {
-  const otpRow = await prisma.otpVerification.findFirst({
-    where: { telephone, utilise: false },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!otpRow || otpRow.expiration < new Date() || otpRow.tentatives >= OTP_MAX_ATTEMPTS) {
-    return { ok: false, error: "Code de vérification incorrect ou expiré.", status: 401 };
-  }
-
-  const valide = await verifyOtp(otp, otpRow.codeOtpHash);
-  if (!valide) {
-    const tentatives = otpRow.tentatives + 1;
-    await prisma.otpVerification.update({ where: { id: otpRow.id }, data: { tentatives } });
-    await prisma.auditLogSecurite.create({ data: { typeEvenement: "OTP_FAIL", details: { telephone } } });
-    const restantes = OTP_MAX_ATTEMPTS - tentatives;
-    return restantes > 0
-      ? {
-          ok: false,
-          error: `Code incorrect (${restantes} tentative${restantes > 1 ? "s" : ""} restante${restantes > 1 ? "s" : ""}).`,
-          status: 401,
-        }
-      : { ok: false, error: "Trop de tentatives incorrectes, demande un nouveau code.", status: 423 };
-  }
-
-  await prisma.otpVerification.update({ where: { id: otpRow.id }, data: { utilise: true } });
   return { ok: true };
 }

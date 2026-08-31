@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getPaymentProvider } from "@/lib/payment";
 import { obtenirTarifPremium, DEVISE_DEFAUT } from "@/lib/payment/tarification";
 import { planifierWebhookMock } from "@/lib/queue/paiement";
-import { verifierPinConfirmation, verifierOtpConfirmation } from "@/lib/auth/confirmation";
+import { verifierPinConfirmation } from "@/lib/auth/confirmation";
 
 /**
  * Initie un paiement Mobile Money pour passer un élève en Premium (§2.4, §2.6).
@@ -14,11 +14,18 @@ import { verifierPinConfirmation, verifierOtpConfirmation } from "@/lib/auth/con
  * (paiement pour un enfant lié) — c'est l'exception explicite du §2.6 à la
  * règle générale du §2.2 excluant toute action de gestion côté parent.
  *
- * Exige en plus une re-vérification légère (§2.6, §5.4 — renforcement
- * demandé au-delà du minimum spécifié) juste avant validation : PIN pour un
- * élève payeur, OTP pour un parent payeur — cf. src/lib/auth/confirmation.ts.
- * Ne crée ni ne modifie aucune session NextAuth, uniquement une confirmation
- * de présence/connaissance des identifiants.
+ * Exige en plus une re-vérification légère du PIN (§2.6, §5.4 — renforcement
+ * demandé au-delà du minimum spécifié) juste avant validation, **mais
+ * uniquement pour un élève payeur** — un parent a déjà franchi une
+ * vérification forte à la connexion (OTP SMS, §2.2), inutile de lui en
+ * redemander une pour payer. Cf. src/lib/auth/confirmation.ts. Ne crée ni ne
+ * modifie aucune session NextAuth, uniquement une confirmation de
+ * présence/connaissance du PIN.
+ *
+ * Verrou anti double paiement croisé (§2.6) : le contrôle "déjà Premium" ci-
+ * dessous est indexé par élève, jamais par payeur — un parent qui a déjà payé
+ * bloque aussi une tentative de paiement par l'élève lui-même, et
+ * inversement.
  */
 
 const bodySchema = z.object({
@@ -30,7 +37,6 @@ const bodySchema = z.object({
     .transform((v) => (v.startsWith("237") ? v.slice(3) : v))
     .refine((v) => /^6\d{8}$/.test(v), "Numéro Mobile Money camerounais invalide (9 chiffres, commence par 6)."),
   pin: z.string().regex(/^\d{4}$/).optional(),
-  otp: z.string().regex(/^\d{6}$/).optional(),
 });
 
 const LIMIT = 10;
@@ -80,6 +86,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Trop de tentatives, réessaie plus tard." }, { status: 429 });
   }
 
+  // Verrou croisé parent/élève (§2.6) — vérifié avant tout, y compris avant de
+  // demander le PIN : inutile de faire ressaisir un code pour une action déjà
+  // refusée quel que soit son résultat.
+  let abonnement = await prisma.abonnement.findFirst({ where: { eleveId }, orderBy: { dateDebut: "desc" } });
+  if (abonnement && abonnement.plan === "PREMIUM" && abonnement.statut === "ACTIF") {
+    return NextResponse.json({ error: "Cet élève a déjà un abonnement Premium actif." }, { status: 409 });
+  }
+
   if (payeurRole === "ELEVE") {
     if (!parsed.data.pin) {
       return NextResponse.json({ error: "Code secret requis pour confirmer le paiement." }, { status: 400 });
@@ -88,20 +102,8 @@ export async function POST(request: Request) {
     if (!confirmation.ok) {
       return NextResponse.json({ error: confirmation.error }, { status: confirmation.status });
     }
-  } else {
-    if (!parsed.data.otp || !session.user.telephone) {
-      return NextResponse.json({ error: "Code de vérification requis pour confirmer le paiement." }, { status: 400 });
-    }
-    const confirmation = await verifierOtpConfirmation(session.user.telephone, parsed.data.otp);
-    if (!confirmation.ok) {
-      return NextResponse.json({ error: confirmation.error }, { status: confirmation.status });
-    }
   }
 
-  let abonnement = await prisma.abonnement.findFirst({ where: { eleveId }, orderBy: { dateDebut: "desc" } });
-  if (abonnement && abonnement.plan === "PREMIUM" && abonnement.statut === "ACTIF") {
-    return NextResponse.json({ error: "Cet élève a déjà un abonnement Premium actif." }, { status: 409 });
-  }
   if (!abonnement) {
     abonnement = await prisma.abonnement.create({ data: { eleveId } });
   }

@@ -21,10 +21,9 @@ export async function verifyOtp(code: string, hash: string): Promise<boolean> {
 
 /**
  * Génère, stocke et "envoie" (log en dev, fournisseur SMS réel à brancher —
- * §3) un OTP pour un numéro donné — mécanisme partagé par la connexion
- * parent (`/api/auth/parent/request-otp`) et la re-vérification légère avant
- * paiement (`/api/paiement/confirmation-otp`, §2.6/§5.4). L'appelant reste
- * responsable de son propre rate limiting, adapté à son contexte.
+ * §3) un OTP pour un numéro donné — utilisé par la connexion parent
+ * (`/api/auth/parent/request-otp`, §2.2). L'appelant reste responsable de son
+ * propre rate limiting, adapté à son contexte.
  */
 export async function envoyerOtp(telephone: string): Promise<{ codeDevMock?: string }> {
   const code = genererCodeOtp();

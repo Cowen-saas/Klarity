@@ -926,3 +926,39 @@ place (§ "Onglet Élève/Parent verrouillé..." plus haut), aucun nouveau code 
 tous les autres liens/redirections vers `/connexion` du projet passés en revue (`grep` sur tout
 `src/`) — aucun ne porte de paramètre `role`, donc aucun n'est affecté par ce changement ; `/connexion`
 sans paramètre reste sans verrouillage.
+
+### Re-vérification paiement : recadrée sur l'élève uniquement + verrou croisé parent/élève (31 août 2026)
+
+Révision de la re-vérification légère ajoutée précédemment (§ "Re-vérification légère avant
+validation finale du paiement" plus haut) : sur demande explicite, l'OTP de re-vérification côté
+parent est **retiré entièrement** — un parent a déjà franchi une vérification forte à la connexion
+(OTP SMS, §2.2), lui en redemander une pour payer était redondant. Seul l'élève repasse par son
+PIN avant validation, comme avant.
+
+- **`src/lib/auth/confirmation.ts`** — `verifierOtpConfirmation` supprimée, ne reste que
+  `verifierPinConfirmation`.
+- **`POST /api/paiement/confirmation-otp`** supprimée (route entière retirée, plus aucun appelant).
+- **`POST /api/paiement/initier`** — le champ `otp` et toute la branche de vérification parent
+  disparaissent du schéma/handler ; seul `payeurRole === "ELEVE"` déclenche encore la vérification
+  PIN. Le contrôle "déjà Premium" (§2.6) est **remonté avant** la vérification PIN — inutile de
+  faire ressaisir un code pour une tentative de toute façon refusée.
+- **`PaiementForm.tsx`** — sous-étape "revalidation" (PIN) conservée uniquement pour
+  `payeurRole === "ELEVE"` ; pour un parent, le bouton "Payer" de l'étape formulaire soumet
+  directement le paiement, sans écran intermédiaire — état/logique OTP (minuteur de renvoi, indice
+  dev, téléphone masqué) entièrement retirés du composant.
+- **Verrou anti double paiement croisé (§2.6, nouveau)** — le contrôle "déjà Premium" était déjà
+  indexé par `eleveId` (jamais par `payeurRole`) donc bloquait déjà structurellement les deux sens ;
+  ce qui manquait était l'affichage. `/abonnement?compte=1` (et donc `/abonnement/paiement`, qui y
+  redirige désormais — bug corrigé au passage : il redirigeait vers `/abonnement` **sans**
+  `compte=1`, retombant silencieusement sur la vue générique qui ne montre jamais cet état) affiche
+  désormais "Payé par un parent."/"Payé par l'élève." en plus de la date d'expiration, déduit du
+  dernier `Paiement.statut = REUSSI` de l'abonnement, quel que soit qui consulte la page.
+- **Vérifié via `curl`**, les 4 scénarios demandés : élève payeur solo — sans PIN → 400, PIN faux →
+  401 avec compteur décroissant, 5 échecs → 423 verrouillé (y compris avec le bon PIN ensuite), PIN
+  correct → paiement `REUSSI` ; parent payeur — paiement direct sans aucun champ de re-vérification,
+  succès immédiat ; parent paie → élève se connecte → `/abonnement?compte=1` affiche "Payé par un
+  parent.", tentative de paiement élève → 409, accès direct à `/abonnement/paiement` → rebond vers
+  `/abonnement?compte=1&eleve=...` ; inverse — élève paie son propre abonnement → parent lié se
+  connecte → voit "Payé par l'élève.", tentative de paiement parent → 409 également. Comptes de
+  test supprimés après coup. Toujours aucun outil de clic navigateur disponible dans cette session
+  (§5/§15 point 1).

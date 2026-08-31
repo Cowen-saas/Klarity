@@ -96,6 +96,17 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
   const dateFinFormatee = abonnement?.dateFin
     ? abonnement.dateFin.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : null;
+  // Verrou croisé parent/élève (§2.6) — le paiement réussi peut avoir été fait
+  // par l'un ou l'autre, indépendamment de qui consulte la page maintenant.
+  const dernierPaiementReussi = dejaPremiumActif
+    ? await prisma.paiement.findFirst({
+        where: { abonnementId: abonnement!.id, statut: "REUSSI" },
+        orderBy: { datePaiement: "desc" },
+        select: { payeurRole: true },
+      })
+    : null;
+  const payeParLabel =
+    dernierPaiementReussi?.payeurRole === "PARENT" ? "un parent" : dernierPaiementReussi?.payeurRole === "ELEVE" ? "l'élève" : null;
   const tarif = obtenirTarifPremium(new Date());
   const pourcentageReduction = Math.round((tarif.reduction / tarif.prixNormal) * 100);
 
@@ -138,6 +149,7 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
             <h1 className="mt-2 text-xl font-bold text-texte sm:text-2xl">Tu es déjà abonné Premium</h1>
             <p className="text-sm text-texte-muted">
               {dateFinFormatee ? `Actif jusqu'au ${dateFinFormatee}.` : "Ton abonnement est actif."}
+              {payeParLabel ? ` Payé par ${payeParLabel}.` : ""}
             </p>
           </div>
         ) : (
