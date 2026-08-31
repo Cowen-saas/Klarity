@@ -907,3 +907,11 @@ directement vers /inscription ou un paiement.
   confirmé sans paramètre ; lien "Abonnement" des sidebars confirmé avec `?compte=1`. Compte de
   test supprimé après coup. Toujours aucun outil de clic navigateur disponible dans cette session
   (§5/§15 point 1).
+
+### Bouton "Retour au tableau de bord" supprimé de l'en-tête `/abonnement` (31 août 2026)
+
+Demande de suivi directe. `src/app/abonnement/layout.tsx` — pour une session connectée, l'en-tête
+n'affiche plus rien à droite (juste le logo Klarity) ; les liens "Connexion"/"Créer un compte"
+restent affichés pour un visiteur non connecté. Vérifié via `curl` : absent en mode anonyme, absent
+aussi pour une session `?compte=1` réellement authentifiée (en-tête droit vide dans les deux cas
+connectés). Compte de test supprimé après coup.

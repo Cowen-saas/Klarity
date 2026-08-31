@@ -16,7 +16,6 @@ import { IconGraduationCap } from "@/components/icons";
 export default async function AbonnementLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   const connecte = !!session && !session.error && (session.user.role === "ELEVE" || session.user.role === "PARENT");
-  const retour = session?.user.role === "PARENT" ? "/parent" : "/eleve";
 
   return (
     <div className="min-h-screen bg-fond">
@@ -27,11 +26,7 @@ export default async function AbonnementLayout({ children }: { children: ReactNo
           </span>
           <span className="text-lg font-bold text-texte">Klarity</span>
         </div>
-        {connecte ? (
-          <Link href={retour} className="text-sm font-medium text-texte-muted hover:text-texte">
-            ← Retour au tableau de bord
-          </Link>
-        ) : (
+        {!connecte && (
           <div className="flex items-center gap-4">
             <Link href="/connexion" className="text-sm font-semibold text-texte">
               Connexion
