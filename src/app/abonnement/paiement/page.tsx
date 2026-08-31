@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenirTarifPremium } from "@/lib/payment/tarification";
+import { masquerTelephone } from "@/lib/format";
 import { PaiementStepper } from "@/components/abonnement/PaiementStepper";
 import { PaiementForm } from "@/components/abonnement/PaiementForm";
 
@@ -33,11 +34,20 @@ export default async function PaiementPage({ searchParams }: PageProps<"/abonnem
   }
 
   const tarif = obtenirTarifPremium(new Date());
+  const telephoneMasque = session.user.role === "PARENT" && session.user.telephone ? masquerTelephone(session.user.telephone) : null;
 
   return (
     <div className="mx-auto max-w-4xl">
       <PaiementStepper step={2} />
-      <PaiementForm eleveId={eleveId} montant={tarif.prix} devise="XAF" reduction={tarif.reduction} prixNormal={tarif.prixNormal} />
+      <PaiementForm
+        eleveId={eleveId}
+        montant={tarif.prix}
+        devise="XAF"
+        reduction={tarif.reduction}
+        prixNormal={tarif.prixNormal}
+        payeurRole={session.user.role}
+        telephoneMasque={telephoneMasque}
+      />
     </div>
   );
 }

@@ -6,12 +6,19 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getPaymentProvider } from "@/lib/payment";
 import { obtenirTarifPremium, DEVISE_DEFAUT } from "@/lib/payment/tarification";
 import { planifierWebhookMock } from "@/lib/queue/paiement";
+import { verifierPinConfirmation, verifierOtpConfirmation } from "@/lib/auth/confirmation";
 
 /**
  * Initie un paiement Mobile Money pour passer un élève en Premium (§2.4, §2.6).
  * Accessible depuis l'espace élève (paiement de soi-même) et l'espace parent
  * (paiement pour un enfant lié) — c'est l'exception explicite du §2.6 à la
  * règle générale du §2.2 excluant toute action de gestion côté parent.
+ *
+ * Exige en plus une re-vérification légère (§2.6, §5.4 — renforcement
+ * demandé au-delà du minimum spécifié) juste avant validation : PIN pour un
+ * élève payeur, OTP pour un parent payeur — cf. src/lib/auth/confirmation.ts.
+ * Ne crée ni ne modifie aucune session NextAuth, uniquement une confirmation
+ * de présence/connaissance des identifiants.
  */
 
 const bodySchema = z.object({
@@ -22,6 +29,8 @@ const bodySchema = z.object({
     .transform((v) => v.replace(/\D/g, ""))
     .transform((v) => (v.startsWith("237") ? v.slice(3) : v))
     .refine((v) => /^6\d{8}$/.test(v), "Numéro Mobile Money camerounais invalide (9 chiffres, commence par 6)."),
+  pin: z.string().regex(/^\d{4}$/).optional(),
+  otp: z.string().regex(/^\d{6}$/).optional(),
 });
 
 const LIMIT = 10;
@@ -69,6 +78,24 @@ export async function POST(request: Request) {
   ]);
   if (!okIp || !okEleve) {
     return NextResponse.json({ error: "Trop de tentatives, réessaie plus tard." }, { status: 429 });
+  }
+
+  if (payeurRole === "ELEVE") {
+    if (!parsed.data.pin) {
+      return NextResponse.json({ error: "Code secret requis pour confirmer le paiement." }, { status: 400 });
+    }
+    const confirmation = await verifierPinConfirmation(eleveId, parsed.data.pin);
+    if (!confirmation.ok) {
+      return NextResponse.json({ error: confirmation.error }, { status: confirmation.status });
+    }
+  } else {
+    if (!parsed.data.otp || !session.user.telephone) {
+      return NextResponse.json({ error: "Code de vérification requis pour confirmer le paiement." }, { status: 400 });
+    }
+    const confirmation = await verifierOtpConfirmation(session.user.telephone, parsed.data.otp);
+    if (!confirmation.ok) {
+      return NextResponse.json({ error: confirmation.error }, { status: confirmation.status });
+    }
   }
 
   let abonnement = await prisma.abonnement.findFirst({ where: { eleveId }, orderBy: { dateDebut: "desc" } });

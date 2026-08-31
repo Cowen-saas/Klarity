@@ -809,3 +809,59 @@ n'a jamais eu vocation à s'appliquer à une session déjà connectée, seulemen
 conformément à la spec initiale "si non authentifié"). Confirmé avec l'utilisateur via question
 directe : comportement à garder tel quel, pas de changement de code nécessaire. Comptes de test
 supprimés après coup.
+
+### Re-vérification légère avant validation finale du paiement (31 août 2026)
+
+Renforcement demandé explicitement au-delà du minimum spécifié par le CDC (§2.6, §5.4) — "même
+principe qu'une banque qui redemande un code avant un virement, même si la session est déjà
+active". Juste avant que "Payer {montant} FCFA" ne déclenche réellement `POST
+/api/paiement/initier`, une étape de re-vérification s'intercale : PIN à 4 chiffres pour un élève
+payeur, OTP à 6 chiffres (nouvel envoi SMS) pour un parent payeur. **Ne crée ni ne modifie aucune
+session/token NextAuth** — confirme uniquement la présence physique/connaissance des identifiants,
+isolé du code d'authentification de `src/auth.ts` pour ne jamais risquer d'y introduire une
+régression.
+
+- **`src/lib/auth/confirmation.ts`** (nouveau) — `verifierPinConfirmation`/`verifierOtpConfirmation`,
+  réutilisant délibérément les **mêmes compteurs** que la connexion
+  (`Eleve.pinTentativesEchouees`/`pinVerrouilleJusqua`, `OtpVerification.tentatives`) : un blocage
+  ici verrouille aussi la connexion normale, comportement voulu (§7, le rate limiting protège le
+  compte entier, pas une action isolée) et vérifié explicitement (voir plus bas).
+- **`src/lib/auth/otp.ts`** — logique d'envoi extraite dans `envoyerOtp(telephone)`, partagée par
+  `/api/auth/parent/request-otp` (connexion, déjà existant, inchangé dans son comportement) et le
+  nouvel envoi de confirmation — le mécanisme est réutilisé, pas dupliqué.
+- **`POST /api/paiement/confirmation-otp`** (nouveau, rôle PARENT uniquement) — déclenche un envoi
+  OTP vers `session.user.telephone` **côté serveur**, jamais un téléphone fourni par le client
+  (contrairement à l'endpoint pré-connexion, qui n'a pas encore de session à qui faire confiance) —
+  rate-limité séparément (`paiement-otp:parent:{id}`/`paiement-otp:ip:{ip}`, propre bucket Redis,
+  n'interfère pas avec le rate limiting de l'OTP de connexion).
+- **`POST /api/paiement/initier`** — accepte maintenant `pin`/`otp` en plus des champs existants ;
+  la vérification a lieu juste après le rate limiting et avant toute écriture (`Abonnement`,
+  `Paiement`, appel au `PaymentProvider`) — échec = aucun effet de bord. Retourne 400 (champ
+  manquant), 401 (code incorrect, avec le nombre de tentatives restantes dans le message), ou 423
+  (verrouillé) — jamais de création de paiement dans ces cas.
+- **UI (`PaiementForm.tsx`)** — nouvelle sous-étape "revalidation" entre le formulaire Mobile Money
+  et l'appel réel à l'API : `PinInput` réutilisé tel quel (4 chiffres masqués pour l'élève, 6
+  chiffres visibles pour le parent, même composant que connexion/inscription) ; côté parent, indice
+  dev (`codeDevMock`) et minuteur "Renvoyer le code" repris à l'identique de `ParentLoginForm.tsx`
+  pour une cohérence visuelle totale avec le reste du flux (skill `ui-ux-pro-max` : aucun nouvel
+  élément visuel disruptif, juste la réutilisation des patrons déjà en place). `masquerTelephone`
+  extrait de `ParentLoginForm.tsx` vers `src/lib/format.ts` pour être partagé sans duplication.
+- **Vérifié via `curl`**, y compris le cas limite du verrouillage :
+  - Élève : sans PIN → 400 ; PIN faux → 401 avec compteur de tentatives restantes décroissant
+    (4, 3, 2, 1) ; 5ᵉ échec → 423 verrouillé 15 min, **y compris avec le bon PIN ensuite** ; la
+    connexion normale (`/api/auth/callback/eleve`) avec le bon PIN est **elle aussi bloquée** au
+    même moment (`CredentialsSignin`, session `null`), confirmant le partage des compteurs voulu ;
+    5 lignes `AuditLogSecurite(PIN_FAIL)` créées, une par échec.
+  - Parent : sans OTP → 400 ; OTP faux → 401 avec compteur décroissant ; après épuisement (5
+    tentatives sur le même code) → 401 "incorrect ou expiré" (même comportement que la connexion
+    normale sur un OTP épuisé) ; "Renvoyer le code" (même endpoint que le bouton) → nouveau code →
+    paiement validé avec succès (`REUSSI`) ; l'OTP consommé passe `utilise = true` (non
+    rejouable) ; 5 lignes `AuditLogSecurite(OTP_FAIL)` créées.
+  - Paiement réussi dans les deux cas après re-vérification correcte, traité normalement par le
+    worker mock (`CREDITE`), sans aucune erreur dans les logs `app`/`worker`.
+  - Chaînes JSX des deux branches (élève/parent) confirmées présentes dans le bundle client
+    compilé (`.next/static/chunks/app/abonnement/paiement/page.js`) — la bascule effective entre
+    sous-étapes reste un changement d'état React côté navigateur, donc non observable par `curl`
+    seul ; toujours aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1).
+  - Comptes de test supprimés après coup (sauf le compte "Aicha MVONDO" déjà signalé au tour
+    précédent, laissé intact).

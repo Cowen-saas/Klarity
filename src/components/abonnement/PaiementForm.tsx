@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconCheckCircle } from "@/components/icons";
+import { IconCheckCircle, IconLock } from "@/components/icons";
+import { PinInput } from "@/components/ui/PinInput";
 
 interface PaiementFormProps {
   eleveId: string;
@@ -10,23 +11,72 @@ interface PaiementFormProps {
   devise: string;
   reduction: number;
   prixNormal: number;
+  payeurRole: "ELEVE" | "PARENT";
+  telephoneMasque: string | null;
 }
 
 type Operateur = "ORANGE" | "MTN";
-type SousEtape = "methode" | "formulaire";
+type SousEtape = "methode" | "formulaire" | "revalidation";
 
 const DEV_HINT_VISIBLE = process.env.NODE_ENV !== "production";
+const DELAI_RENVOI_SECONDES = 60;
 
-/** Écrans 15 (choix du moyen) + 16 (formulaire Mobile Money) — §2.4, §2.6. */
-export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal }: PaiementFormProps) {
+/**
+ * Écrans 15 (choix du moyen) + 16 (formulaire Mobile Money) — §2.4, §2.6 —
+ * plus une re-vérification légère juste avant validation (§2.6, §5.4,
+ * renforcement demandé explicitement, cf. src/lib/auth/confirmation.ts) :
+ * PIN pour un élève payeur, OTP pour un parent payeur. Ne crée aucune
+ * session — seule la requête d'initiation du paiement en dépend.
+ */
+export function PaiementForm({
+  eleveId,
+  montant,
+  devise,
+  reduction,
+  prixNormal,
+  payeurRole,
+  telephoneMasque,
+}: PaiementFormProps) {
   const router = useRouter();
   const [sousEtape, setSousEtape] = useState<SousEtape>("methode");
   const [operateur, setOperateur] = useState<Operateur | null>(null);
   const [telephone, setTelephone] = useState("");
+  const [pin, setPin] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [envoiOtpEnCours, setEnvoiOtpEnCours] = useState(false);
+  const [codeDevMock, setCodeDevMock] = useState<string | null>(null);
+  const [secondesRestantes, setSecondesRestantes] = useState(0);
+  const [verrouille, setVerrouille] = useState(false);
 
-  async function handlePayer() {
+  useEffect(() => {
+    if (secondesRestantes <= 0) return;
+    const t = setTimeout(() => setSecondesRestantes((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secondesRestantes]);
+
+  async function envoyerOtpConfirmation() {
+    setEnvoiOtpEnCours(true);
+    try {
+      const res = await fetch("/api/paiement/confirmation-otp", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Impossible d'envoyer le code de vérification.");
+        return false;
+      }
+      setCodeDevMock(typeof data.codeDevMock === "string" ? data.codeDevMock : null);
+      setSecondesRestantes(DELAI_RENVOI_SECONDES);
+      return true;
+    } catch {
+      setError("Impossible de contacter le serveur, vérifie ta connexion.");
+      return false;
+    } finally {
+      setEnvoiOtpEnCours(false);
+    }
+  }
+
+  async function handlePasserALaRevalidation() {
     if (!operateur) {
       setError("Choisis un opérateur.");
       return;
@@ -36,17 +86,47 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal }
       return;
     }
     setError(null);
+    setOtp("");
+    setPin("");
+    setVerrouille(false);
+    if (payeurRole === "PARENT") {
+      const ok = await envoyerOtpConfirmation();
+      if (!ok) return;
+    }
+    setSousEtape("revalidation");
+  }
+
+  async function handleConfirmerEtPayer() {
+    if (payeurRole === "ELEVE" && !/^\d{4}$/.test(pin)) {
+      setError("Entre ton code secret à 4 chiffres.");
+      return;
+    }
+    if (payeurRole === "PARENT" && !/^\d{6}$/.test(otp)) {
+      setError("Entre le code à 6 chiffres reçu par SMS.");
+      return;
+    }
+    setError(null);
     setSubmitting(true);
     try {
       const res = await fetch("/api/paiement/initier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eleveId, operateur, telephone: telephone.replace(/\D/g, "") }),
+        body: JSON.stringify({
+          eleveId,
+          operateur,
+          telephone: telephone.replace(/\D/g, ""),
+          ...(payeurRole === "ELEVE" ? { pin } : { otp }),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Une erreur est survenue, réessaie.");
         setSubmitting(false);
+        if (res.status === 423) {
+          setVerrouille(true);
+        } else {
+          payeurRole === "ELEVE" ? setPin("") : setOtp("");
+        }
         return;
       }
       router.push(`/abonnement/verification/${data.paiementId}?eleve=${eleveId}`);
@@ -59,7 +139,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal }
   return (
     <div className="grid grid-cols-1 gap-6 rounded-3xl bg-surface p-6 shadow-sm sm:p-10 lg:grid-cols-[3fr_2fr]">
       <div>
-        {sousEtape === "methode" ? (
+        {sousEtape === "methode" && (
           <>
             <h1 className="text-lg font-bold text-texte">Votre moyen de paiement</h1>
             <button
@@ -81,7 +161,9 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal }
               Continuer
             </button>
           </>
-        ) : (
+        )}
+
+        {sousEtape === "formulaire" && (
           <>
             <p className="text-xs font-semibold tracking-wide text-primary uppercase">Étape 2 sur 4 · Paiement</p>
             <h1 className="mt-1 text-lg font-bold text-texte">Mobile Money</h1>
@@ -149,15 +231,102 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal }
 
             <button
               type="button"
-              onClick={handlePayer}
-              disabled={submitting}
+              onClick={handlePasserALaRevalidation}
+              disabled={envoiOtpEnCours}
               className="mt-6 w-full rounded-xl bg-primary py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
             >
-              {submitting
-                ? "Envoi de la demande..."
+              {envoiOtpEnCours
+                ? "Envoi du code..."
                 : `Payer ${montant.toLocaleString("fr-FR")} ${devise === "XAF" ? "FCFA" : devise}`}
             </button>
           </>
+        )}
+
+        {sousEtape === "revalidation" && (
+          <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-light text-primary">
+              <IconLock className="h-7 w-7" weight="fill" aria-hidden="true" />
+            </div>
+            {payeurRole === "ELEVE" ? (
+              <>
+                <h1 className="mt-4 text-lg font-bold text-texte">Confirme avec ton code secret</h1>
+                <p className="mt-1 text-sm text-texte-muted">
+                  Pour valider ce paiement, entre ton code secret à 4 chiffres.
+                </p>
+                <div className="mt-6 flex justify-center">
+                  <PinInput id="pin-confirmation" label="Code secret" value={pin} onChange={setPin} autoFocus />
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="mt-4 text-lg font-bold text-texte">Confirme avec le code reçu par SMS</h1>
+                <p className="mt-1 text-sm text-texte-muted">
+                  Un code de vérification a été envoyé au {telephoneMasque ?? "numéro de ton compte"} pour confirmer
+                  ce paiement.
+                </p>
+                <div className="mt-6 flex justify-center">
+                  <PinInput
+                    id="otp-confirmation"
+                    label="Code de vérification"
+                    value={otp}
+                    onChange={setOtp}
+                    length={6}
+                    masque={false}
+                    autoFocus
+                  />
+                </div>
+                {codeDevMock && (
+                  <button
+                    type="button"
+                    onClick={() => setOtp(codeDevMock)}
+                    className="mx-auto mt-3 block rounded-lg bg-accent-light px-3 py-1.5 text-xs font-semibold text-texte"
+                  >
+                    Dev uniquement — code : {codeDevMock} (cliquer pour remplir)
+                  </button>
+                )}
+                <p className="mt-3 text-sm text-texte-muted">
+                  {secondesRestantes > 0 ? (
+                    <>
+                      Renvoyer le code dans <strong>00:{secondesRestantes.toString().padStart(2, "0")}</strong>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={envoyerOtpConfirmation}
+                      disabled={envoiOtpEnCours}
+                      className="font-semibold text-primary disabled:opacity-60"
+                    >
+                      Renvoyer le code
+                    </button>
+                  )}
+                </p>
+              </>
+            )}
+
+            {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
+            <button
+              type="button"
+              onClick={handleConfirmerEtPayer}
+              disabled={submitting || verrouille}
+              className="mt-6 w-full rounded-xl bg-primary py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+            >
+              {submitting
+                ? "Vérification..."
+                : `Confirmer et payer ${montant.toLocaleString("fr-FR")} ${devise === "XAF" ? "FCFA" : devise}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSousEtape("formulaire");
+                setError(null);
+                setVerrouille(false);
+              }}
+              className="mt-3 text-sm font-medium text-texte-muted hover:text-texte"
+            >
+              ← Modifier le numéro
+            </button>
+          </div>
         )}
       </div>
 

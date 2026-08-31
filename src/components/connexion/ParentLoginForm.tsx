@@ -5,20 +5,9 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { PinInput } from "@/components/ui/PinInput";
 import { IconUser, IconLock } from "@/components/icons";
+import { masquerTelephone } from "@/lib/format";
 
 const DELAI_RENVOI_SECONDES = 60;
-
-function masquerTelephone(tel: string): string {
-  const chiffres = tel.replace(/\D/g, "");
-  const indicatif = chiffres.slice(0, 3);
-  const reste = chiffres.slice(3);
-  if (reste.length < 4) return tel;
-  const premier = reste[0];
-  const dernier = reste.slice(-2);
-  const nbMasques = Math.max(reste.length - 3, 0);
-  const groupes = "•".repeat(nbMasques).match(/.{1,2}/g) ?? [];
-  return `+${indicatif} ${premier}${groupes.length ? " " + groupes.join(" ") : ""} ${dernier}`.replace(/\s+/g, " ").trim();
-}
 
 interface ParentLoginFormProps {
   from: string | null;
