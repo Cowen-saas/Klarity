@@ -42,7 +42,7 @@ const STEPS: Step[] = [
 
 export function HowItWorks() {
   return (
-    <section className="bg-surface py-16">
+    <section id="comment-ca-marche" className="bg-surface py-16">
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
         <div className="text-center">
           <p className="text-sm font-bold tracking-wide text-primary uppercase">

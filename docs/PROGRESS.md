@@ -429,6 +429,31 @@ lui-même entre ces deux nœuds, et matérialise l'exigence CDC §2.1.1 (§3 ci-
   `/legal/*.docx`) via `curl` contre le conteneur Docker `app`. Pas de vérification visuelle pixel
   réelle — aucun outil navigateur disponible dans cette session (§5).
 
+### Nav publique — 4 liens qui ne menaient nulle part, corrigés (31 août 2026)
+`LandingHeader.tsx` rendait "Fonctionnalités"/"Épreuves"/"Tarifs"/"Parents" en texte statique
+volontairement non cliquable (aucune cible n'existait encore à l'époque). Trois des quatre ont
+maintenant une cible réelle :
+- **Fonctionnalités** → `/#comment-ca-marche`, ancre ajoutée sur la section déjà présente
+  (`HowItWorks.tsx`, `id="comment-ca-marche"`).
+- **Tarifs** → `/abonnement`, maintenant réel depuis la Phase 2 (§16). ⚠️ Un visiteur non connecté
+  qui clique est redirigé vers `/connexion` (`AbonnementLayout` gate toute la section derrière une
+  session Élève/Parent) — pas une page tarifs publique consultable avant inscription ; comportement
+  volontaire de l'utilisateur, signalé ici pour référence si le besoin d'une vitrine tarifs
+  publique apparaît plus tard.
+- **Parents** → `/connexion?from=/parent`, décision actée avec l'utilisateur après lui avoir
+  signalé que la maquette landing (crop unique, s'arrête au footer) ne montre aucune section
+  dédiée aux parents à ancrer. Réutilise le mécanisme déjà existant `roleDepuisFrom()` de
+  `ConnexionForm.tsx` (jusqu'ici seulement atteint via `?from=/parent...` en interne) pour ouvrir
+  directement sur l'onglet Parent plutôt que sur l'onglet Élève par défaut.
+- **Épreuves** reste volontairement non cliquable (banque d'épreuves toujours absente) — même
+  traitement visuel "Bientôt" que la nav interne app (`EleveShell`/`ParentShell`), ajouté ici pour
+  la première fois côté landing.
+- **Vérifié** via `curl`/inspection du HTML rendu (hrefs corrects, ancre `id` présente, redirect
+  `/abonnement` → `/connexion` confirmé pour un visiteur anonyme, onglet Parent bien pré-sélectionné
+  sur `/connexion?from=/parent`) — **pas de clic réel en navigateur** : aucun outil browser
+  disponible dans cette session (même limitation qu'au §5, malgré la demande explicite de tester
+  réellement ; signalé à l'utilisateur plutôt que présenté comme vérifié).
+
 ### Skill `run-klarity` créé puis recadré en solution de secours
 Pendant le développement de la landing page, `npm install`/le serveur de dev cassaient de façon
 répétée et déroutante quand exécutés depuis le chemin UNC `\\wsl.localhost\...` (seul chemin que
