@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { IconHome, IconSparkles, IconDocument, IconBulb, IconPencil, IconUser, IconCreditCard } from "@/components/icons";
 import { KlarityLogo } from "@/components/ui/KlarityLogo";
+import { SignOutButton } from "@/components/ui/SignOutButton";
 
 interface NavItem {
   href: string;
@@ -35,6 +36,7 @@ export function EleveShell({ children }: { children: ReactNode }) {
             <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
           ))}
         </nav>
+        <SignOutButton className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60" />
       </aside>
 
       <div className="flex-1 pb-20 md:pb-0">{children}</div>

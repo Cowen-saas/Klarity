@@ -746,3 +746,52 @@ les deux onglets cliquables, comportement inchangé.
   seul (sans `role`) → aucun bouton `disabled`, comportement historique intact. Toujours aucun outil
   de clic navigateur disponible dans cette session (§5/§15 point 1) — vérification par inspection du
   HTML servi, pas par clic réel, signalé comme tel plutôt que présenté comme testé en navigateur.
+
+### Signalement "fuite de session entre comptes sur la landing" — investigué, cause racine trouvée et corrigée : aucune fonction de déconnexion n'existait (31 août 2026)
+
+Signalement utilisateur (potentiellement grave, IDOR-like) : après connexion via `/abonnement`,
+revenir sur `/` semblerait refléter l'état du compte précédemment connecté. Investigation des 3
+pistes demandées, avec preuves :
+
+1. **Cache Next.js ignorant la session ?** Non — `/` (`src/app/page.tsx` et ses 4 sous-composants
+   `LandingHeader`/`Hero`/`TuteurDemoWidget`/`LandingFooter`) ne lit `auth()`, `cookies()` ni aucune
+   donnée de session nulle part : la page est strictement identique pour tout le monde, connecté ou
+   non. Vérifié par comparaison octet-par-octet du HTML rendu (hors query-strings de cache-busting
+   du build dev) pour deux comptes de test différents — **aucune trace nominative** (nom, code élève)
+   dans le HTML dans les deux cas. Il n'y a tout simplement rien de personnalisé à "fuiter" sur cette
+   page dans le code actuel.
+2. **Le cookie de session se réémet-il correctement à chaque connexion ?** Oui, y compris dans le cas
+   le plus défavorable testé : connexion en tant qu'élève A, puis connexion en tant qu'élève B
+   **dans le même cookie jar sans déconnexion préalable** — `/api/auth/session` bascule
+   immédiatement et complètement sur B (id, nom, classe, filière), le cookie change de valeur, et
+   `/eleve` rend bien "Bonjour, {nom de B}". Aucune fuite serveur détectée, même sans déconnexion.
+3. **Cause racine réelle, trouvée** : **`signOut` n'était appelé nulle part dans toute l'app** — aucun
+   bouton, aucune route, aucune fonctionnalité de déconnexion n'existait, sous aucun libellé
+   (recherché "logout", "signOut", "déconnexion" dans tout `src/`). Le scénario de reproduction
+   demandé par l'utilisateur nécessitait une étape "déconnexion" qui n'avait tout simplement aucun
+   moyen réel de se produire dans l'app — la seule façon de "changer de compte" était d'effacer les
+   cookies manuellement (navigation privée, DevTools) ou de se connecter par-dessus une session
+   existante (testé au point 2, sans fuite). C'est très probablement ce qui a produit l'impression
+   signalée : un compte de test resté connecté sans qu'aucune action de l'app ne l'ait jamais
+   réellement terminé.
+
+**Correction (racine, pas un contournement)** : ajout d'une vraie fonctionnalité de déconnexion,
+absente jusqu'ici de tout le produit.
+- **`src/components/ui/SignOutButton.tsx`** (nouveau) — `signOut({ redirect: false })` puis
+  `router.push("/")` + `router.refresh()` (vide explicitement le cache client du Router App pour
+  qu'aucune page visitée pendant la session ne reste affichée comme si elle l'était encore).
+- Ajouté en bas des sidebars desktop `EleveShell`/`ParentShell` (`mt-auto`, même style que les liens
+  de nav) et sur `/eleve/profil` (seul point d'accès pour la nav mobile, qui n'a pas d'équivalent
+  "plus" dans la bottom-nav actuelle).
+- `IconSignOut` ajouté à `src/components/icons.tsx` (Phosphor `SignOut`).
+- **Vérifié via `curl`** que `/api/auth/signout` (même appel que le bouton) retourne bien
+  `Set-Cookie: authjs.session-token=; Max-Age=0`, que `/api/auth/session` devient `null` juste après,
+  et que `/eleve` redirige alors vers `/connexion` (vraiment déconnecté, pas une apparence).
+- **Reproduction complète du scénario demandé, avec la vraie déconnexion cette fois** : élève A se
+  connecte via `/abonnement` → atteint le vrai formulaire de paiement → retour sur `/` → déconnexion
+  réelle via `/api/auth/signout` → `/eleve` refusé (307 vers `/connexion`, confirmant une
+  déconnexion effective) → élève B se connecte dans le même jar → `/` et `/eleve` ne portent plus
+  aucune trace du nom ou du code élève de A. Comptes de test supprimés après coup (sauf un compte
+  "Aicha MVONDO" créé très récemment, probablement par l'utilisateur lui-même en cours de test en
+  parallèle — laissé intact pour ne pas interrompre une session en cours, à nettoyer par la suite).
+  Toujours aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1).

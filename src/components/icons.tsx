@@ -31,6 +31,7 @@ import {
   Warning,
   Camera,
   Robot,
+  SignOut,
 } from "@phosphor-icons/react";
 
 /**
@@ -74,3 +75,4 @@ export const IconCamera = Camera;
  * pour ne pas laisser croire que le Tuteur IA produit lui-même une correction chiffrée.
  */
 export const IconRobot = Robot;
+export const IconSignOut = SignOut;

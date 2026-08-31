@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { SignOutButton } from "@/components/ui/SignOutButton";
 
 const CLASSE_LABELS: Record<string, string> = {
   TROISIEME: "3e",
@@ -37,6 +38,8 @@ export default async function EleveProfilPage() {
       <p className="mt-4 text-sm text-texte-muted">
         Donne ce code à ton parent avec ton numéro de téléphone : c&apos;est ce qui lui permet de suivre ta progression.
       </p>
+
+      <SignOutButton className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface py-3 text-center text-sm font-semibold text-texte transition-colors hover:border-danger/40 hover:text-danger disabled:opacity-60" />
     </main>
   );
 }
