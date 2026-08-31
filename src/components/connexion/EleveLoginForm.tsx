@@ -32,7 +32,7 @@ export function EleveLoginForm({ from }: { from: string | null }) {
         setPin("");
         return;
       }
-      router.push(from && from.startsWith("/eleve") ? from : "/eleve");
+      router.push(from && (from.startsWith("/eleve") || from.startsWith("/abonnement")) ? from : "/eleve");
       router.refresh();
     } catch {
       setErreur("Impossible de contacter le serveur.");

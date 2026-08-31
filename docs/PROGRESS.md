@@ -435,11 +435,10 @@ volontairement non cliquable (aucune cible n'existait encore à l'époque). Troi
 maintenant une cible réelle :
 - **Fonctionnalités** → `/#comment-ca-marche`, ancre ajoutée sur la section déjà présente
   (`HowItWorks.tsx`, `id="comment-ca-marche"`).
-- **Tarifs** → `/abonnement`, maintenant réel depuis la Phase 2 (§16). ⚠️ Un visiteur non connecté
-  qui clique est redirigé vers `/connexion` (`AbonnementLayout` gate toute la section derrière une
-  session Élève/Parent) — pas une page tarifs publique consultable avant inscription ; comportement
-  volontaire de l'utilisateur, signalé ici pour référence si le besoin d'une vitrine tarifs
-  publique apparaît plus tard.
+- **Tarifs** → `/abonnement`, maintenant réel depuis la Phase 2 (§16). Initialement redirigeait tout
+  visiteur non connecté vers `/connexion` avant même de voir la grille — corrigé juste après (même
+  jour, voir la sous-section "`/abonnement` rendu public..." plus bas) : la grille tarifaire est
+  maintenant publique, seule l'étape de paiement effective exige une session.
 - **Parents** → `/connexion?from=/parent`, décision actée avec l'utilisateur après lui avoir
   signalé que la maquette landing (crop unique, s'arrête au footer) ne montre aucune section
   dédiée aux parents à ancrer. Réutilise le mécanisme déjà existant `roleDepuisFrom()` de
@@ -636,3 +635,65 @@ inchangé dans son interface `PaymentProvider` à 3 méthodes) — seule la couc
   - Idempotence (ci-dessus) — un seul crédit malgré 2 replays du même webhook signé.
   - Logs des deux conteneurs (`app`, `worker`) propres sur toute la session de test — 4 jobs
     mock traités (`2× CREDITE`, `1× ECHEC_PAIEMENT`, `1× CREDITE` pour le parcours parent).
+
+### `/abonnement` rendu public, anti-double-paiement, choix élève/parent avant connexion (31 août 2026)
+
+Suite au lien "Tarifs" de la landing (§13) : `/abonnement` exigeait une session, donc un visiteur
+anonyme qui cliquait "Tarifs" atterrissait directement sur `/connexion` sans jamais voir la grille
+tarifaire — pas ce qu'une page "Tarifs" publique doit faire. Deux demandes utilisateur successives
+ont fait évoluer le comportement :
+
+1. **D'abord** : rendre `/abonnement` public et rediriger vers `/connexion` au clic sur "Choisir
+   Premium" si non connecté.
+2. **Puis, avant que la première version soit testée** : remplacé par un vrai choix élève/parent
+   plutôt qu'un redirect générique — rappel du CDC §2.2, un parent n'a pas de compte autonome (il
+   se connecte avec le code élève + téléphone de son enfant), donc l'envoyer directement sur l'onglet
+   élève de `/connexion` aurait été trompeur pour un parent visiteur.
+
+Comportement final :
+- **`src/app/abonnement/layout.tsx`** ne redirige plus les visiteurs non connectés — seul l'en-tête
+  change (Connexion/Créer un compte au lieu de "Retour au tableau de bord"). La grille tarifaire
+  (`/abonnement`) est publique ; `/abonnement/paiement` et `/abonnement/verification/[id]`
+  continuent d'exiger leur propre session (vérifiée dans chaque page, pas dans le layout), pour
+  qu'un visiteur anonyme ne puisse jamais déclencher un paiement réel.
+- **`/abonnement/eleve-ou-parent`** (nouvelle page publique) — écran d'aiguillage affiché au clic
+  sur "Choisir Premium" sans session : carte "Je suis élève" (Se connecter / Créer un compte) et
+  carte "Je suis parent" (Se connecter, avec rappel explicite "la connexion se fait avec le code
+  élève transmis par ton enfant" + lien "Ton enfant n'a pas encore de compte ?" vers `/inscription`
+  pour le cas où le parent doit d'abord faire créer le compte élève). Chaque carte porte vers
+  `/connexion?from=/abonnement/paiement&role=ELEVE|PARENT`.
+- **Nouveau paramètre `role` sur `/connexion`**, distinct de `from` — `from` reste le mécanisme
+  existant de redirection post-connexion (`EleveLoginForm`/`ParentLoginForm`, étendu pour accepter
+  aussi un `from` commençant par `/abonnement`, pas seulement `/eleve`/`/parent`) ; `role` sert
+  uniquement à présélectionner l'onglet, prioritaire sur l'ancienne heuristique par préfixe
+  (`roleDepuisFrom`, conservée pour les appelants existants comme le lien "Parents" de la landing).
+  Les deux étaient auparavant confondus dans `from` seul, ce qui ne permettait pas de forcer
+  l'onglet Parent vers une destination qui ne commence pas par `/parent`.
+- **`ConnexionForm.tsx`** affiche un bandeau contextuel quand `from` vient de l'abonnement, différent
+  par rôle : côté élève "Connecte-toi pour continuer ton abonnement" + lien Inscription ; côté
+  parent "Connecte-toi avec le code élève transmis par ton enfant" + lien "Crée d'abord son compte
+  élève", cohérent avec le rappel déjà présent sur l'écran d'aiguillage.
+- **Anti-double-paiement** — `/abonnement` affiche un état bloquant dès qu'un `Abonnement`
+  `PREMIUM`/`ACTIF` existe pour l'élève consulté : bandeau "Tu es déjà abonné Premium, actif
+  jusqu'au {date}" (formatée `fr-FR`, depuis `Abonnement.dateFin`) à la place du bloc titre normal,
+  et le bouton "Choisir Premium" est remplacé par un badge "Premium actif" non cliquable — jamais
+  de lien vers `/abonnement/paiement` dans cet état. `/abonnement/paiement` lui-même re-vérifie
+  côté serveur (déjà en place depuis la première version, §16) et rebondit vers `/abonnement` si
+  quelqu'un tente d'y accéder directement malgré tout (IDOR/replay), donc double protection.
+- **Parent avec plusieurs enfants, cas particulier assumé** : la destination post-connexion
+  `/abonnement/paiement` ne porte pas de `?eleve=` (impossible à connaître avant la connexion) ;
+  `/abonnement/paiement` rebondit alors vers `/abonnement` (maintenant authentifié), où le parent
+  reclique "Choisir Premium" — cette fois avec le vrai `eleveId`. Deux clics au lieu d'un pour ce
+  cas précis, mais aucun risque de payer pour le mauvais enfant ; jugé acceptable plutôt que de
+  complexifier le flux de connexion pour deviner l'enfant à l'avance.
+- **Vérifié via `curl`/inspection HTML** (toujours aucun outil navigateur disponible dans cette
+  session — voir §5/§15 point 1, signalé à l'utilisateur plutôt que présenté comme un clic réel) :
+  grille publique servie à un visiteur anonyme (200, sans redirect) ; "Choisir Premium" anonyme
+  pointe vers `/abonnement/eleve-ou-parent` (pas directement `/connexion`) ; les deux cartes portent
+  les bons `href` avec `role=ELEVE`/`role=PARENT` ; les deux bandeaux contextuels s'affichent sur
+  `/connexion` selon le rôle ; élève fraîchement inscrit → connexion → `/abonnement/paiement` sert
+  le vrai formulaire ; parent nouvellement lié → connexion → rebond vers `/abonnement` confirmé (pas
+  de `?eleve=`) → nouveau clic → paiement réel jusqu'à `REUSSI` ; état "déjà abonné" confirmé avec
+  la date formatée et absence du lien de paiement dans le HTML, y compris un accès direct forcé à
+  `/abonnement/paiement?eleve=...` (rebond 307 vers `/abonnement`). Comptes de test supprimés après
+  coup.

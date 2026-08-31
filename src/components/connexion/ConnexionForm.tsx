@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { RoleSwitcher, type Role } from "./RoleSwitcher";
 import { EleveLoginForm } from "./EleveLoginForm";
@@ -37,16 +38,47 @@ const PANNEAU: Record<Role, Record<string, { titre: string; description: string;
 export function ConnexionForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
-  const [role, setRole] = useState<Role>(roleDepuisFrom(from));
+  const roleParam = searchParams.get("role");
+  const [role, setRole] = useState<Role>(
+    roleParam === "PARENT" || roleParam === "ELEVE" ? roleParam : roleDepuisFrom(from)
+  );
   const [parentEtape, setParentEtape] = useState<"demande" | "verification">("demande");
 
   const panneau = role === "ELEVE" ? PANNEAU.ELEVE.default : PANNEAU.PARENT[parentEtape];
+  const viensDeLabonnement = from?.startsWith("/abonnement") ?? false;
 
   return (
     <div className="flex w-full max-w-4xl overflow-hidden rounded-3xl bg-surface shadow-xl md:min-h-[600px]">
       <ConnexionSidePanel {...panneau} />
 
       <div className="flex-1 p-6 sm:p-10 md:p-12">
+        {viensDeLabonnement && (
+          <div className="mb-6 rounded-xl bg-primary-light px-4 py-3 text-sm text-texte">
+            {role === "ELEVE" ? (
+              <>
+                <p className="font-semibold">Connecte-toi pour continuer ton abonnement.</p>
+                <p className="mt-1 text-texte-muted">
+                  Pas encore de compte ?{" "}
+                  <Link href="/inscription" className="font-semibold text-primary hover:underline">
+                    Inscris-toi
+                  </Link>
+                  .
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Connecte-toi avec le code élève transmis par ton enfant.</p>
+                <p className="mt-1 text-texte-muted">
+                  Ton enfant n&apos;a pas encore de compte ?{" "}
+                  <Link href="/inscription" className="font-semibold text-primary hover:underline">
+                    Crée d&apos;abord son compte élève
+                  </Link>
+                  .
+                </p>
+              </>
+            )}
+          </div>
+        )}
         <RoleSwitcher
           value={role}
           onChange={(next) => {

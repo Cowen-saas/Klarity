@@ -7,7 +7,9 @@ import { PaiementForm } from "@/components/abonnement/PaiementForm";
 
 export default async function PaiementPage({ searchParams }: PageProps<"/abonnement/paiement">) {
   const session = await auth();
-  if (!session) return null;
+  if (!session || session.error || (session.user.role !== "ELEVE" && session.user.role !== "PARENT")) {
+    redirect("/abonnement/eleve-ou-parent");
+  }
 
   const { eleve: eleveParam } = await searchParams;
   const idParam = Array.isArray(eleveParam) ? eleveParam[0] : eleveParam;

@@ -7,7 +7,9 @@ import { VerificationPoll } from "@/components/abonnement/VerificationPoll";
 export default async function VerificationPage({ params }: PageProps<"/abonnement/verification/[id]">) {
   const { id } = await params;
   const session = await auth();
-  if (!session) return null;
+  if (!session || session.error) {
+    redirect("/connexion?from=/abonnement");
+  }
 
   const paiement = await chargerPaiementAutorise(id, session);
   if (!paiement) redirect("/abonnement");

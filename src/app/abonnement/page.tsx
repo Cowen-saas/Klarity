@@ -27,22 +27,30 @@ const LIGNES_COMPARATIF: Array<{ label: string; gratuit: string; premium: string
   { label: "Suivi avancé de progression", gratuit: "—", premium: "✓" },
 ];
 
+/**
+ * Grille tarifaire publique (§2.4, §2.6) — accessible sans session (lien
+ * "Tarifs" de la landing). Un visiteur non connecté ne voit que la grille :
+ * cliquer "Choisir Premium"/"Continuer gratuitement" sans session renvoie
+ * vers /connexion (Premium) ou /inscription (Gratuit), jamais directement
+ * vers un paiement — /abonnement/paiement exige sa propre session pour éviter
+ * qu'un visiteur anonyme déclenche un paiement sans compte identifiable.
+ */
 export default async function AbonnementPage({ searchParams }: PageProps<"/abonnement">) {
   const session = await auth();
-  // Le layout parent redirige déjà si non authentifié / mauvais rôle.
-  if (!session) return null;
+  const authentifie = !!session && !session.error && (session.user.role === "ELEVE" || session.user.role === "PARENT");
 
-  let eleveId: string;
-  let selecteurEnfants: { liens: Array<{ id: string; nom: string; classe: string; filiere: string | null }>; selectedId: string } | null = null;
+  let eleveId: string | null = null;
+  let selecteurEnfants: { liens: Array<{ id: string; nom: string; classe: string; filiere: string | null }>; selectedId: string } | null =
+    null;
 
-  if (session.user.role === "PARENT") {
+  if (authentifie && session!.user.role === "PARENT") {
     const [liens, parent] = await Promise.all([
       prisma.parentEleveLink.findMany({
-        where: { parentId: session.user.id },
+        where: { parentId: session!.user.id },
         include: { eleve: { select: { id: true, nom: true, classe: true, filiere: true } } },
         orderBy: { dateLiaison: "asc" },
       }),
-      prisma.parent.findUnique({ where: { id: session.user.id }, select: { dernierEleveConsulteId: true } }),
+      prisma.parent.findUnique({ where: { id: session!.user.id }, select: { dernierEleveConsulteId: true } }),
     ]);
     if (liens.length === 0) {
       return (
@@ -67,14 +75,28 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
       liens: liens.map((l) => ({ id: l.eleveId, nom: l.eleve.nom, classe: l.eleve.classe, filiere: l.eleve.filiere })),
       selectedId: eleveId,
     };
-  } else {
-    eleveId = session.user.id;
+  } else if (authentifie) {
+    eleveId = session!.user.id;
   }
 
-  const abonnement = await prisma.abonnement.findFirst({ where: { eleveId }, orderBy: { dateDebut: "desc" } });
+  const abonnement = eleveId
+    ? await prisma.abonnement.findFirst({ where: { eleveId }, orderBy: { dateDebut: "desc" } })
+    : null;
   const dejaPremiumActif = abonnement?.plan === "PREMIUM" && abonnement.statut === "ACTIF";
+  const dateFinFormatee = abonnement?.dateFin
+    ? abonnement.dateFin.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
   const tarif = obtenirTarifPremium(new Date());
   const pourcentageReduction = Math.round((tarif.reduction / tarif.prixNormal) * 100);
+
+  const hrefGratuit = !authentifie
+    ? "/inscription"
+    : abonnement && abonnement.plan !== "GRATUIT"
+      ? session!.user.role === "PARENT"
+        ? `/parent?eleve=${eleveId}`
+        : "/eleve"
+      : null;
+  const hrefPremium = !authentifie ? "/abonnement/eleve-ou-parent" : `/abonnement/paiement?eleve=${eleveId}`;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -98,15 +120,27 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
           </div>
         )}
 
-        <div className="text-center">
-          {tarif.periode !== "NORMALE" && (
-            <span className="inline-block rounded-full bg-danger-light px-4 py-1.5 text-xs font-bold text-danger">
-              {LABEL_PERIODE[tarif.periode]}
+        {dejaPremiumActif ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl bg-primary-light px-6 py-8 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white">
+              <IconCheckCircle className="h-6 w-6" weight="fill" aria-hidden="true" />
             </span>
-          )}
-          <h1 className="mt-4 text-2xl font-bold text-texte sm:text-3xl">Choisissez votre formule</h1>
-          <p className="mt-2 text-sm text-texte-muted">Changez ou annulez à tout moment.</p>
-        </div>
+            <h1 className="mt-2 text-xl font-bold text-texte sm:text-2xl">Tu es déjà abonné Premium</h1>
+            <p className="text-sm text-texte-muted">
+              {dateFinFormatee ? `Actif jusqu'au ${dateFinFormatee}.` : "Ton abonnement est actif."}
+            </p>
+          </div>
+        ) : (
+          <div className="text-center">
+            {tarif.periode !== "NORMALE" && (
+              <span className="inline-block rounded-full bg-danger-light px-4 py-1.5 text-xs font-bold text-danger">
+                {LABEL_PERIODE[tarif.periode]}
+              </span>
+            )}
+            <h1 className="mt-4 text-2xl font-bold text-texte sm:text-3xl">Choisissez votre formule</h1>
+            <p className="mt-2 text-sm text-texte-muted">Changez ou annulez à tout moment.</p>
+          </div>
+        )}
 
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="rounded-2xl border-2 border-border p-6">
@@ -123,17 +157,17 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
                 <IconLock className="h-3.5 w-3.5" aria-hidden="true" /> Pas de vidéos explicatives
               </li>
             </ul>
-            {!abonnement || abonnement.plan === "GRATUIT" ? (
-              <span className="mt-8 block rounded-xl border-2 border-border py-3 text-center text-sm font-semibold text-texte-muted">
-                Formule actuelle
-              </span>
-            ) : (
+            {hrefGratuit ? (
               <Link
-                href={session.user.role === "PARENT" ? `/parent?eleve=${eleveId}` : "/eleve"}
+                href={hrefGratuit}
                 className="mt-8 block rounded-xl border-2 border-border bg-surface py-3 text-center text-sm font-semibold text-texte transition-colors hover:border-primary/40"
               >
                 Continuer gratuitement
               </Link>
+            ) : (
+              <span className="mt-8 block rounded-xl border-2 border-border py-3 text-center text-sm font-semibold text-texte-muted">
+                Formule actuelle
+              </span>
             )}
           </div>
 
@@ -141,7 +175,7 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
             <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase">
               Recommandé
             </span>
-            {tarif.reduction > 0 && (
+            {tarif.reduction > 0 && !dejaPremiumActif && (
               <span className="absolute -top-3 right-6 rounded-full bg-danger px-2.5 py-1 text-[11px] font-bold text-white">
                 -{pourcentageReduction}%
               </span>
@@ -167,7 +201,7 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
               </span>
             ) : (
               <Link
-                href={`/abonnement/paiement?eleve=${eleveId}`}
+                href={hrefPremium}
                 className="mt-8 block rounded-xl bg-primary py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
               >
                 Choisir Premium

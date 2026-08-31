@@ -97,7 +97,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
         setOtp("");
         return;
       }
-      router.push(from && from.startsWith("/parent") ? from : "/parent");
+      router.push(from && (from.startsWith("/parent") || from.startsWith("/abonnement")) ? from : "/parent");
       router.refresh();
     } catch {
       setErreur("Impossible de contacter le serveur.");
