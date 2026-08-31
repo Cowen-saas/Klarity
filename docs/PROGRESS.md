@@ -795,3 +795,17 @@ absente jusqu'ici de tout le produit.
   "Aicha MVONDO" créé très récemment, probablement par l'utilisateur lui-même en cours de test en
   parallèle — laissé intact pour ne pas interrompre une session en cours, à nettoyer par la suite).
   Toujours aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1).
+
+**Suivi (même jour)** : l'utilisateur a maintenu que le bug persistait après la correction ci-dessus
+— "connecté sans jamais me déconnecter, retour sur `/abonnement`, clic Choisir Premium → saute
+directement au paiement". Reproduit littéralement, avec une preuve plus poussée que le tour
+précédent : `/abonnement` répond `Cache-Control: no-store, must-revalidate` (aucune mise en cache à
+aucune couche) et le `href` de "Choisir Premium" contient l'`eleveId` réel de **la session
+actuellement connectée elle-même**, vérifié octet pour octet contre la base pour deux comptes de
+test distincts créés coup sur coup (jamais interverti). Conclusion : le comportement décrit
+("saute directement au paiement") se reproduit bel et bien, mais ce n'est pas une fuite — c'est le
+comportement voulu pour un utilisateur **déjà authentifié** (le chooser `/abonnement/eleve-ou-parent`
+n'a jamais eu vocation à s'appliquer à une session déjà connectée, seulement au visiteur anonyme,
+conformément à la spec initiale "si non authentifié"). Confirmé avec l'utilisateur via question
+directe : comportement à garder tel quel, pas de changement de code nécessaire. Comptes de test
+supprimés après coup.
