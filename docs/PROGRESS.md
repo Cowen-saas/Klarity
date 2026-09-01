@@ -962,3 +962,30 @@ PIN avant validation, comme avant.
   connecte → voit "Payé par l'élève.", tentative de paiement parent → 409 également. Comptes de
   test supprimés après coup. Toujours aucun outil de clic navigateur disponible dans cette session
   (§5/§15 point 1).
+
+### Stepper bloqué sur "Vérification" en cours même après confirmation (1 septembre 2026)
+
+Bug mineur signalé par l'utilisateur : sur l'écran de vérification, dès que le paiement passe à
+`REUSSI`, l'étape "Vérification" du stepper devrait se cocher comme les précédentes — elle restait
+affichée comme "en cours" (non cochée) même après confirmation. Cause : `PaiementStepper` recevait
+son `step` calculé **côté serveur, une seule fois**, au premier rendu de la page
+(`/abonnement/verification/[id]/page.tsx`) — au moment où le paiement est presque toujours encore
+`EN_ATTENTE` (le webhook mock ne résout qu'après ~3s, cf. §16). Le statut réel n'arrive qu'ensuite,
+via le polling client de `VerificationPoll.tsx`, mais ce composant ne pilotait que son propre
+contenu (spinner/confirmé/échoué) — jamais le stepper, qui restait figé sur son état initial jusqu'à
+un rechargement manuel de la page.
+
+- **Correction** : `PaiementStepper` déplacé à l'intérieur de `VerificationPoll.tsx` lui-même,
+  avec son `step` dérivé du **même** state `statut` que le contenu principal
+  (`statut === "EN_ATTENTE" ? 3 : 4`) — les deux ne peuvent plus jamais être incohérents, par
+  construction, puisqu'ils dépendent d'une seule et même valeur mise à jour par le même effet de
+  polling. La page serveur ne rend plus le stepper elle-même (retiré de
+  `verification/[id]/page.tsx`).
+- **Vérifié via `curl`** : rendu d'un paiement déjà résolu (`REUSSI`) — les 3 premières étapes du
+  stepper (Formule/Paiement/Vérification) affichent bien la coche (icône `IconCheckCircle`, 3
+  occurrences confirmées avant le contenu principal), la 4ᵉ ("Confirmation") reste en état actif
+  non coché, cohérent avec le contenu "Paiement confirmé !" affiché juste en dessous. La transition
+  live EN_ATTENTE → REUSSI en cours de session (sans rechargement) reste non observable par `curl`
+  seul — garantie par construction (state partagé) plutôt que testée en clic réel, toujours aucun
+  outil navigateur disponible dans cette session (§5/§15 point 1). Comptes de test supprimés après
+  coup.
