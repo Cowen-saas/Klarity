@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (rétention & suppression des données §2.9 : jobs worker + clôture manuelle parent — voir §19)_
+_Dernière mise à jour : 1 septembre 2026 (bascule stockage Cloudflare R2 réel + vérification clé YouTube Data API — voir §20)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -95,10 +95,14 @@ Depuis le 1er septembre 2026 (§17 à §19) :
   cycle `ACTIF → INACTIF_NOTIFIE → ANONYMISE`, plus l'écran de clôture manuelle immédiate côté
   parent (`/parent/parametres`, maquette 12b).
 
-Les quatre accès externes encore en attente — CamerPay live, clé API Anthropic Claude, Cloudflare
-R2, fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur interface + un mock,
-et basculeront en réel par un simple changement de config (`PAYMENT_MODE` / `AI_MODE` /
-`STORAGE_MODE` / `SMS_MODE`), sans réécriture du code appelant.
+**Cloudflare R2 est passé en réel le 1er septembre 2026** (`STORAGE_MODE=r2`, `R2StorageProvider`,
+clés fournies par l'utilisateur — voir §20) : upload, URL signée expirante et suppression vérifiés
+bout en bout contre le vrai bucket. La clé **YouTube Data API v3** est branchée et l'API répond,
+mais le pipeline vidéo §2.5 lui-même reste à construire (et son étape de filtrage dépend de la clé
+Anthropic). Les trois accès externes encore en attente — CamerPay live, clé API Anthropic Claude,
+fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur interface + un mock, et
+basculeront en réel par un simple changement de config (`PAYMENT_MODE` / `AI_MODE` / `SMS_MODE`),
+sans réécriture du code appelant.
 
 `next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
 le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
@@ -1440,4 +1444,78 @@ tokens / coûts, ops) laissé intact également — hors de la liste de suppress
 
 Données de test purgées après coup. `tsc --noEmit` et `npm run lint` : 0 erreur. `next build`
 reste bloqué par le bug `<Html>` préexistant (§ « 🔴 Bloquant »), non aggravé.
+
+## 20. Cloudflare R2 réel + vérification clé YouTube Data API (1er septembre 2026)
+
+L'utilisateur a renseigné ses vraies clés dans `.env` (jamais partagées dans le chat) et demandé
+la bascule effective : `STORAGE_MODE=r2` + les 4 `R2_*`, et `YOUTUBE_API_KEY`.
+
+### `R2StorageProvider` — 4ᵉ abstraction passée en réel
+
+- **`src/lib/storage/r2-provider.ts`** (nouveau) — implémente `StorageProvider` contre l'API
+  S3-compatible de R2 (`https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, `region: "auto"`).
+  `uploader()` = `PutObjectCommand` (clé opaque `dossier/uuid.ext`, `ContentType` posé) ;
+  `obtenirUrlSignee()` = presigned GET SigV4 (`@aws-sdk/s3-request-presigner`), défaut 15 min, borné
+  à 7 j ; `supprimer()` = `DeleteObjectCommand` (idempotent). Aucune URL publique, jamais de bucket
+  public — mêmes garanties que le mock.
+- **`src/lib/storage/index.ts`** — `case "r2"` instancie `R2StorageProvider` (l'erreur « pas encore
+  implémenté » est retirée). Les appelants (`POST /api/admin/epreuves`, page `/admin/epreuves`, job
+  `archivage-photos` du worker, futur pipeline de correction) sont inchangés.
+- **Dépendances ajoutées** : `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`. Images `app` +
+  `worker` reconstruites (`docker compose build`), puis `up -d --force-recreate --renew-anon-volumes`
+  (le volume anonyme `node_modules` ne se met pas à jour autrement — piège §4). **Rappel confirmé
+  cette session** : `docker compose restart` **ne recharge pas** `.env` — il faut `up -d
+  --force-recreate` pour qu'un conteneur voie de nouvelles variables d'environnement.
+- **`src/app/api/admin/storage/route.ts`** (serveur d'URL signées du mock) laissé en place : dormant
+  sous `STORAGE_MODE=r2` puisque les URLs signées R2 sont absolues et servies directement par R2 ;
+  toujours utile si on repasse en `mock`. Disparaîtra quand le mock sera retiré.
+
+### Vérifié bout en bout contre le vrai bucket
+
+Script de fumée jetable exerçant **exactement** les appels de la route/page admin
+(`uploader()` ×2 vers `epreuves/` et `corriges/`, `obtenirUrlSignee()`, puis `supprimer()`), lancé
+dans le conteneur `app` en `STORAGE_MODE=r2` :
+
+- upload des 2 PDF → objets réellement créés dans le bucket R2 (log `[STORAGE R2] Fichier déposé`),
+  **pas** dans `.storage-mock/` ;
+- URL signée générée (hôte `<bucket>.<account>.r2.cloudflarestorage.com`, `X-Amz-*`) → `GET` **200**,
+  `content-type: application/pdf`, octets identiques à la source ;
+- URL signée à 1 s d'expiration, rejouée après 2,5 s → **403** (R2 applique bien l'échéance) ;
+- `supprimer()` puis second `supprimer()` sur la même clé → OK, idempotent ;
+- `GET` sur une URL signée encore valide après suppression → **404**.
+
+Tous les objets de test supprimés du bucket après coup.
+
+### Test via le formulaire admin — délégué à l'utilisateur
+
+Exercer le vrai formulaire `/admin/epreuves` dans le navigateur exige une session ADMIN, que Claude
+Code ne crée jamais lui-même (règle actée §11 : seul `npm run admin:create` lancé par l'utilisateur
+produit un compte admin réel). L'utilisateur fait ce click-test de son côté. La couche stockage
+(seule partie touchant R2) est déjà couverte par la vérification ci-dessus, avec les mêmes appels
+que la route ; le reste du chemin formulaire (multipart + zod + `prisma.epreuve.create` + gate
+ADMIN) ne touche pas R2 et était déjà validé au §18 avec le mock.
+
+### YouTube Data API v3 — clé lue, API répond
+
+- Variable utilisée : **`YOUTUBE_API_KEY`** (déjà le nom documenté dans `.env.example`).
+- Appel de recherche test (`GET https://www.googleapis.com/youtube/v3/search`, `part=snippet`,
+  `type=video`, `q` = notion de maths Terminale, `relevanceLanguage=fr`) depuis le conteneur `app` →
+  **HTTP 200**, `youtube#searchListResponse`, 3 vidéos FR pertinentes renvoyées (dont une chaîne
+  connue, « Yvan Monka »). La clé est bien lue et acceptée par Google.
+- **Aucun module vidéo n'existe encore** dans `src/` — le pipeline §2.5 (lacune → notion → recherche
+  YouTube → filtrage Claude Haiku → cache `LacuneVideoCache`) reste à construire. Il dépend en amont
+  des lacunes réelles / quiz (donc de la banque d'épreuves Supabase), et son étape de filtrage
+  **reste bloquée tant que `ANTHROPIC_API_KEY` n'est pas branchée** (`AI_MODE=live`). La
+  vérification ci-dessus confirme seulement que la brique YouTube sera prête le moment venu.
+
+### État Docker en fin de session
+
+Après la reconstruction des images et le `--renew-anon-volumes`, le moteur Docker Desktop est
+redevenu injoignable (`request returned 500 Internal Server Error`, `docker ps` sans sortie) — même
+mode de panne qu'au §14, sans rapport avec ce travail. Le redémarrage forcé de Docker Desktop
+(disruptif, à confirmer avec l'utilisateur — cf. §14) n'a pas été fait dans cette session. **À la
+reprise** : `docker compose up -d --force-recreate --renew-anon-volumes app worker`, puis vérifier
+que `app` et `worker` démarrent proprement avec le SDK AWS (le `worker` importe `getStorageProvider`
+via `src/lib/retention/anonymisation.ts`) et refaire un `npx tsc --noEmit` / `npm run lint` dans le
+conteneur (les deux étaient à 0 erreur avant la panne moteur).
 
