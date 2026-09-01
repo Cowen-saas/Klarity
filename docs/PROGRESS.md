@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (avatar élève — silhouette générique, voir §16)_
+_Dernière mise à jour : 1 septembre 2026 (avatar élève + outillage lint/build — voir §16 et « 🔴 Bloquant »)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -15,6 +15,54 @@ _Dernière mise à jour : 1 septembre 2026 (avatar élève — silhouette géné
   landing page (`src/components/landing/LandingFooter.tsx`) renvoie pour l'instant directement vers
   ces `.docx` tels quels (décision actée avec l'utilisateur le 27 août : lien de téléchargement du
   document source plutôt qu'une page web reformatant un texte encore provisoire).
+
+- **`next build` échoue — erreur `<Html>` au prérendu de `/404`** (découvert le 1er septembre 2026 en
+  lançant `next build` proprement pour la première fois). `next dev` fonctionne, mais un déploiement
+  production nécessite `next build` — donc **à régler avant la mise en production**. On y revient au
+  moment de préparer le vrai déploiement ; pour l'instant l'investigation est volontairement
+  arrêtée.
+
+  **Déclencheur exact.** Après `✓ Compiled successfully` et `Checking validity of types` (qui
+  passent tous les deux), à la phase « Generating static pages » :
+  ```
+  Error: <Html> should not be imported outside of pages/_document.
+      at x (.next/server/chunks/611.js:6:1351)
+  Error occurred prerendering page "/404".
+  Export encountered an error on /_error: /404, exiting the build.
+  ```
+  `x` est le composant `Html` de `next/dist/compiled/next-server/pages.runtime.prod.js`. Le projet
+  est 100 % App Router (pas de `src/pages/`), donc Next génère lui-même `pages/_app.js`,
+  `pages/_document.js`, `pages/_error.js` (le `_error.js` compilé fait ~80 Ko). À l'export statique,
+  Next prérend `/404` et `/500` à travers ce `_error` et le garde-fou `docComponentsRendered.Html`
+  du `_document` par défaut lève l'exception. Aucune *import trace* n'est affichée : l'erreur est
+  interne à Next, non rattachable à un module du projet.
+
+  **Problème connu de Next.js.** Signature récurrente et documentée (plusieurs tickets GitHub à
+  travers Next 13/14/15) pour les projets App-Router-only, à la génération statique de `/404` et
+  `/_error`. Les déclencheurs habituels rapportés ailleurs ne s'appliquent pas ici (voir ci-dessous).
+
+  **Préexistant, pas une régression.** `next build` échoue à l'identique au commit `722f4bd` (HEAD
+  d'avant la session du 1er septembre, avant les correctifs paiement/abonnement et avant l'avatar).
+  Aucun commit de l'historique ne mentionne un `next build` réussi (tous disent « vérifié via
+  `curl` »), et le workflow Docker Compose ne lance que `npm run dev`. `next build` n'a donc **jamais
+  fonctionné** dans ce repo — le développement s'est fait entièrement contre `next dev`.
+
+  **Pistes déjà écartées (testées le 1er septembre) :**
+  - un fichier de `src/` important `next/document` → aucun (seuls les fichiers de règles de
+    `@next/eslint-plugin-next` citent la chaîne) ;
+  - `src/middleware.ts` → retiré, échec identique ;
+  - la config ESLint cassée → `next build --no-lint`, échec identique ;
+  - l'absence de `not-found.tsx` / `global-error.tsx` → les deux ajoutés (et conservés), échec
+    identique ;
+  - la version de Next → `15.5.23` **et** `15.5.25`, échec identique ;
+  - `next/font/google` injoignable dans le conteneur → Google Fonts répond 200 depuis le conteneur.
+
+  **Pistes non testées, à explorer plus tard :**
+  - `experimental.optimizePackageImports: ['@phosphor-icons/react']` dans `next.config.ts` (le
+    barrel d'icônes est le plus gros import client du projet) ;
+  - bisection : retirer pages/composants un par un jusqu'à ce que `/404` build ;
+  - un `pages/_document.tsx` minimal explicite ;
+  - passage à Next 16.x (bump majeur — dernier stable `16.3.4` au 1er septembre 2026).
 
 ## 1. Où en est le projet, dans l'ensemble
 
@@ -1048,3 +1096,25 @@ sur `/eleve`.
   reste utilisée pour le garde de rôle.
 - **`src/app/eleve/page.tsx`** — inchangé, garde `<Avatar seed={eleveId} nom={nom} size={40} />`
   à côté de la cloche.
+
+### Outillage : `npm run lint` réparé, pages d'erreur ajoutées, `next build` toujours cassé (1 septembre 2026)
+
+En lançant `next build` et `npm run lint` pour la première fois proprement (via Docker), deux
+défauts **préexistants au scaffold** sont apparus, sans rapport avec l'avatar.
+
+- **`npm run lint` — corrigé.** `eslint.config.mjs` (généré au scaffold, commit `bc4edfa`) était
+  incompatible avec `eslint-config-next@15.5.x` : imports sans extension `.js` (le paquet n'a pas de
+  champ `exports`) puis, une fois corrigé, `nextVitals is not iterable` — cette version ne publie que
+  des configs au format « eslintrc » hérité, pas de config plate. Réécrit en **FlatCompat**
+  (`@eslint/eslintrc`, ajouté en `devDependencies`), exactement comme `create-next-app` le fait pour
+  ESLint 9 + `eslint-config-next` 15.5.x. Vérifié dans le conteneur : `exit 0`, **0 erreur**, 4
+  warnings préexistants mineurs (`operateur` inutilisé dans `initier/route.ts`, un `eslint-disable`
+  obsolète dans `ChatPanel.tsx`, `_methode`/`_payeur` dans `mock-provider.ts`).
+- **`src/app/not-found.tsx` + `src/app/global-error.tsx` — ajoutés.** 404 App Router et error
+  boundary racine personnalisés, cohérents avec le design system. Utiles indépendamment. **Ne
+  débloquent pas** `next build` (testé : échec identique avec et sans).
+- **`next build` — non résolu, documenté comme bloquant** (voir la section « 🔴 Bloquant avant mise
+  en production » en tête de ce document pour le diagnostic complet : erreur `<Html>` au prérendu de
+  `/404`, préexistante — échoue déjà au commit `722f4bd` —, pistes écartées et pistes à explorer).
+  Investigation volontairement arrêtée ; on y revient au moment du déploiement.
+- `tsc --noEmit` : **0 erreur** (types de routes Next régénérés au préalable).
