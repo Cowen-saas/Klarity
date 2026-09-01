@@ -11,8 +11,6 @@ export default async function EleveLayout({ children }: LayoutProps<"/eleve">) {
   }
 
   return (
-    <EleveShell eleveId={session.user.id} nom={session.user.nom ?? ""}>
-      {children}
-    </EleveShell>
+    <EleveShell>{children}</EleveShell>
   );
 }

@@ -1,16 +1,19 @@
 /**
  * Avatar de compte élève — généré déterministiquement à partir de l'`id`
  * unique de l'`Eleve` (cuid), jamais stocké : le même id produit toujours le
- * même avatar, et deux élèves différents ont toujours un id différent, donc
- * un avatar visuellement différent — sans dépendance à un service externe
- * (pas d'appel réseau, pas d'image hébergée à gérer) et sans migration de
- * schéma. Motif "identicon" : grille 5×5 symétrique + teinte, dérivés d'un
- * hash du seed.
+ * même avatar, et deux élèves différents ont un id différent donc une couleur
+ * différente — sans dépendance à un service externe (pas d'appel réseau, pas
+ * d'image hébergée à gérer) et sans migration de schéma.
+ *
+ * Le motif est une silhouette générique « profil » (tête + épaules dans un
+ * cercle) identique pour tout le monde ; seule la teinte HSL est tirée
+ * aléatoirement du seed — saturation et luminosité restent fixes pour que
+ * chaque avatar garde le même style, seule la couleur change.
  */
 
-export interface MotifAvatar {
-  teinte: number; // 0-359
-  cellules: boolean[][]; // 5 lignes x 5 colonnes, symétrique horizontalement
+export interface CouleurAvatar {
+  /** Teinte HSL, 0-359 — dérivée du seed. */
+  teinte: number;
 }
 
 function hashSeed(seed: string): number {
@@ -33,22 +36,7 @@ function mulberry32(graine: number): () => number {
   };
 }
 
-const LIGNES = 5;
-const COLONNES_UTILES = 3; // colonne centrale + 2 colonnes miroitées vers les bords
-
-export function genererAvatar(seed: string): MotifAvatar {
+export function genererAvatar(seed: string): CouleurAvatar {
   const aleatoire = mulberry32(hashSeed(seed));
-  const teinte = Math.floor(aleatoire() * 360);
-
-  const cellules: boolean[][] = [];
-  for (let ligne = 0; ligne < LIGNES; ligne++) {
-    const moitie: boolean[] = [];
-    for (let colonne = 0; colonne < COLONNES_UTILES; colonne++) {
-      moitie.push(aleatoire() > 0.55);
-    }
-    // [c0, c1, c2(centre), c1, c0] — grille miroitée façon identicon.
-    cellules.push([...moitie, moitie[1], moitie[0]]);
-  }
-
-  return { teinte, cellules };
+  return { teinte: Math.floor(aleatoire() * 360) };
 }

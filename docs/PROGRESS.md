@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 31 août 2026 (Phase 2 — Paiement, voir §16)_
+_Dernière mise à jour : 1 septembre 2026 (avatar élève — silhouette générique, voir §16)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1022,3 +1022,29 @@ déconnecter" (sidebar `EleveShell`) — deux élèves ne doivent jamais avoir l
   unique endroit, pas de doublon à traiter ailleurs. Comptes de test supprimés après coup. Toujours
   aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1) — rendu vérifié par
   inspection du HTML/SVG servi, pas par capture d'écran réelle.
+
+#### Révision (1 septembre 2026) — silhouette générique au lieu de l'identicon, un seul emplacement
+
+Demande de l'utilisateur (avec image de référence) : remplacer le motif identicon par un avatar
+« silhouette de profil » classique (tête + épaules dans un cercle), **identique pour tout le
+monde**, seule la **couleur** étant tirée aléatoirement du compte ; et **retirer l'avatar de la
+sidebar** à côté de « Se déconnecter » — il ne reste plus qu'à côté de la cloche de notification
+sur `/eleve`.
+
+- **`src/lib/avatar.ts`** — l'identicon (grille 5×5 + `MotifAvatar`) est supprimé. `genererAvatar`
+  ne renvoie plus que `{ teinte }` : hash FNV-1a du `Eleve.id` → PRNG mulberry32 → une teinte
+  0-359. Saturation et luminosité restent fixes, donc tous les avatars ont le même style, seule la
+  couleur varie. Toujours déterministe, jamais stocké, aucune migration. L'espace de collision
+  visuelle se réduit à 360 teintes — assumé : deux élèves peuvent avoir la même couleur, l'avatar
+  n'est qu'un ornement d'interface, jamais un identifiant.
+- **`src/components/ui/Avatar.tsx`** — rendu SVG `viewBox 0 0 100 100` : cercle de fond
+  `hsl(t 22% 84%)`, silhouette `hsl(t 24% 52%)` = un cercle « tête » (cy 39, r 19) + un grand
+  cercle « épaules » (cy 92, r 30) rognés par un `clipPath` circulaire. Reste un composant pur
+  sans `"use client"`, `role="img"` + `aria-label`.
+- **`EleveShell.tsx`** — `import { Avatar }`, le `<Avatar>` de la sidebar et les props
+  `eleveId`/`nom` sont retirés (`EleveShellProps` n'a plus que `children`). Le `<SignOutButton>`
+  occupe désormais toute la largeur du bloc bas de sidebar.
+- **`src/app/eleve/layout.tsx`** — `<EleveShell>{children}</EleveShell>` sans props ; la `session`
+  reste utilisée pour le garde de rôle.
+- **`src/app/eleve/page.tsx`** — inchangé, garde `<Avatar seed={eleveId} nom={nom} size={40} />`
+  à côté de la cloche.
