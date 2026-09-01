@@ -82,6 +82,28 @@ parcours complet Choisir formule → Paiement Mobile Money → Vérification →
 actif en base, pour un élève payeur solo et pour un parent payeur, avec idempotence webhook
 testée explicitement et IDOR couvert sur toutes les routes par ID.
 
+Depuis le 1er septembre 2026 (§17 à §19) :
+- **`SmsProvider`** (mock) posé sur le même patron que `AIProvider`/`PaymentProvider`, et le flux
+  OTP parent unifié dessus (§17).
+- **Back-office admin complet** (§2.3, §18) : le dashboard `/admin` était déjà là (§8/§9) ;
+  ajout des écrans de gestion **dates d'examens** (alimente enfin le compte à rebours du dashboard
+  parent), **épreuves** (formulaire d'ajout + `StorageProvider` mock, en attendant Cloudflare R2)
+  et **corrections signalées** (liste + détail + override manuel de note). `StorageProvider` est la
+  4ᵉ abstraction du même patron.
+- **Rétention & anonymisation des comptes élève** (§2.9, §19) : jobs BullMQ sur le `worker`
+  (détection d'inactivité + anonymisation automatique hebdomadaires, archivage annuel des photos),
+  cycle `ACTIF → INACTIF_NOTIFIE → ANONYMISE`, plus l'écran de clôture manuelle immédiate côté
+  parent (`/parent/parametres`, maquette 12b).
+
+Les quatre accès externes encore en attente — CamerPay live, clé API Anthropic Claude, Cloudflare
+R2, fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur interface + un mock,
+et basculeront en réel par un simple changement de config (`PAYMENT_MODE` / `AI_MODE` /
+`STORAGE_MODE` / `SMS_MODE`), sans réécriture du code appelant.
+
+`next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
+le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
+réparé le 1er septembre (§ « Outillage »).
+
 Le dépôt est maintenant sur GitHub (`git@github.com:Cowen-saas/Klarity.git`, branche `main`),
 avec authentification SSH configurée.
 
@@ -118,14 +140,23 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
     vérification d'appartenance à la ressource précise (IDOR) reste à faire par route en
     Phase 1+ (voir §5, item ouvert).
 
-### Anticipation Phase 1 (déjà en avance sur la roadmap)
-Le CDC recommande explicitement de respecter les interfaces `AIProvider` et `PaymentProvider`
-dès la Phase 0 même en mode mock, pour que les Phases 3 et 4 (bascule vers les services réels)
-se limitent à un changement de configuration. C'est déjà fait :
-- `src/lib/ai/` — interface `AIProvider` + `MockAIProvider` (`.chat()`, `.corrigerCopie()`,
-  `.genererQuiz()`, simulation de rate limit, estimation de tokens).
-- `src/lib/payment/` — interface `PaymentProvider` + `MockPaymentProvider`
-  (`.initierPaiement()`, `.traiterWebhook()`, `.verifierSignatureWebhook()`).
+### Abstractions de services externes — même patron mock → réel (4)
+Le CDC recommande explicitement de respecter les interfaces des services externes dès la
+Phase 0 même en mode mock, pour que la bascule vers les services réels se limite à un
+changement de configuration. Quatre abstractions suivent maintenant ce patron
+(`get<X>Provider()` + `<X>_MODE` en env + une erreur explicite tant que la classe réelle
+n'existe pas) :
+- `src/lib/ai/` — `AIProvider` + `MockAIProvider` (`.chat()`, `.corrigerCopie()`,
+  `.genererQuiz()`, simulation de rate limit, estimation de tokens). `AI_MODE=mock|live`.
+- `src/lib/payment/` — `PaymentProvider` + `MockPaymentProvider` (`.initierPaiement()`,
+  `.traiterWebhook()`, `.verifierSignatureWebhook()`). `PAYMENT_MODE=mock|sandbox|live`.
+- `src/lib/sms/` — `SmsProvider` + `MockSmsProvider` (§17) : `envoyerOtp`,
+  `envoyerRappelRenouvellement`, `envoyerResumeProgression`, `envoyerAlerteInactivite` (§19).
+  Le mock logue `[SMS MOCK] Envoyé à <numéro> (<catégorie>) : <contenu>`. `SMS_MODE=mock|live`.
+  Le flux OTP parent (`src/lib/auth/otp.ts`) passe par cette interface.
+- `src/lib/storage/` — `StorageProvider` + `MockStorageProvider` (§18) : `uploader()`,
+  `obtenirUrlSignee()` (URL signée expirante, jamais d'URL publique en base), `supprimer()`.
+  Le mock écrit dans `.storage-mock/` (gitignoré). `STORAGE_MODE=mock|r2`.
 
 ### Clarification Tuteur IA vs Correction IA (fait et poussé — commit `f1b7754`)
 Le graphe de connaissances (voir ci-dessous) avait fait remonter une ambiguïté : les maquettes
@@ -147,10 +178,11 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 ### Graphe de connaissances Graphify
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
 persistant (`graphify-out/`) : **513 nœuds, 741 arêtes, 39 communautés**, santé du graphe
-propre (aucune arête orpheline). Mis à jour de façon incrémentale (`graphify --update`) à
-chaque changement de fond — dernière mise à jour après la clarification Tuteur IA/Correction IA
-ci-dessus. Sert de garde-fou pour repérer les incohérences entre maquettes, CDC et code au fil
-du développement.
+propre (aucune arête orpheline). Sert de garde-fou pour repérer les incohérences entre
+maquettes, CDC et code au fil du développement. **Snapshot du 27 août 2026** — n'inclut pas
+encore la Phase 2 paiement (§16) ni le travail du 1er septembre (§17 à §19 : SMS, back-office
+admin, rétention) ; un `graphify --update` sera nécessaire avant de s'en resservir comme
+référence.
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
@@ -230,15 +262,18 @@ tout futur ajout de dépendance.
    qu'aucun flux ne soit exercé avant l'audit du 25 août ; rien ne garantit qu'un futur ajout de
    dépendance ne retombe pas dans le piège du volume anonyme `node_modules` (§4 ci-dessus) si on
    l'oublie.
-2. 🟡 **Pas d'outils de navigateur Chrome disponibles dans les sessions récentes** — l'extension a
-   été installée par l'utilisateur en cours de route mais n'a pas été détectée dans la session en
-   cours (la détection se fait au démarrage d'une nouvelle session). Le rendu visuel réel (mise en
-   page, interactions au clic) de tous les écrans Phase 1 reste donc à vérifier par l'utilisateur
-   ou dans une session future avec les outils actifs — voir "Vérifié end-to-end via curl" plus bas
-   pour ce qui a pu être validé sans navigateur.
-3. 🟡 **Aucune donnée `DateExamen`** — le compte à rebours "BAC dans N jours" du dashboard parent
-   (maquette `11_dashboard_parent.png`) dépend du calendrier d'examens admin, jamais alimenté ;
-   volontairement omis du dashboard parent livré en §8 plutôt que d'afficher une fausse échéance.
+2. 🟡 **Outils navigateur Chrome — disponibles depuis le 1er septembre 2026, mais extension
+   instable.** Utilisés avec succès ce jour-là pour click-tester la transition live du stepper de
+   paiement (§16), le dashboard admin et les 3 écrans du back-office (§18), et une partie du
+   parcours rétention (§19). L'extension a toutefois multiplié les timeouts / crashs d'onglet
+   pendant la session, et les captures d'écran sont refusées sur `localhost:3000` (permission de
+   site non accordée) — plusieurs vérifications se sont donc faites par inspection du DOM plutôt
+   que visuellement. Le rendu pixel des écrans Phase 1 (§6 à §11) et de l'écran de clôture parent
+   n'a toujours pas été comparé aux maquettes au navigateur.
+3. ✅ **`DateExamen` — résolu (§18).** L'écran admin `/admin/dates-examens` existe ; deux dates
+   ont été saisies (BAC 2026-2027 au 19 juin 2027, Probatoire 2026-2027 « courant mai 2027 »,
+   attribuées à `admin@klarity.com`) et le compte à rebours du dashboard parent affiche désormais
+   « BAC dans N jours ».
 
 _(Le blocage `lightningcss`/Tailwind v4 qui figurait ici a été corrigé le 25 août — voir §4. L'IDOR,
 différé jusqu'ici faute de route par ID, est traité en §8 dès la première route concernée.)_
@@ -576,10 +611,12 @@ le réflexe 3001 reste.
 
 ## 15. Prochaine étape concrète
 
-1. Rendu visuel réel (comparaison pixel avec les maquettes) dans Chrome dès que les outils
-   navigateur sont disponibles dans une session — toujours pas le cas jusqu'ici (§5), y compris
-   pour les 4 nouveaux écrans de paiement livrés en §16 (vérifiés par `curl`/contenu HTML rendu,
-   jamais cliqués dans un vrai navigateur).
+1. Comparaison pixel systématique avec les maquettes dans Chrome. Les outils navigateur sont
+   disponibles depuis le 1er septembre (§5 point 2) et ont servi à click-tester le comportement de
+   plusieurs écrans (stepper §16, back-office admin §18, rétention §19), mais l'extension est
+   instable et les captures d'écran sont bloquées sur `localhost` — une passe de fidélité visuelle
+   complète reste à faire, notamment pour les écrans Phase 1 (§6-§11), l'écran de clôture parent
+   (12b) et les 4 écrans de paiement (§16).
 2. ~~Corriger l'erreur `tsc` résiduelle dans `src/auth.ts:241`~~ — fait en §16 (assignation
    `session.user.email` rendue conditionnelle) ; `npx tsc --noEmit` dans le conteneur est propre.
 3. Compléter et faire valider juridiquement les 3 documents légaux avant tout déploiement public
@@ -588,8 +625,11 @@ le réflexe 3001 reste.
    chat mode 2, lacunes réelles, quiz — tout ce qui était explicitement hors scope de §8.
 5. Job BullMQ de rappel de renouvellement (§5.5 du CDC) — cron quotidien J-3 avant
    `dateProchainRenouvellement`, bascule `ACTIF → EXPIRE` après le délai de grâce — explicitement
-   hors scope de la tâche Phase 2 traitée en §16 (qui couvrait §2.4/§2.6/§5.1-§5.4, pas §5.5) ;
-   à faire quand les canaux SMS/WhatsApp sortants seront branchés.
+   hors scope de la tâche Phase 2 traitée en §16 (qui couvrait §2.4/§2.6/§5.1-§5.4, pas §5.5).
+   **Débloqué** : le canal SMS sortant est en place (`SmsProvider`, §17, avec
+   `envoyerRappelRenouvellement` déjà posé) et l'ossature de jobs cron sur le worker existe
+   (`src/lib/queue/retention.ts`, §19) — reste à écrire le job lui-même et le gabarit de message.
+   Le job de rétention/anonymisation §2.9, lui, est **fait** (§19).
 6. `CamerPaySandboxProvider`/`CamerPayLiveProvider` (§5.3) dès obtention de l'accès CamerPay —
    l'endpoint `/api/paiement/webhook` et l'interface `PaymentProvider` sont déjà prêts à les
    recevoir sans retravail (§16).
@@ -1032,11 +1072,14 @@ un rechargement manuel de la page.
 - **Vérifié via `curl`** : rendu d'un paiement déjà résolu (`REUSSI`) — les 3 premières étapes du
   stepper (Formule/Paiement/Vérification) affichent bien la coche (icône `IconCheckCircle`, 3
   occurrences confirmées avant le contenu principal), la 4ᵉ ("Confirmation") reste en état actif
-  non coché, cohérent avec le contenu "Paiement confirmé !" affiché juste en dessous. La transition
-  live EN_ATTENTE → REUSSI en cours de session (sans rechargement) reste non observable par `curl`
-  seul — garantie par construction (state partagé) plutôt que testée en clic réel, toujours aucun
-  outil navigateur disponible dans cette session (§5/§15 point 1). Comptes de test supprimés après
-  coup.
+  non coché, cohérent avec le contenu "Paiement confirmé !" affiché juste en dessous.
+- **Transition live confirmée au navigateur (1 septembre 2026)** — parcours réel piloté dans
+  Chrome (inscription → paiement Orange Money → PIN). Sur `/abonnement/verification/[id]`, **même
+  URL tout du long, sans rechargement** : à `t = 0` le titre est « Vérification de votre
+  paiement… », le spinner tourne, l'étape « Vérification » du stepper n'est **pas** cochée (2
+  coches) ; à `t ≈ 4 s` le titre passe à « Paiement confirmé ! », le spinner disparaît et l'étape
+  « Vérification » est **cochée** (4 coches). La garantie « par construction » (state partagé) est
+  donc bien vérifiée empiriquement. Comptes de test supprimés après coup.
 
 ### Avatar de compte élève (1 septembre 2026)
 
@@ -1096,6 +1139,10 @@ sur `/eleve`.
   reste utilisée pour le garde de rôle.
 - **`src/app/eleve/page.tsx`** — inchangé, garde `<Avatar seed={eleveId} nom={nom} size={40} />`
   à côté de la cloche.
+- **Vérifié** : `tsc --noEmit` propre (types de routes Next régénérés). Rendu contrôlé sur un
+  aperçu HTML statique des 12 teintes + la silhouette de référence, et par lecture du SVG servi —
+  la page `/eleve` elle-même n'a pas été ouverte au navigateur ce jour-là (extension instable au
+  moment de ce changement).
 
 ### Outillage : `npm run lint` réparé, pages d'erreur ajoutées, `next build` toujours cassé (1 septembre 2026)
 
