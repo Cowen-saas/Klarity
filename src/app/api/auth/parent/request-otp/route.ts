@@ -5,9 +5,10 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * Envoi de l'OTP SMS pour la connexion parent (§2.2, §2.7). Rate limiting IP +
- * téléphone, les deux (réf. sécurité §2, cahier des charges §7). Le
- * fournisseur SMS reste à sélectionner (§3) — envoi simulé (log) en dev/mock
- * en attendant.
+ * téléphone, les deux (réf. sécurité §2, cahier des charges §7). L'envoi passe
+ * par `SmsProvider` (`src/lib/sms`, via `envoyerOtp`) : `SMS_MODE=mock` logue le
+ * message, `SMS_MODE=live` enverra un vrai SMS dès souscription du fournisseur
+ * (§3).
  */
 const bodySchema = z.object({
   telephone: z.string().min(8),
@@ -33,7 +34,6 @@ export async function POST(request: Request) {
   }
 
   const { codeDevMock } = await envoyerOtp(telephone);
-  // TODO Phase 2+ : brancher le vrai fournisseur SMS (§3) une fois sélectionné.
 
   return NextResponse.json({ envoye: true, codeDevMock });
 }

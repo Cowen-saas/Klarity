@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (avatar élève + outillage lint/build — voir §16 et « 🔴 Bloquant »)_
+_Dernière mise à jour : 1 septembre 2026 (provider SMS mock + unification OTP parent — voir §17)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1118,3 +1118,51 @@ défauts **préexistants au scaffold** sont apparus, sans rapport avec l'avatar.
   `/404`, préexistante — échoue déjà au commit `722f4bd` —, pistes écartées et pistes à explorer).
   Investigation volontairement arrêtée ; on y revient au moment du déploiement.
 - `tsc --noEmit` : **0 erreur** (types de routes Next régénérés au préalable).
+
+## 17. Provider SMS (mock) + unification du flux OTP parent (1 septembre 2026)
+
+Le fournisseur SMS réel (Orange SMS Cameroun ou Africa's Talking, §3) n'est pas encore souscrit.
+Comme pour `AIProvider` (§6.2) et `PaymentProvider` (§5.1), on pose l'interface + un mock, et on
+bascule plus tard par un simple changement de config.
+
+- **`src/lib/sms/`** — nouveau module, même structure que `src/lib/ai/` et `src/lib/payment/` :
+  - `provider.ts` — interface `SmsProvider` avec trois méthodes, une par usage SMS sortant du CDC :
+    `envoyerOtp(telephone, code, ttlMinutes)` (a, §2.2), `envoyerRappelRenouvellement(telephone,
+    donnees)` (b, §5.5), `envoyerResumeProgression(telephone, donnees)` (c, §2.2.3). Méthodes
+    distinctes plutôt qu'un `envoyer()` générique : un fournisseur réel route différemment le
+    transactionnel (OTP) et la notification de masse (rappels, résumés).
+  - `types.ts` — `ResultatEnvoiSms`, `DonneesRappelRenouvellement`, `DonneesResumeProgression`,
+    `CategorieSms`, `SmsEnvoiError`. Agnostiques du fournisseur (le payload d'une vraie API SMS
+    n'est pas connu).
+  - `messages.ts` — composition du texte à gabarit fixe (OTP, rappel de renouvellement), isolée
+    pour que mock et futur provider réel produisent un libellé identique. Le résumé de progression
+    n'a pas de gabarit ici : son corps est composé par le job appelant.
+  - `mock-provider.ts` — `MockSmsProvider` : n'appelle aucune API, logue
+    `[SMS MOCK] Envoyé à <numéro> (<catégorie>) : <contenu>` dans les logs du conteneur, retourne
+    `{ messageId, statut: "ENVOYE" }` après un délai simulé de 300 ms.
+  - `index.ts` — `getSmsProvider()`, sélection via `SMS_MODE = mock | live`. `live` lève une erreur
+    explicite tant qu'aucune classe réelle n'existe (même pattern que `AI_MODE`/`PAYMENT_MODE`).
+- **`SMS_MODE=mock`** ajouté à `.env.example` (défaut code `?? "mock"`, non déclaré dans
+  `docker-compose.yml` — même traitement que `AI_MODE`/`PAYMENT_MODE`).
+- **Unification OTP (point 3 de la demande).** `src/lib/auth/otp.ts` `envoyerOtp()` faisait un
+  `console.log("[OTP mock] ...")` ad hoc. Il appelle désormais
+  `getSmsProvider().envoyerOtp(telephone, code, OTP_TTL_MINUTES)`. Le seul chemin d'envoi d'OTP
+  (connexion parent, `/api/auth/parent/request-otp`) passe donc par `SmsProvider`. Le retour
+  `codeDevMock` (hors production) est conservé : il alimente le bouton « cliquer pour remplir » du
+  `ParentLoginForm`. Commentaires obsolètes nettoyés dans la route (`TODO Phase 2+ : brancher le
+  vrai fournisseur SMS`).
+- **Pas construit (point 4).** Aucun job BullMQ de rappel de renouvellement (§5.5) ni de résumé de
+  progression (§2.2.3) — seules les méthodes `SmsProvider` correspondantes sont posées, prêtes pour
+  ces jobs. `src/lib/sms/messages.ts` contient un gabarit de rappel de renouvellement provisoire,
+  à figer avec le job quand il sera écrit.
+- **Vérifié dans le navigateur** (pas seulement `tsc`) : parcours connexion parent de bout en bout —
+  `/connexion` onglet Parent → numéro `+237677889900` + code élève `ELE-TR6-CPF` → « Recevoir le
+  code ». Logs du conteneur `app` :
+  `[SMS MOCK] Envoyé à +237677889900 (OTP) : Klarity : votre code de connexion est 969647. Il
+  expire dans 10 minutes...` — bon numéro, bon code. Code `969647` saisi depuis les logs → `signIn`
+  parent réussi → redirection `/parent`, `session.user.role === "PARENT"`,
+  `session.user.telephone === "+237677889900"`, `ParentEleveLink` créé (`codeUtilise`
+  `ELE-TR6-CPF`), dashboard parent rendu avec l'enfant lié. Compte de test (parent + élève + lien +
+  OTP) supprimé de la base après coup. `tsc --noEmit` et `eslint` sur les fichiers touchés : 0
+  erreur.
+
