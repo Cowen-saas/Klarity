@@ -989,3 +989,36 @@ un rechargement manuel de la page.
   seul — garantie par construction (state partagé) plutôt que testée en clic réel, toujours aucun
   outil navigateur disponible dans cette session (§5/§15 point 1). Comptes de test supprimés après
   coup.
+
+### Avatar de compte élève (1 septembre 2026)
+
+Demande : chaque élève doit avoir un avatar de profil dès la création de son compte, affiché dans
+le cercle à côté de la cloche de notification (dashboard `/eleve`) et à côté du bouton "Se
+déconnecter" (sidebar `EleveShell`) — deux élèves ne doivent jamais avoir le même avatar.
+
+- **Décision d'architecture — généré, jamais stocké.** `src/lib/avatar.ts` dérive un motif
+  "identicon" (grille 5×5 symétrique + teinte HSL) directement de `Eleve.id` (cuid, déjà unique en
+  base) via un hash déterministe (FNV-1a) puis un PRNG (mulberry32) : le même id produit toujours
+  le même avatar, sans appel réseau à un service tiers, sans image à héberger et sans migration de
+  schéma — l'avatar existe "dès la création du compte" du simple fait que l'id existe dès cet
+  instant, aucune étape de génération séparée à orchestrer. Avec ~11,8M de combinaisons visuelles
+  distinctes possibles (360 teintes × 2¹⁵ motifs), une collision est possible en théorie à très
+  grande échelle (paradoxe des anniversaires) mais non gérée explicitement — jugé largement
+  suffisant pour l'échelle réelle de la plateforme plutôt que d'ajouter un registre de collision.
+- **`src/components/ui/Avatar.tsx`** — composant purement fonctionnel (pas de `"use client"`,
+  utilisable aussi bien dans un Server Component que dans le `EleveShell` client), rendu SVG
+  (`viewBox 0 0 5 5`) dans un conteneur `rounded-full overflow-hidden`, `role="img"` +
+  `aria-label` avec le nom de l'élève pour l'accessibilité.
+- **`src/app/eleve/page.tsx`** — remplace le placeholder vide (`<div ... bg-primary-light />`, déjà
+  réservé à cet effet) à côté de la cloche par `<Avatar seed={eleveId} nom={nom} />`.
+- **`EleveShell.tsx`** — nouvelles props `eleveId`/`nom` (passées depuis `src/app/eleve/layout.tsx`,
+  qui a déjà la session) ; avatar affiché juste à gauche du bouton `SignOutButton` en bas de la
+  sidebar desktop, séparé du reste de la nav par une bordure.
+- **Vérifié via `curl`** avec deux comptes de test distincts : teintes HSL différentes confirmées
+  dans le HTML rendu (`hsl(359 ...)` vs `hsl(37 ...)`) ; exactement 2 avatars par page (cloche +
+  sidebar), tous deux dérivés du même `eleveId` pour un même utilisateur (cohérent — c'est le même
+  avatar affiché à deux endroits, pas deux avatars différents pour la même personne) ; recherché
+  dans tout `src/app/eleve` et `src/components/eleve` — la cloche de notification n'existe qu'à cet
+  unique endroit, pas de doublon à traiter ailleurs. Comptes de test supprimés après coup. Toujours
+  aucun outil de clic navigateur disponible dans cette session (§5/§15 point 1) — rendu vérifié par
+  inspection du HTML/SVG servi, pas par capture d'écran réelle.

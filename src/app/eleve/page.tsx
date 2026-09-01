@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { IconBell } from "@/components/icons";
 import { LacuneBar } from "@/components/eleve/LacuneBar";
+import { Avatar } from "@/components/ui/Avatar";
 
 const CLASSE_LABELS: Record<string, string> = {
   TROISIEME: "3e",
@@ -74,7 +75,7 @@ export default async function EleveDashboardPage() {
           >
             <IconBell className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div className="h-10 w-10 rounded-full bg-primary-light" aria-hidden="true" />
+          <Avatar seed={eleveId} nom={nom} size={40} />
         </div>
       </div>
 

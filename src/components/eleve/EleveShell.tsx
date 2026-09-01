@@ -6,6 +6,7 @@ import type { ComponentType, ReactNode, SVGProps } from "react";
 import { IconHome, IconSparkles, IconDocument, IconBulb, IconPencil, IconUser, IconCreditCard } from "@/components/icons";
 import { KlarityLogo } from "@/components/ui/KlarityLogo";
 import { SignOutButton } from "@/components/ui/SignOutButton";
+import { Avatar } from "@/components/ui/Avatar";
 
 interface NavItem {
   href: string;
@@ -24,7 +25,13 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/eleve/profil", label: "Profil", icon: IconUser },
 ];
 
-export function EleveShell({ children }: { children: ReactNode }) {
+interface EleveShellProps {
+  children: ReactNode;
+  eleveId: string;
+  nom: string;
+}
+
+export function EleveShell({ children, eleveId, nom }: EleveShellProps) {
   const pathname = usePathname();
 
   return (
@@ -36,7 +43,10 @@ export function EleveShell({ children }: { children: ReactNode }) {
             <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
           ))}
         </nav>
-        <SignOutButton className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60" />
+        <div className="mt-auto flex items-center gap-2 border-t border-white/10 pt-4">
+          <Avatar seed={eleveId} nom={nom} size={36} />
+          <SignOutButton className="flex flex-1 items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60" />
+        </div>
       </aside>
 
       <div className="flex-1 pb-20 md:pb-0">{children}</div>

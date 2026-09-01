@@ -10,5 +10,9 @@ export default async function EleveLayout({ children }: LayoutProps<"/eleve">) {
     redirect("/connexion");
   }
 
-  return <EleveShell>{children}</EleveShell>;
+  return (
+    <EleveShell eleveId={session.user.id} nom={session.user.nom ?? ""}>
+      {children}
+    </EleveShell>
+  );
 }
