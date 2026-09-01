@@ -33,16 +33,15 @@ function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
     { href: "/admin/utilisateurs", label: "Utilisateurs", icon: IconUsers, disabled: true },
     { href: "/admin/eleves", label: "Élèves", icon: IconUser, disabled: true },
     { href: "/admin/parents", label: "Parents", icon: IconUsers, disabled: true },
-    { href: "/admin/epreuves", label: "Épreuves", icon: IconDocument, disabled: true },
+    { href: "/admin/epreuves", label: "Épreuves", icon: IconDocument },
     { href: "/admin/exemples-corriges", label: "Exemples corrigés", icon: IconPencil, disabled: true },
     {
       href: "/admin/corrections-signalees",
       label: "Corrections signalées",
       icon: IconFlag,
-      disabled: true,
       badge: correctionsSignaleesCount,
     },
-    { href: "/admin/dates-examens", label: "Dates d'examens", icon: IconCalendar, disabled: true },
+    { href: "/admin/dates-examens", label: "Dates d'examens", icon: IconCalendar },
     { href: "/admin/usage-ia", label: "Usage IA", icon: IconSparkles, disabled: true },
     { href: "/admin/securite", label: "Sécurité", icon: IconShield, disabled: true },
     { href: "/admin/paiements", label: "Paiements", icon: IconCreditCard, disabled: true },
@@ -105,6 +104,9 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link href={item.href} className={classes} aria-current={active ? "page" : undefined}>
       <Icon className="h-5 w-5" aria-hidden="true" />
       {item.label}
+      {item.badge ? (
+        <span className="ml-auto rounded-full bg-danger px-2 py-0.5 text-[10px] font-bold text-white">{item.badge}</span>
+      ) : null}
     </Link>
   );
 }

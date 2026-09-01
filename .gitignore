@@ -47,3 +47,6 @@ next-env.d.ts
 
 # graphify (generated knowledge-graph cache, not app code)
 /graphify-out/
+
+# StorageProvider mock — fichiers uploadés en dev (épreuves, corrigés), jamais versionnés
+/.storage-mock/

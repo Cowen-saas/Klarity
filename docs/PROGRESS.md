@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (provider SMS mock + unification OTP parent — voir §17)_
+_Dernière mise à jour : 1 septembre 2026 (back-office admin : dates d'examens, épreuves + StorageProvider, corrections signalées — voir §18)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1165,4 +1165,126 @@ bascule plus tard par un simple changement de config.
   `ELE-TR6-CPF`), dashboard parent rendu avec l'enfant lié. Compte de test (parent + élève + lien +
   OTP) supprimé de la base après coup. `tsc --noEmit` et `eslint` sur les fichiers touchés : 0
   erreur.
+
+## 18. Back-office admin — dates d'examens, épreuves (+ StorageProvider), corrections signalées (1 septembre 2026)
+
+Construit contre §2.3 du CDC. Le compte admin (`prisma/create-admin.ts`) et `/admin/connexion`
+existaient déjà (Phase 1). Le dashboard `/admin` lui-même était déjà construit en §8/§9 (tuiles
+stats, CA, répartition abonnements, monitoring usage IA, observabilité sécurité, journal
+paiements) — cette tâche ajoute les **trois écrans de gestion** que la sidebar listait en
+« Bientôt », et câble les boutons du dashboard qui pointaient dans le vide.
+
+### `StorageProvider` (`src/lib/storage/`) — 4ᵉ abstraction du même patron
+
+Même logique que `AIProvider` (§6.2), `PaymentProvider` (§5.1), `SmsProvider` (§17) : Cloudflare R2
+n'ayant pas encore de clés, on pose l'interface + un mock, bascule ultérieure par config.
+
+- `provider.ts` — `StorageProvider` : `uploader(fichier)` → `{ key, taille }` (clé opaque, jamais
+  d'URL en base) ; `obtenirUrlSignee(key, expiresInSeconds?)` → URL **temporaire signée** (jamais
+  d'accès public permanent, réf. sécurité / CLAUDE.md) ; `supprimer(key)`.
+- `types.ts` — `DossierStockage` (`epreuves` | `corriges` | `copies`), `FichierAUploader`,
+  `ResultatUpload`, `StorageError`.
+- `mock-provider.ts` — `MockStorageProvider` : écrit sous `.storage-mock/<dossier>/<uuid>.<ext>`
+  (racine du repo, **gitignoré**, bind-mounté donc persistant en dev). `obtenirUrlSignee` imite une
+  URL signée R2 : lien vers `/api/admin/storage` porteur d'un HMAC (`STORAGE_MOCK_SIGNING_SECRET`)
+  + échéance, refusé une fois expiré. Chemin disque borné à l'intérieur de `.storage-mock/`
+  (garde anti-traversal). Logue `[STORAGE MOCK] Fichier déposé : <key> (<n> octets)`.
+- `index.ts` — `getStorageProvider()`, sélection `STORAGE_MODE = mock | r2`. `r2` lève une erreur
+  explicite tant que `R2StorageProvider` n'existe pas.
+- `.env.example` : `STORAGE_MODE=mock` ajouté à la section R2.
+- `src/app/api/admin/storage/route.ts` (GET) — sert un fichier mock depuis une URL signée
+  (HMAC + échéance vérifiés). Gate ADMIN en plus : en dev, seuls les écrans admin consomment ces
+  URLs. Disparaît quand R2 réel sera branché.
+
+### 1. Dashboard `/admin` — boutons câblés
+
+`src/app/admin/(protected)/page.tsx` : les boutons « + Ajouter une épreuve » et « + Ajouter »
+(dates d'examens), jusque-là `disabled`, deviennent des `Link` vers les nouveaux écrans. Les lignes
+« Corrections contestées » deviennent des `Link` vers `/admin/corrections-signalees?id=…`. Le reste
+du dashboard (données réelles, jamais simulées) est inchangé — vérifié en session admin réelle :
+tuiles (2 élèves, 1 parent, CA 10 000 FCFA depuis les paiements mock de test), observabilité qui
+remonte les vraies tentatives de connexion échouées, épreuves/usage IA en état vide honnête.
+
+### 2. `/admin/dates-examens` — calendrier d'examens (§2.3, §4.2.1)
+
+- Page serveur + `src/components/admin/DateExamenManager.tsx` (client) : formulaire
+  ajout/modification (BEPC/Probatoire/BAC × année scolaire × date précise **ou** période estimée —
+  exclusives) + liste du calendrier groupée par année scolaire avec bouton « Modifier » qui
+  recharge la ligne dans le formulaire.
+- `src/app/api/admin/dates-examens/route.ts` (POST) — upsert sur la clé naturelle
+  `(typeExamen, anneeScolaire)` : ajouter et modifier = même appel. `ajouteParAdminId` =
+  `session.user.id`. Gate ADMIN.
+- **Vérifié navigateur** : ajout BAC 2026-2027 → 19 juin 2027 (précise) et Probatoire 2026-2027 →
+  « Courant mai 2027 » (estimée), les deux persistés en base. Le compte à rebours du **dashboard
+  parent** (`11_dashboard_parent.png`, seul dashboard à en avoir un — la maquette élève
+  `04_dashboard_eleve.png` n'en a pas) passe de « Aucune date d'examen renseignée » à
+  **« BAC dans 291 jours »**. Ces deux dates sont conservées (réattribuées à `admin@klarity.com`)
+  comme données valides alimentant la fonctionnalité — modifiables/supprimables via l'écran.
+
+### 3. `/admin/epreuves` — ajout à la banque (§2.3, §4.2, §4.3)
+
+- Page serveur + `src/components/admin/EpreuveManager.tsx` (client) : formulaire multipart (classe,
+  filière conditionnelle à Première/Terminale, matière filtrée par classe/filière parmi les
+  `Matiere.banqueDisponible = true`, titre, année scolaire, fiche PDF, corrigé PDF) + liste des
+  épreuves avec liens **Fiche / Corrigé** (URLs signées régénérées à chaque rendu). État vide
+  honnête : « la banque sera alimentée quand la source externe Supabase sera accessible ».
+- `src/app/api/admin/epreuves/route.ts` (POST) — `multipart/form-data`, validation zod des
+  métadonnées + des fichiers (PDF, ≤ 20 Mo), vérification `Matiere.banqueDisponible`, upload des
+  deux PDF via `StorageProvider`, création `Epreuve` avec les clés opaques. Gate ADMIN.
+- **Vérifié navigateur** : upload d'une épreuve de test (2 PDF) → `Epreuve` créée avec
+  `fichePdfKey`/`corrigeReferenceKey`, fichiers réellement écrits dans `.storage-mock/`, log
+  `[STORAGE MOCK]`, et `fetch` de l'URL signée renvoie bien le PDF (200, `application/pdf`,
+  `%PDF…`). Épreuve de test + fichiers supprimés ensuite — la banque reste vide (aucune vraie
+  épreuve à ajouter tant que R2 et la source Supabase ne sont pas branchés, comme demandé).
+
+### 4. `/admin/corrections-signalees` — revue des contestations (§2.3, §2.8)
+
+- Page serveur (liste + détail via `?id=`) + `src/components/admin/CorrectionSignaleeDetail.tsx`
+  (client) : liste des `CorrectionDetail.signalee = true` avec badge « N en attente » et statut
+  Traité/En attente par ligne ; panneau de détail (élève, épreuve, motif, commentaire élève,
+  vignettes copie/corrigé en placeholder, détail correction IA) + formulaire « Forcer une nouvelle
+  note » (note /20 + justification). État vide honnête.
+- `src/app/api/admin/corrections/[id]/override/route.ts` (PATCH) — renseigne `noteOverride`,
+  `justificationOverride`, `overrideParAdminId`, `dateTraitementSignalement`. **N'écrase jamais la
+  sortie de l'IA** (`note`, `pointsForts`, `feedbackDetaille` intacts — invariant CLAUDE.md). Gate
+  ADMIN + vérifie l'existence de la correction.
+- **Vérifié navigateur** : écran d'abord en état vide, puis avec une correction signalée de test —
+  liste → ouverture du détail → override note 8.5 → 14 avec justification : en base `note` reste
+  `8.5`, `noteOverride = 14`, `overrideParAdminId` = l'admin, signalement marqué traité ; l'UI
+  repasse la ligne en « Traité » et le détail en « Déjà traité ». Données de test supprimées.
+
+### 5. IDOR (§2.3 point 5, réf. sécurité §5)
+
+Le middleware (`src/middleware.ts`) ne matche que `/admin/:path*` (pages), **jamais `/api/*`** —
+convention du projet : chaque route API fait son propre contrôle. Vérifié :
+
+- Les 3 pages (`/admin/dates-examens`, `/admin/epreuves`, `/admin/corrections-signalees`) : gate
+  middleware + second contrôle `session.user.role === "ADMIN"` dans le composant serveur →
+  redirect `/admin/connexion`. Testé sans session : **307**.
+- Les 4 routes API (`/api/admin/dates-examens`, `/api/admin/epreuves`,
+  `/api/admin/corrections/[id]/override`, `/api/admin/storage`) : `auth()` +
+  `session.user.role !== "ADMIN"` → **401** en tête de handler, avant toute requête base. Testé
+  sans session : **401** sur toutes.
+- Aucune de ces routes n'accepte d'identifiant d'élève/parent en entrée ni ne renvoie de donnée
+  d'un élève/parent hors du contexte admin : `dates-examens` ne touche que `DateExamen` ;
+  `epreuves` ne touche que `Epreuve` + `Matiere` ; `corrections/[id]/override` charge la
+  `CorrectionDetail` par son id (ressource de revue admin, pas indexée par un élève appelant) et
+  n'expose que la note/justification ; `storage` ne sert que des clés du `MockStorageProvider`,
+  signées.
+
+### Sidebar (`AdminShell.tsx`)
+
+`/admin/epreuves`, `/admin/corrections-signalees`, `/admin/dates-examens` : `disabled` retiré. Le
+badge de compteur (corrections signalées) s'affiche désormais aussi sur l'item actif. Les autres
+items (`Utilisateurs`, `Élèves`, `Parents`, `Exemples corrigés`, `Usage IA`, `Sécurité`,
+`Paiements`, `Revenus`, `Paramètres`) restent « Bientôt » — hors scope de cette tâche.
+
+### Non fait (volontaire)
+
+- Écran « Exemples corrigés » (`ExempleCorrection`) : listé dans la maquette mais pas dans la
+  demande — reste `disabled`.
+- Aucune vraie épreuve ni vraie correction ajoutée : les outils sont prêts, l'alimentation
+  attend R2 + la source Supabase tierce.
+- `next build` reste cassé (erreur `<Html>` préexistante, cf. section « 🔴 Bloquant ») — non
+  aggravé par ces écrans ; `tsc --noEmit` et `npm run lint` : 0 erreur.
 

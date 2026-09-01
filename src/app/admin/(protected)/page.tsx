@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -110,6 +111,7 @@ export default async function AdminDashboardPage() {
       orderBy: { dateSignalement: "desc" },
       take: 5,
       select: {
+        id: true,
         motifSignalement: true,
         dateSignalement: true,
         eleve: { select: { codeEleve: true } },
@@ -205,13 +207,12 @@ export default async function AdminDashboardPage() {
       <section className="mt-6 rounded-2xl bg-surface p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-texte">Épreuves récemment ajoutées</h2>
-          <button
-            type="button"
-            disabled
-            className="cursor-not-allowed rounded-xl bg-primary/40 px-4 py-2 text-sm font-semibold text-white"
+          <Link
+            href="/admin/epreuves"
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
           >
             + Ajouter une épreuve
-          </button>
+          </Link>
         </div>
         {epreuvesRecentes.length === 0 ? (
           <p className="mt-4 text-sm text-texte-muted">Aucune épreuve dans la banque pour l&apos;instant.</p>
@@ -296,9 +297,12 @@ export default async function AdminDashboardPage() {
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-texte">Dates d&apos;examens</h2>
-            <button type="button" disabled className="cursor-not-allowed rounded-xl bg-primary/40 px-4 py-2 text-sm font-semibold text-white">
+            <Link
+              href="/admin/dates-examens"
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+            >
               + Ajouter
-            </button>
+            </Link>
           </div>
           {datesExamens.length === 0 ? (
             <p className="mt-4 text-sm text-texte-muted">Aucune date d&apos;examen renseignée.</p>
@@ -357,20 +361,27 @@ export default async function AdminDashboardPage() {
             <p className="mt-4 text-sm text-texte-muted">Aucune correction signalée pour l&apos;instant.</p>
           ) : (
             <div className="mt-3 divide-y divide-border">
-              {correctionsSignalees.map((c, i) => (
-                <div key={i} className="flex items-center justify-between py-3 text-sm">
+              {correctionsSignalees.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/admin/corrections-signalees?id=${c.id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg px-2 py-3 text-sm transition-colors hover:bg-fond"
+                >
                   <p className="font-semibold text-texte">{c.eleve.codeEleve}</p>
                   <p className="text-texte-muted">
                     {c.epreuve.titre} — {c.matiere.nom}
                   </p>
                   <p className="text-texte-muted">{c.motifSignalement}</p>
-                </div>
+                </Link>
               ))}
             </div>
           )}
         </section>
-        <section className="flex items-center justify-center rounded-2xl bg-surface p-6 text-center shadow-sm">
-          <p className="text-sm text-texte-muted">Sélectionne une correction signalée dans la liste pour la traiter.</p>
+        <section className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-surface p-6 text-center shadow-sm">
+          <p className="text-sm text-texte-muted">Ouvre une correction signalée pour la traiter et forcer une nouvelle note.</p>
+          <Link href="/admin/corrections-signalees" className="text-sm font-semibold text-primary hover:underline">
+            Voir toutes les corrections signalées
+          </Link>
         </section>
       </div>
 
