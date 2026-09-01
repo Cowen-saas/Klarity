@@ -26,7 +26,10 @@ async function compteToujoursValide(role: ActeurRole, id: string): Promise<boole
   switch (role) {
     case "ELEVE": {
       const eleve = await prisma.eleve.findUnique({ where: { id } });
-      return !!eleve && eleve.statutCompte === "ACTIF";
+      // Un compte anonymisé (§2.9) perd tout accès ; un compte simplement
+      // INACTIF_NOTIFIE garde sa session en cours (l'usage courant *est* une
+      // reprise d'activité — la connexion le repasse ACTIF, cf. authorize).
+      return !!eleve && eleve.statutCompte !== "ANONYMISE";
     }
     case "PARENT": {
       const parent = await prisma.parent.findUnique({ where: { id } });
@@ -65,7 +68,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!codeEleve || !pin) return null;
 
         const eleve = await prisma.eleve.findUnique({ where: { codeEleve } });
-        if (!eleve || eleve.statutCompte !== "ACTIF") return null;
+        // Un compte anonymisé (§2.9) est définitivement clos. Un compte
+        // INACTIF_NOTIFIE peut encore se reconnecter : c'est précisément la
+        // reprise d'activité qui annule l'anonymisation à venir (cf. plus bas).
+        if (!eleve || eleve.statutCompte === "ANONYMISE") return null;
 
         if (eleve.pinVerrouilleJusqua && eleve.pinVerrouilleJusqua > new Date()) {
           return null;
@@ -92,7 +98,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         await prisma.eleve.update({
           where: { id: eleve.id },
-          data: { pinTentativesEchouees: 0, pinVerrouilleJusqua: null, derniereActiviteLe: new Date() },
+          data: {
+            pinTentativesEchouees: 0,
+            pinVerrouilleJusqua: null,
+            derniereActiviteLe: new Date(),
+            // Reprise d'activité pendant le délai de grâce (§2.9.1) : le compte
+            // redevient ACTIF et échappe au job d'anonymisation.
+            ...(eleve.statutCompte === "INACTIF_NOTIFIE"
+              ? { statutCompte: "ACTIF" as const, dateNotificationInactivite: null }
+              : {}),
+          },
         });
 
         return {

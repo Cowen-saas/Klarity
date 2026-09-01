@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SmsProvider } from "./provider";
 import type { CategorieSms, DonneesRappelRenouvellement, DonneesResumeProgression, ResultatEnvoiSms } from "./types";
-import { messageOtp, messageRappelRenouvellement } from "./messages";
+import { messageAlerteInactivite, messageOtp, messageRappelRenouvellement } from "./messages";
 
 /** Latence simulée d'une API SMS réelle — permet de tester les états "envoi en cours" côté UI. */
 const MOCK_DELAI_MS = 300;
@@ -30,6 +30,14 @@ export class MockSmsProvider implements SmsProvider {
     donnees: DonneesResumeProgression
   ): Promise<ResultatEnvoiSms> {
     return this.simuler(telephone, donnees.corps, "RESUME_PROGRESSION");
+  }
+
+  async envoyerAlerteInactivite(
+    telephone: string,
+    prenomEleve: string,
+    joursAvantAnonymisation: number
+  ): Promise<ResultatEnvoiSms> {
+    return this.simuler(telephone, messageAlerteInactivite(prenomEleve, joursAvantAnonymisation), "ALERTE_INACTIVITE");
   }
 
   private async simuler(telephone: string, contenu: string, categorie: CategorieSms): Promise<ResultatEnvoiSms> {

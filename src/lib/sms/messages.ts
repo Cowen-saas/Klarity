@@ -27,3 +27,11 @@ export function messageRappelRenouvellement({ joursAvantExpiration, dateExpirati
         : `expire dans ${joursAvantExpiration} jours`;
   return `Klarity : l'abonnement Premium ${echeance} (le ${date}). Renouvelez-le pour garder l'acces sans interruption.`;
 }
+
+/** (d) Alerte d'inactivité du compte élève avant anonymisation (§2.9.1). */
+export function messageAlerteInactivite(prenomEleve: string, joursAvantAnonymisation: number): string {
+  return (
+    `Klarity : le compte de ${prenomEleve} est inactif. Sans nouvelle connexion sous ${joursAvantAnonymisation} jours, ` +
+    `ses donnees pedagogiques seront definitivement supprimees.`
+  );
+}

@@ -14,7 +14,7 @@
  * facturée et acheminée autrement) — d'où des méthodes distinctes sur
  * l'interface plutôt qu'un `envoyer()` générique.
  */
-export type CategorieSms = "OTP" | "RAPPEL_RENOUVELLEMENT" | "RESUME_PROGRESSION";
+export type CategorieSms = "OTP" | "RAPPEL_RENOUVELLEMENT" | "RESUME_PROGRESSION" | "ALERTE_INACTIVITE";
 
 export interface ResultatEnvoiSms {
   /** Identifiant de message du fournisseur — mock : un uuid ; réel : l'id renvoyé par l'API SMS. */

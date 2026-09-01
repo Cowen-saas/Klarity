@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (back-office admin : dates d'examens, épreuves + StorageProvider, corrections signalées — voir §18)_
+_Dernière mise à jour : 1 septembre 2026 (rétention & suppression des données §2.9 : jobs worker + clôture manuelle parent — voir §19)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1287,4 +1287,110 @@ items (`Utilisateurs`, `Élèves`, `Parents`, `Exemples corrigés`, `Usage IA`, 
   attend R2 + la source Supabase tierce.
 - `next build` reste cassé (erreur `<Html>` préexistante, cf. section « 🔴 Bloquant ») — non
   aggravé par ces écrans ; `tsc --noEmit` et `npm run lint` : 0 erreur.
+
+## 19. Rétention & suppression des données — cycle de vie du compte élève (§2.9, 1 septembre 2026)
+
+Cycle `ACTIF -> INACTIF_NOTIFIE -> ANONYMISE`, sur le service `worker` (BullMQ, §3.1) — jamais sur
+`app`.
+
+### `src/lib/retention/` — logique pure, partagée worker + route
+
+- **`config.ts`** — seuils surchargeables par env (valeurs de départ non figées, §2.9.1) :
+  `RETENTION_INACTIVITE_JOURS` (défaut 180), `RETENTION_GRACE_JOURS` (défaut 60),
+  `RETENTION_ARCHIVAGE_RECUL_ANS` (défaut 1). Réduire pour tester.
+- **`detection-inactivite.ts`** — `detecterInactivite()` : les comptes `ACTIF` dont
+  `derniereActiviteLe` (ou `createdAt` à défaut) dépasse le seuil passent `INACTIF_NOTIFIE`,
+  `dateNotificationInactivite` est horodaté, on notifie par SMS le(s) parent(s) lié(s) — ou, à
+  défaut de lien vérifié, le dernier numéro ayant payé *en tant qu'élève* (l'élève n'a pas de
+  téléphone en base), sinon rien — et on journalise `COMPTE_INACTIF_DETECTE`. Idempotent (ne cible
+  que `ACTIF`).
+- **`anonymisation.ts`** — `anonymiserEleve(eleveId, source)` : **cœur partagé** par le job auto et
+  la clôture manuelle. Irréversible, idempotent (no-op si déjà `ANONYMISE`). Hors transaction :
+  suppression des objets `StorageProvider` de `TentativeEpreuve.photoUploadKeys`. En transaction :
+  suppression de `MessageChat`/`ConversationChat`, `QuizQuestion`/`Quiz`, `Lacune`,
+  `CorrectionDetail` (suppression complète, choix prudent §2.9.2), `TentativeEpreuve`,
+  `SessionActivite`, `ParentEleveLink` ; puis anonymisation de la **ligne** `Eleve` (`nom` = « Élève
+  anonymisé », `pinHash` = « ANONYMISE » — non-bcrypt, verrouille toute connexion), `statutCompte`
+  = `ANONYMISE`, `dateAnonymisation` horodaté ; enfin `AuditLogSecurite`
+  `COMPTE_ANONYMISE_AUTO` / `COMPTE_ANONYMISE_MANUEL` (avec `parentId` + `parentTelephone` dans
+  `details` pour le manuel, §4.6). La ligne `Eleve` **n'est jamais supprimée** — l'intégrité
+  référentielle avec `Abonnement`/`Paiement` (conservés, §2.9.4) est préservée.
+- **`anonymisation-auto.ts`** — `anonymiserComptesExpires()` : cible `INACTIF_NOTIFIE` dont la
+  notification date de plus de `DELAI_GRACE_JOURS`, sans reprise d'activité, appelle
+  `anonymiserEleve(_, { type: "AUTO" })`.
+- **`archivage-photos.ts`** — `archiverPhotosAncienneAnnee()` : supprime du stockage les
+  `photoUploadKeys` des `TentativeEpreuve` rattachées à une `Epreuve` d'année scolaire antérieure à
+  « année en cours − recul » (pivot au 1er août), vide la référence en base (idempotent).
+  `CorrectionDetail` (note/feedback) **conservé** (§2.9.3).
+
+### `src/lib/queue/retention.ts` + `src/worker/index.ts`
+
+File `retention`, 3 Job Schedulers BullMQ (`upsertJobScheduler`, ré-enregistrés à chaque démarrage
+du worker) : `detection-inactivite` (lundi 03:00), `anonymisation-auto` (lundi 04:00, après la
+détection), `archivage-photos` (1er août 05:00). `declencherJobRetention(nom)` déclenche un job à
+la main (tests). Le worker log confirme au boot : « schedulers rétention enregistrés ».
+
+### `src/auth.ts` — reprise d'activité pendant le délai de grâce
+
+Le provider élève bloquait toute connexion `statutCompte !== "ACTIF"` — un compte
+`INACTIF_NOTIFIE` ne pouvait donc **jamais** « reprendre l'activité ». Corrigé : la connexion est
+refusée uniquement si `ANONYMISE` ; une connexion réussie d'un compte `INACTIF_NOTIFIE` le repasse
+`ACTIF` et efface `dateNotificationInactivite`. `compteToujoursValide` (refresh JWT) aligné :
+invalide seulement `ANONYMISE`.
+
+### Clôture manuelle immédiate par le parent (§2.9.1, maquette `12b`)
+
+- **`src/app/parent/parametres/page.tsx`** — page serveur PARENT, sélection de l'enfant via
+  `?eleve=` (appartenance du `ParentEleveLink` re-vérifiée, IDOR). Affiche le formulaire de clôture,
+  ou un encart « Compte clôturé » si déjà `ANONYMISE`, ou « Aucun enfant lié ».
+- **`src/components/parent/ClotureCompteForm.tsx`** — fidèle à la maquette : carte d'avertissement
+  rouge + case « Je comprends que cette action est irréversible » + bouton, puis carte
+  « CONFIRMATION FINALE » où il faut taper `CLÔTURER`. Note sur la conservation des données de
+  facturation.
+- **`src/app/api/parent/eleve/[id]/cloture/route.ts`** (POST) — PARENT, IDOR (lien vérifié requis,
+  sinon `IDOR_BLOCKED` + 403), double confirmation **revalidée côté serveur** (`comprend === true`
+  + `confirmationTexte` == « CLÔTURER » après trim/upper), puis
+  `anonymiserEleve(_, { type: "MANUEL", parentId, parentTelephone })`.
+- **`ParentShell.tsx`** : « Paramètres » n'est plus `disabled`.
+
+### `SmsProvider` — 4ᵉ méthode
+
+`envoyerAlerteInactivite(telephone, prenomEleve, joursAvantAnonymisation)` ajoutée à l'interface +
+mock + gabarit (`messageAlerteInactivite`), catégorie `ALERTE_INACTIVITE`. C'est la seule brique
+SMS réellement câblée à un job à ce stade (les 3 autres méthodes attendent toujours leurs jobs).
+
+### Hors périmètre de ces jobs (§2.9.4) — vérifié non touché
+
+`OtpVerification` (expiration courte propre), `Paiement` / `Abonnement` / `WebhookLog` (durée
+légale comptable), `AuditLogSecurite` (rétention sécurité distincte). `UsageIA` (compteurs de
+tokens / coûts, ops) laissé intact également — hors de la liste de suppression du §2.9.
+
+### Vérifié réellement (pas seulement `tsc`) — jobs déclenchés à la main + curl
+
+- **Détection** : élève test `derniereActiviteLe` à −300 j + parent lié → job `detection-inactivite`
+  → `statutCompte` = `INACTIF_NOTIFIE`, `dateNotificationInactivite` posé, log
+  `[SMS MOCK] Envoyé à +237655443322 (ALERTE_INACTIVITE) : ...sous 60 jours...`, audit
+  `COMPTE_INACTIF_DETECTE` (`{seuilInactiviteJours:180, delaiGraceJours:60, numerosNotifies:1}`).
+  Re-run → 0 compte, aucun doublon d'audit.
+- **Anonymisation auto** : élève `INACTIF_NOTIFIE` notifié −70 j + conversation + abonnement → job
+  `anonymisation-auto` → conversation/messages supprimés, **abonnement conservé**, `nom` = « Élève
+  anonymisé », `pinHash` = « ANONYMISE », `statutCompte` = `ANONYMISE`, audit
+  `COMPTE_ANONYMISE_AUTO`. Re-appel `anonymiserEleve` → `dejaAnonymise: true`, aucun nouvel audit.
+- **Clôture manuelle** : connexion parent réelle via OTP (curl), `GET /parent/parametres` → 200
+  avec le formulaire ; `POST .../cloture` d'un élève non lié → **403** + `IDOR_BLOCKED` ; mauvais
+  mot / case décochée → **400** ; payload valide → lacune + session + conversation + lien parent
+  supprimés (`contenuSupprime` renvoyé), `Eleve` anonymisée mais **ligne conservée**, abonnement
+  intact, audit `COMPTE_ANONYMISE_MANUEL` avec `parentId` + `parentTelephone`. Après clôture le
+  parent n'a plus d'enfant lié → « Aucun enfant lié ». *(La navigation clic-à-clic dans l'écran
+  n'a pas pu être faite — extension navigateur instable pendant la session — mais la double
+  confirmation est aussi appliquée côté serveur, testée.)*
+- **Archivage annuel** : 2 tentatives (épreuve 2023-2024 avec 2 photos, épreuve 2026-2027 avec 1)
+  → job `archivage-photos` → `photoUploadKeys` de la vieille tentative vidé (`[]`), la récente
+  intacte, les 2 lignes conservées. Pivot calculé « 2025-2026 ».
+- **Reprise d'activité** : connexion (curl) d'un élève `INACTIF_NOTIFIE` → session établie (n'était
+  plus possible avant le correctif `auth.ts`), puis en base `statutCompte` = `ACTIF`,
+  `dateNotificationInactivite` = NULL.
+
+Données de test purgées après coup. `tsc --noEmit` et `npm run lint` : 0 erreur. `next build`
+reste bloqué par le bug `<Html>` préexistant (§ « 🔴 Bloquant »), non aggravé.
 

@@ -32,4 +32,15 @@ export interface SmsProvider {
     telephone: string,
     donnees: DonneesResumeProgression
   ): Promise<ResultatEnvoiSms>;
+
+  /**
+   * (d) Alerte d'inactivité avant anonymisation du compte élève (§2.9.1),
+   * envoyée au parent lié (ou à l'élève à défaut) par le job hebdomadaire de
+   * détection d'inactivité.
+   */
+  envoyerAlerteInactivite(
+    telephone: string,
+    prenomEleve: string,
+    joursAvantAnonymisation: number
+  ): Promise<ResultatEnvoiSms>;
 }

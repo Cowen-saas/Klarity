@@ -22,7 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock, disabled: true },
   { href: "/parent/notifications", label: "Notifications", icon: IconBell },
   { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },
-  { href: "/parent/parametres", label: "Paramètres", icon: IconSettings, disabled: true },
+  { href: "/parent/parametres", label: "Paramètres", icon: IconSettings },
 ];
 
 export function ParentShell({ children }: { children: ReactNode }) {
