@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 1 septembre 2026 (bascule stockage Cloudflare R2 réel + vérification clé YouTube Data API — voir §20)_
+_Dernière mise à jour : 2 septembre 2026 (Phase R2 validée bout en bout via le formulaire admin réel — voir §21)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1518,4 +1518,47 @@ reprise** : `docker compose up -d --force-recreate --renew-anon-volumes app work
 que `app` et `worker` démarrent proprement avec le SDK AWS (le `worker` importe `getStorageProvider`
 via `src/lib/retention/anonymisation.ts`) et refaire un `npx tsc --noEmit` / `npm run lint` dans le
 conteneur (les deux étaient à 0 erreur avant la panne moteur).
+
+## 21. Phase R2 — validée bout en bout via le formulaire admin réel (2 septembre 2026)
+
+Reprise après le redémarrage de Docker Desktop annoncé au §20. Cette session ferme la Phase R2.
+
+### Docker relancé, pièges du §20 confirmés
+
+- `docker compose up -d` seul a fait **crasher le `worker`** : `Cannot find module '@aws-sdk/client-s3'`.
+  Le volume anonyme `node_modules` datait d'avant l'ajout des deux paquets AWS au §20 et ne se met
+  pas à jour tout seul (`tsx watch` masquait la panne en gardant le conteneur « Up »). Corrigé par
+  `docker compose up -d --build --renew-anon-volumes` — `npm ci` récupère les deux paquets, volumes
+  `node_modules` / `.next` recréés, volumes nommés `postgres_data` / `redis_data` **préservés**.
+  Règle : après tout commit qui touche les dépendances, `--build --renew-anon-volumes` obligatoire,
+  jamais un simple `up -d`.
+- État final : `app` **200** sur `:3000`, `worker` « connected to Redis » + schedulers rétention
+  enregistrés, `postgres` / `redis` healthy, `adminer` **200** sur `:8080`, `prisma migrate status`
+  « Database schema is up to date! ». `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur**
+  (4 warnings préexistants, sans rapport avec R2).
+
+### Click-test du formulaire `/admin/epreuves` — fait par l'utilisateur, concluant
+
+L'utilisateur (session ADMIN réelle, créée de son côté par `npm run admin:create` — cf. §11) a
+ajouté une épreuve de test via le vrai formulaire : upload des 2 PDF, création de la ligne
+`Epreuve`, liens **Fiche** et **Corrigé** fonctionnels (URLs signées R2 absolues, `GET` OK), les
+deux objets bien visibles dans le bucket R2 sous `epreuves/` et `corriges/`. Le chemin complet
+multipart + zod + gate ADMIN + `prisma.epreuve.create` + `R2StorageProvider.uploader()` est donc
+validé en conditions réelles, pas seulement la couche stockage isolée du §20.
+
+### Nettoyage des données de test
+
+Script jetable (`scripts/`, supprimé après usage) exécuté dans le conteneur `app` en
+`STORAGE_MODE=r2` : `R2StorageProvider.supprimer()` sur les deux clés
+(`epreuves/ba5b9881-…​.pdf`, `corriges/c5d5fc0b-…​.pdf`) puis `prisma.epreuve.delete`. Vérifié :
+`SELECT count(*) FROM epreuves` → **0** ; `GET` sur une URL signée fraîche pour chaque clé → **404**.
+Le bucket R2 et la table `epreuves` sont revenus à vide, comme avant le test.
+
+### Bilan Phase R2
+
+`R2StorageProvider` est en production (`STORAGE_MODE=r2`), exercé avec succès par le seul appelant
+actuel (formulaire admin d'ajout d'épreuve). Les autres appelants (`archivage-photos` du worker,
+futur pipeline de correction §2.5) partagent la même interface et n'ont pas besoin d'adaptation. La
+banque d'épreuves reste vide en attendant la source de contenu (§18 : Supabase tierce) ; rien
+d'autre ne bloque côté stockage.
 
