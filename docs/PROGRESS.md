@@ -1845,8 +1845,12 @@ re-parsable). Idempotent (update pur).
 - **Chaque champ re-parse en JSON valide** : `enonceModele::jsonb ? 'citation'` = t,
   `exempleReponseModele::jsonb ? 'introduction'` = t, `notesMethodologiques::jsonb ? 'typeDePlan'`
   = t.
-- L'annotation `[À VÉRIFIER : … écriture peu lisible sur le manuscrit]` du corrigé source (un passage
-  illisible sur la photo) est conservée telle quelle dans `exempleReponseModele`.
+- Le corrigé source portait une annotation `[À VÉRIFIER : … écriture peu lisible sur le manuscrit]`
+  pour un passage illisible sur la photo. **Résolu ensuite par l'utilisateur** : le passage est la
+  ville fictive « Ebonzel » de *Les Chauves-Souris* de Bernard Nanga. `exemple_dissertation_litteraire.json`
+  mis à jour, seed rejoué ; vérifié en base — plus aucune occurrence de « VÉRIFIER » dans
+  `exempleReponseModele` (`LIKE '%VÉRIFIER%'` → false), le nouveau texte est présent, `baremeStructure`
+  toujours inchangé (1104 octets), champ toujours re-parsable en JSON.
 
 `tsc --noEmit` = 0 erreur ; `lint` = 0 erreur. Le sidecar Windows
 `exemple_dissertation_litteraire.json:Zone.Identifier` a été supprimé (déjà couvert par la règle
