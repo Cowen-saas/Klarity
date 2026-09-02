@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (seed ExempleCorrection — les 5 barèmes chargés en base — voir §24)_
+_Dernière mise à jour : 2 septembre 2026 (audit complet contre code/base réels + resynchronisation Graphify — voir §25)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -181,14 +181,16 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 
 ### Graphe de connaissances Graphify
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
-persistant (`graphify-out/`) : **1075 nœuds, 1702 arêtes, 100 communautés**, santé du graphe
+persistant (`graphify-out/`) : **1125 nœuds, 1832 arêtes, 112 communautés**, santé du graphe
 propre (aucune arête orpheline, aucun endpoint manquant, aucun doublon). Sert de garde-fou pour
-repérer les incohérences entre maquettes, CDC et code au fil du développement. **Snapshot du
-2 septembre 2026** (`graphify --update`) — couvre désormais la Phase 2 paiement, le travail du
-1er septembre (SMS, back-office admin, rétention), la bascule R2 réelle et le changement v1.29
-(SVT séries C/D/TI). Le nœud « v1.29 change: SVT added to bank/correction » est bien relié à la
-table de référence §2.1, à `Matiere.filiereRequise`, à `ProgrammeOfficiel` (15 couples) et à
-`corrigerCopie()`.
+repérer les incohérences entre maquettes, CDC et code au fil du développement. **À jour au
+2 septembre 2026** (`graphify --update` rejoué après audit — `detect_incremental` = 0 fichier en
+attente) : couvre la Phase 2 paiement, le travail du 1er septembre (SMS, back-office admin,
+rétention), la bascule R2 réelle, **et** toute la série de changements du 2 septembre — CDC v1.30,
+`COMMENTAIRE_COMPOSE` dans l'enum, seed `ExempleCorrection` (§24), SVT séries C/D/TI (§22). Les
+nœuds « Changelog v1.28 → v1.29 » / « Changelog v1.29 → v1.30 » / « TypeExerciceCorrection enum
+(5 valeurs) » / « seedExemplesCorrection() » sont présents et reliés à la table §2.1, à
+`Matiere.filiereRequise`, à `ProgrammeOfficiel` et à `corrigerCopie()`.
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
@@ -1658,9 +1660,7 @@ au programme de Français et sa source brute est versionnée
   de page 1→42, 39 pages non touchées identiques au bit près.
 - **`CLAUDE.md`** : la ligne `docs/baremes/*.txt` liste maintenant les 5 types.
 - **Seed `ExempleCorrection`** : fait au §24 (juste après).
-- **Graphe Graphify** : pas de `graphify --update` relancé pour ce petit changement (schema +
-  migration = code/AST, mais CDC + `CLAUDE.md` demanderaient une passe sémantique) — à refaire au
-  prochain update groupé.
+- **Graphe Graphify** : resynchronisé après coup, voir §25.
 
 ## 24. Seed ExempleCorrection — les 5 barèmes chargés en base (2 septembre 2026)
 
@@ -1707,4 +1707,55 @@ encore dans l'enum… à ajouter avant de charger en base »), rendu obsolète p
 JSON source ; reseed effectué — vérifié en base : la clé `noteImportante` n'est plus dans
 `baremeStructure` (`? 'noteImportante'` → false), le reste du barème est intact (2704 octets, 4
 sections).
+
+## 25. Audit complet + resynchronisation Graphify (2 septembre 2026)
+
+À la demande de l'utilisateur, audit de tout le travail des dernières sessions **contre le code et la
+base réels** (pas contre ce fichier ni les souvenirs de conversation), motivé par la découverte que
+les barèmes `ExempleCorrection` étaient documentés « chargés » sans l'avoir jamais été (corrigé au
+§24).
+
+### Vérifié — conforme
+
+- **SVT C/D/TI** : `matieres.filiereRequise` de SVT = `{A,C,D,TI}` en base ; les 9
+  `ProgrammeOfficiel` SVT (dont les 6 nouveaux 1ère/Tle × C/D/TI) ont chacun 4 modules / 14–15
+  thèmes / ~3 Ko de `contenuStructure` — aucun vide. CDC : page 1 = « v1.30 », journal contient
+  `v1.28 → v1.29` **et** `v1.29 → v1.30`, table §2.1 des 3 séries C/D/TI porte « …, SVT », phrase
+  « 15 couples matière/classe/série ».
+- **Barèmes** : 5 lignes `exemples_correction`, `baremeStructure` = objet jsonb non tronqué (tailles
+  = fichiers source), `typeExercice` cohérent. Enum `TypeExerciceCorrection` en base = 5 valeurs
+  dont `COMMENTAIRE_COMPOSE` ; migration `20260902113429…` appliquée.
+- **R2** : `STORAGE_MODE=r2` dans les conteneurs `app` **et** `worker` ; `getStorageProvider()` →
+  `R2StorageProvider` ; 4 appelants passent par cette fabrique, aucun `new MockStorageProvider()`
+  hors du switch. **Test live** : upload réel vers le bucket, URL signée `GET 200` + contenu exact,
+  `supprimer()` puis `GET 404`.
+- **Zone.Identifier** : `.gitignore` ligne `*:Zone.Identifier` ; `git check-ignore` confirme
+  l'application effective.
+- **`Bareme_philosophie.txt`** : suivi par git sous le bon nom, aucun fichier `philososphie` (typo)
+  suivi.
+
+### Incomplet / à noter (signalé à l'audit)
+
+- **YouTube API** : la clé `YOUTUBE_API_KEY` est valide (appel live `GET youtube/v3/search` →
+  HTTP 200, vidéos réelles) mais **aucun code de `src/` ne la lit** — seul `.env.example` la
+  mentionne. Le pipeline vidéo §2.5 n'existe pas encore.
+- **`ExempleCorrection`** : `enonceModele` / `exempleReponseModele` / `notesMethodologiques` sont
+  vides sur les 5 lignes — seuls les barèmes sont chargés, pas les exemples few-shot (énoncés types
+  + réponses modèles). Le mécanisme few-shot de `corrigerCopie()` n'est donc pas encore exploitable
+  de bout en bout.
+- **`Français` Terminale** : 4 `ProgrammeOfficiel` vides (`TERMINALE × {A,C,D,TI}`,
+  `contenuStructure.modules = []`). Gap **pré-existant** : la clé `francais` des fichiers
+  `docs/programmes/Terminale */programme_*.json` a `modules: []` depuis le premier commit
+  (`4896b0f`) — le programme officiel de Français Terminale n'est jamais chargé.
+
+### Graphe Graphify — resynchronisé
+
+L'audit a confirmé que le graphe était **désynchronisé** : `detect_incremental` = 11 fichiers en
+attente, 0 nœud pour `COMMENTAIRE_COMPOSE` / `TypeExerciceCorrection` / `seedExemplesCorrection` /
+`v1.30`. `graphify --update` rejoué (2 sous-agents d'extraction sémantique sur CDC v1.30 +
+`CLAUDE.md` + `PROGRESS.md` + `Bareme_philosophie.txt`, en reproduisant l'inventaire de nœuds
+existant pour éviter la perte au `build_merge`). Résultat : **1125 nœuds / 1832 arêtes / 112
+communautés**, santé propre, `detect_incremental` = **0**. Les nœuds `v1.30`, `COMMENTAIRE_COMPOSE`,
+`TypeExerciceCorrection enum (5 valeurs)`, `seedExemplesCorrection()`, `PROGRESS 22/23/24` et même
+« Francais Terminale ProgrammeOfficiel vides (4) » sont présents et reliés.
 
