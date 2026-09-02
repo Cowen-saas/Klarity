@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -24,14 +24,18 @@ import { prisma } from "../src/lib/prisma";
  *    type d'exercice méthodologique (Français / Philosophie), chargé dans
  *    `baremeStructure` tel quel (contenu JSON complet, non transformé). Les cinq
  *    types sont couverts : DISSERTATION_PHILO, DISSERTATION_LITTERAIRE,
- *    CONTRACTION_TEXTE, DISCUSSION, COMMENTAIRE_COMPOSE (ajouté CDC v1.30). Les
- *    champs `enonceModele` / `exempleReponseModele` / `notesMethodologiques` restent
- *    vides pour l'instant : seuls les barèmes sont fournis, pas encore les exemples
- *    few-shot (énoncés + réponses modèles) — à compléter avec le pipeline §6.2.
+ *    CONTRACTION_TEXTE, DISCUSSION, COMMENTAIRE_COMPOSE (ajouté CDC v1.30).
+ *
+ * 3. Exemples few-shot depuis docs/baremes/exemples/exemple_*.json (préparés à
+ *    partir de copies corrigées réelles) — complètent `enonceModele` /
+ *    `exempleReponseModele` / `notesMethodologiques` de la ligne ExempleCorrection
+ *    déjà créée en 2, sans toucher `baremeStructure`. Dossier partiel toléré : seuls
+ *    les types présents sont complétés (les autres gardent leurs 3 champs vides).
  */
 
 const PROGRAMMES_DIR = path.join(__dirname, "..", "docs", "programmes");
 const BAREMES_JSON_DIR = path.join(__dirname, "..", "docs", "baremes", "JSON");
+const BAREMES_EXEMPLES_DIR = path.join(__dirname, "..", "docs", "baremes", "exemples");
 const SEED_ADMIN_EMAIL = "seed@klarity.local";
 
 const TYPES_EXERCICE_VALIDES: readonly TypeExerciceCorrection[] = [
@@ -180,6 +184,71 @@ async function seedExemplesCorrection(adminId: string): Promise<number> {
   return count;
 }
 
+interface ExempleFewShotFichier {
+  typeExercice: string;
+  matiere: string;
+  enonceModele: unknown;
+  exempleReponseModele: unknown;
+  notesMethodologiques: unknown;
+  [autre: string]: unknown;
+}
+
+/** Champ text : chaîne telle quelle, ou JSON indenté et lisible si structuré. */
+function versTexte(v: unknown): string {
+  return typeof v === "string" ? v : JSON.stringify(v, null, 2);
+}
+
+/**
+ * Complète les 3 champs few-shot (`enonceModele`, `exempleReponseModele`,
+ * `notesMethodologiques`) des lignes `ExempleCorrection` déjà créées par
+ * `seedExemplesCorrection()`, depuis `docs/baremes/exemples/exemple_*.json`
+ * (préparés à partir de copies corrigées réelles). Ne touche jamais à
+ * `baremeStructure`. Idempotent (update pur). Le dossier peut être absent ou
+ * partiel : seuls les types présents sont complétés.
+ */
+async function seedExemplesFewShot(): Promise<number> {
+  if (!existsSync(BAREMES_EXEMPLES_DIR)) return 0;
+  const fichiers = readdirSync(BAREMES_EXEMPLES_DIR).filter((f) => f.endsWith(".json"));
+  let count = 0;
+
+  for (const nomFichier of fichiers) {
+    const data = JSON.parse(
+      readFileSync(path.join(BAREMES_EXEMPLES_DIR, nomFichier), "utf-8"),
+    ) as ExempleFewShotFichier;
+
+    if (!TYPES_EXERCICE_VALIDES.includes(data.typeExercice as TypeExerciceCorrection)) {
+      throw new Error(`${nomFichier} : typeExercice "${data.typeExercice}" hors enum`);
+    }
+    const typeExercice = data.typeExercice as TypeExerciceCorrection;
+
+    const matiere = await prisma.matiere.findUnique({ where: { nom: data.matiere } });
+    if (!matiere) throw new Error(`${nomFichier} : matière "${data.matiere}" introuvable`);
+
+    const ligne = await prisma.exempleCorrection.findFirst({
+      where: { matiereId: matiere.id, typeExercice },
+    });
+    if (!ligne) {
+      throw new Error(
+        `${nomFichier} : aucune ligne ExempleCorrection (${data.matiere} / ${typeExercice}) — ` +
+          `le barème correspondant doit être chargé d'abord (docs/baremes/JSON/)`,
+      );
+    }
+
+    // Uniquement les 3 champs few-shot — baremeStructure laissé intact.
+    await prisma.exempleCorrection.update({
+      where: { id: ligne.id },
+      data: {
+        enonceModele: versTexte(data.enonceModele),
+        exempleReponseModele: versTexte(data.exempleReponseModele),
+        notesMethodologiques: versTexte(data.notesMethodologiques),
+      },
+    });
+    count++;
+  }
+
+  return count;
+}
+
 async function main() {
   const admin = await prisma.admin.upsert({
     where: { email: SEED_ADMIN_EMAIL },
@@ -242,6 +311,9 @@ async function main() {
 
   const exemples = await seedExemplesCorrection(admin.id);
   console.log(`[seed] ${exemples} ExempleCorrection (barèmes §4.2.2) upsertés.`);
+
+  const fewShot = await seedExemplesFewShot();
+  console.log(`[seed] ${fewShot} ExempleCorrection complété(s) avec un exemple few-shot.`);
 }
 
 main()

@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (audit complet contre code/base réels + resynchronisation Graphify — voir §25)_
+_Dernière mise à jour : 2 septembre 2026 (premier exemple few-shot ExempleCorrection chargé — DISSERTATION_LITTERAIRE, voir §26)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1740,9 +1740,8 @@ les barèmes `ExempleCorrection` étaient documentés « chargés » sans l'avoi
   HTTP 200, vidéos réelles) mais **aucun code de `src/` ne la lit** — seul `.env.example` la
   mentionne. Le pipeline vidéo §2.5 n'existe pas encore.
 - **`ExempleCorrection`** : `enonceModele` / `exempleReponseModele` / `notesMethodologiques` sont
-  vides sur les 5 lignes — seuls les barèmes sont chargés, pas les exemples few-shot (énoncés types
-  + réponses modèles). Le mécanisme few-shot de `corrigerCopie()` n'est donc pas encore exploitable
-  de bout en bout.
+  encore vides sur **4 des 5** lignes — seuls les barèmes sont chargés pour celles-là. Le premier
+  exemple few-shot complet (DISSERTATION_LITTERAIRE) a été intégré, voir §26.
 - **`Français` Terminale — FAUX POSITIF de l'audit, corrigé.** L'audit avait signalé « 4
   `ProgrammeOfficiel` vides » : c'était une **erreur de métrique**. La requête comptait
   `jsonb_array_length(contenuStructure->'modules')`, or la clé `francais` de Terminale n'a **pas**
@@ -1809,4 +1808,48 @@ présents et reliés.
 > Note : un des sous-agents a créé un nœud « Francais Terminale ProgrammeOfficiel vides (4) » à
 > partir du faux positif de l'audit (voir ci-dessus). Ce nœud est **incorrect** ; il sera retiré au
 > prochain `graphify --update` (`graphify-out/` est local et gitignoré).
+
+## 26. Premier exemple few-shot chargé — DISSERTATION_LITTERAIRE (2 septembre 2026)
+
+`docs/baremes/exemples/exemple_dissertation_litteraire.json` (préparé dans une session parallèle à
+partir de photos de copie corrigée réelle — Lycée du Manengouba, épreuve de Littérature, nov. 2025)
+complète la première des 5 lignes `ExempleCorrection`.
+
+### Correspondance vérifiée
+
+Le fichier porte `typeExercice = "DISSERTATION_LITTERAIRE"` + `matiere = "Français"` — mêmes clés que
+le barème `docs/baremes/JSON/bareme_dissertation_litteraire.json` déjà chargé. Il cible donc la
+ligne `ExempleCorrection (matiereId = Français, typeExercice = DISSERTATION_LITTERAIRE)`.
+
+### `prisma/seed.ts` — `seedExemplesFewShot()`
+
+Nouvelle 3ᵉ passe du seed, appelée après `seedExemplesCorrection()`. Scanne
+`docs/baremes/exemples/exemple_*.json` (dossier absent ou partiel toléré) ; pour chaque fichier,
+résout matière + `typeExercice`, retrouve la ligne `ExempleCorrection` existante (erreur si le
+barème correspondant n'a pas été chargé d'abord), et fait un `update` **des 3 seuls champs**
+`enonceModele` / `exempleReponseModele` / `notesMethodologiques` — `baremeStructure` n'est jamais
+dans le `data`. Champs text : chaîne telle quelle, sinon `JSON.stringify(v, null, 2)` (lisible,
+re-parsable). Idempotent (update pur).
+
+### Vérifié réellement en base (`psql`)
+
+- Ligne `DISSERTATION_LITTERAIRE` : `len(enonceModele)` = **482**, `len(exempleReponseModele)` =
+  **2971**, `len(notesMethodologiques)` = **750** (étaient 0). Les 4 autres lignes restent à 0 sur
+  ces champs.
+- **`baremeStructure` intact** : toujours `jsonb` de type `object`, **1104 octets** (inchangé),
+  `->>'typeExercice'` = `DISSERTATION_LITTERAIRE`.
+- **Lisible / non tronqué** : `enonceModele` affiche la citation de Claude Roy, la consigne, le TAF,
+  la durée ; `exempleReponseModele` commence `{ "introduction": "La littérature entretient…` et se
+  termine proprement `…par le biais de l'imaginaire." }` ; `notesMethodologiques` liste le type de
+  plan, la problématique, les 6 étapes de méthode et la remarque sur le périmètre du corrigé.
+- **Chaque champ re-parse en JSON valide** : `enonceModele::jsonb ? 'citation'` = t,
+  `exempleReponseModele::jsonb ? 'introduction'` = t, `notesMethodologiques::jsonb ? 'typeDePlan'`
+  = t.
+- L'annotation `[À VÉRIFIER : … écriture peu lisible sur le manuscrit]` du corrigé source (un passage
+  illisible sur la photo) est conservée telle quelle dans `exempleReponseModele`.
+
+`tsc --noEmit` = 0 erreur ; `lint` = 0 erreur. Le sidecar Windows
+`exemple_dissertation_litteraire.json:Zone.Identifier` a été supprimé (déjà couvert par la règle
+`.gitignore`). Reste 4 types à fournir (DISSERTATION_PHILO, CONTRACTION_TEXTE, DISCUSSION,
+COMMENTAIRE_COMPOSE) — le seed les complètera automatiquement dès que les fichiers seront déposés.
 

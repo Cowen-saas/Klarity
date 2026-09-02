@@ -1,0 +1,33 @@
+{
+  "typeExercice": "DISSERTATION_LITTERAIRE",
+  "matiere": "Français",
+  "seriesConcernees": ["C", "D", "TI"],
+  "source": "Lycée du Manengouba, Épreuve de Littérature, Session Novembre 2025",
+  "enonceModele": {
+    "sujetType": "Sujet de type 2 : Dissertation littéraire",
+    "citation": "Dans un ouvrage consacré au Roman, Claude Roy remarque : « Ce que les histoires imaginaires nous donnent, c'est la véritable histoire de la vie. »",
+    "consigne": "Commentez cette assertion à la lumière des œuvres lues ou étudiées.",
+    "taf": "Produire l'introduction, la première partie du développement (thèse), la transition, et la conclusion.",
+    "duree": "3H",
+    "classesConcernees": "Tle C, D, TI"
+  },
+  "exempleReponseModele": {
+    "introduction": "La littérature entretient depuis toujours un rapport singulier avec le réel : elle invente des mondes, des êtres et des destins qui n'existent nulle part, et pourtant elle ne cesse de parler de la vie véritable. C'est ce paradoxe que souligne l'écrivain Claude Roy lorsqu'il affirme que « ce que les histoires imaginaires nous donnent, c'est la véritable histoire de la vie ». Autrement dit, la fiction, bien qu'entièrement inventée, livrerait une vérité plus profonde sur l'existence humaine que le réel lui-même. Dès lors, on peut se demander en quoi la fiction, malgré son caractère imaginaire, parvient à refléter la réalité. Nous montrerons d'abord que le roman est un espace de pure invention, avant d'examiner en quoi cette invention rejoint pourtant la vérité du monde.",
+    "developpement_these": "Le roman est avant tout un espace de pure invention, où rien de ce qui est raconté n'a d'existence réelle. D'abord, l'histoire elle-même est un pur produit de l'imagination de l'auteur : les événements racontés ne se sont jamais déroulés dans la réalité, ils sont construits de toutes pièces pour servir le récit. Ensuite, les personnages qui peuplent ces histoires ne sont que des « êtres de papier », selon l'expression consacrée : ils n'ont ni chair ni existence propre en dehors des pages qui les décrivent. Georges Duroy, héros de Bel-Ami de Guy de Maupassant, en est un exemple frappant : ambitieux et sans scrupules, il n'a jamais existé que dans l'imagination de son créateur, et pourtant il agit, pense et évolue comme un être vivant. Enfin, même les lieux dans lesquels se déroule l'intrigue sont souvent des créations fictives [À VÉRIFIER : référence exacte de l'œuvre et du lieu — écriture peu lisible sur le manuscrit], destinées à ancrer le récit dans un espace crédible sans pour autant correspondre à un endroit réel. Ainsi, par son histoire, ses personnages et ses lieux, le roman se présente d'abord comme un univers entièrement fabriqué par l'auteur.",
+    "transition": "Au-delà de leur apparence fictive, les histoires imaginaires s'avèrent pourtant être un miroir de la société. Si tout, dans le roman, procède de l'invention, il convient à présent de se demander en quoi cette invention parvient malgré tout à dire quelque chose de vrai sur le monde réel.",
+    "conclusion": "En définitive, si le roman se construit entièrement sur l'invention — une histoire imaginée, des personnages fictifs, des lieux inventés —, cette fabrication n'est jamais gratuite : elle permet à l'auteur de dire, par le détour de la fiction, une vérité sur la condition humaine que le réel seul ne pourrait exprimer aussi clairement. C'est en ce sens que l'on peut affirmer, avec Claude Roy, que les histoires imaginaires nous donnent la véritable histoire de la vie. Il serait alors intéressant de se demander si tous les genres littéraires, et pas seulement le roman, possèdent ce même pouvoir de révéler le réel par le biais de l'imaginaire."
+  },
+  "notesMethodologiques": {
+    "typeDePlan": "Plan analytique",
+    "problematique": "En quoi la fiction reflète-t-elle la réalité ?",
+    "methodeUtilisee": [
+      "1. Explication des mots-clés du sujet (Roman, Histoires imaginaires, Histoire de la vie)",
+      "2. Reformulation du sujet en une phrase simple",
+      "3. Identification du champ de réflexion (ici : la fiction et la réalité dans le roman)",
+      "4. Choix du type de plan (analytique)",
+      "5. Formulation de la problématique",
+      "6. Construction du développement : une thèse, avec un exemple concret par argument"
+    ],
+    "remarque": "Ce corrigé ne développe que la partie exigée par le TAF (intro + 1ère partie/thèse + transition + conclusion), sans antithèse ni synthèse, conformément à la consigne de l'énoncé."
+  }
+}
