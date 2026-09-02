@@ -1700,9 +1700,11 @@ Lit les 5 fichiers de `docs/baremes/JSON/`, et pour chacun :
   préservées (`baremeStructureAlternatif` + `criteresTransversaux` pour PHILO, `remarquesImportantes`
   pour COMMENTAIRE_COMPOSE).
 
-### À noter
+### Nettoyage (suite)
 
 Le champ `noteImportante` de `bareme_commentaire_compose.json` (« Ce type d'exercice n'existe pas
-encore dans l'enum… à ajouter avant de charger en base ») est désormais obsolète (fait en v1.30) mais
-stocké tel quel — à nettoyer dans le JSON source si souhaité, sans impact fonctionnel.
+encore dans l'enum… à ajouter avant de charger en base »), rendu obsolète par v1.30, a été retiré du
+JSON source ; reseed effectué — vérifié en base : la clé `noteImportante` n'est plus dans
+`baremeStructure` (`? 'noteImportante'` → false), le reste du barème est intact (2704 octets, 4
+sections).
 

@@ -3,7 +3,6 @@
   "matiere": "Français",
   "seriesConcernees": ["A", "C", "D", "TI"],
   "totalPoints": 20,
-  "noteImportante": "Ce type d'exercice n'existe pas encore dans l'enum ExempleCorrection.typeExercice du CDC (§4.2.2) — actuellement limité à DISSERTATION_PHILO, DISSERTATION_LITTERAIRE, CONTRACTION_TEXTE, DISCUSSION. À ajouter à l'enum avant de charger ce barème en base.",
   "baremeStructure": {
     "titre": "Commentaire Composé",
     "sections": [
