@@ -1,0 +1,51 @@
+{
+  "typeExercice": "DISSERTATION_LITTERAIRE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "totalPoints": 20,
+  "baremeStructure": {
+    "titre": "Dissertation Littéraire (Épreuve de Français)",
+    "criteres": [
+      {
+        "nom": "Compréhension & Problématique",
+        "points": 3,
+        "exigences": [
+          "Analyse juste des termes de la citation / du sujet",
+          "Reformulation du problème littéraire sous-jacent"
+        ]
+      },
+      {
+        "nom": "Organisation & Plan",
+        "points": 3,
+        "exigences": [
+          "Structure cohérente (plan dialectique, analytique ou thématique)",
+          "Enchaînement logique des idées et transitions"
+        ]
+      },
+      {
+        "nom": "Qualité de l'argumentation",
+        "points": 8,
+        "exigences": [
+          "Pertinence des arguments développés",
+          "Variété et précision des exemples tirés des œuvres au programme (et de la culture littéraire générale)"
+        ]
+      },
+      {
+        "nom": "Conclusion",
+        "points": 3,
+        "exigences": [
+          "Synthèse méthodique de la réflexion",
+          "Résolution du problème posé et ouverture pertinente"
+        ]
+      },
+      {
+        "nom": "Expression & Présentation",
+        "points": 3,
+        "exigences": [
+          "Niveau de langue, syntaxe, ponctuation, orthographe",
+          "Sauts de lignes, alinéas et propreté de la copie"
+        ]
+      }
+    ]
+  }
+}

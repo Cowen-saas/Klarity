@@ -1,0 +1,45 @@
+{
+  "typeExercice": "CONTRACTION_TEXTE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "totalPoints": 10,
+  "totalPointsNote": "10 à 12 points selon le barème appliqué (variable officielle)",
+  "baremeStructure": {
+    "titre": "Analyse et Contraction du Texte",
+    "criteres": [
+      {
+        "nom": "Respect du volume / Nombre de mots",
+        "points": 2,
+        "exigences": [
+          "Respect de la marge autorisée (généralement ±10%)",
+          "Indication exacte du nombre de mots utilisés à la fin du résumé"
+        ]
+      },
+      {
+        "nom": "Fidélité au texte d'origine",
+        "points": 4,
+        "exigences": [
+          "Restitution exacte des idées principales du texte",
+          "Absence de contresens, de faux sens ou d'omissions majeures",
+          "Interdiction stricte d'introduire des idées personnelles"
+        ]
+      },
+      {
+        "nom": "Qualité de la reformulation",
+        "points": 3,
+        "exigences": [
+          "Utilisation d'un vocabulaire personnel (interdiction du copier-coller ou montage de citations)",
+          "Maintien du système d'énonciation (mêmes pronoms, même temps) et de la structure argumentative du texte initial"
+        ]
+      },
+      {
+        "nom": "Rédactique & Enchaînement",
+        "points": "2 à 3",
+        "exigences": [
+          "Clarté des liaisons logiques (connecteurs spatio-temporels et argumentatifs)",
+          "Fluidité du texte résumé"
+        ]
+      }
+    ]
+  }
+}

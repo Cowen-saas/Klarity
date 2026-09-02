@@ -1,0 +1,119 @@
+{
+  "typeExercice": "DISSERTATION_PHILO",
+  "matiere": "Philosophie",
+  "seriesConcernees": ["A"],
+  "totalPoints": 20,
+  "baremeStructure": {
+    "titre": "Sujets de Dissertation (Sujets 1 et 2)",
+    "description": "La notation d'une dissertation philosophique se divise en 3 grands moments.",
+    "criteres": [
+      {
+        "nom": "Introduction",
+        "points": 3,
+        "sousCriteres": [
+          { "nom": "Situation du sujet / Amorce", "points": 0.5 },
+          { "nom": "Poser le problème (Problématique)", "points": 1 },
+          { "nom": "Formulation de la question centrale / Problème", "points": 1 },
+          { "nom": "Annonce du plan", "points": 0.5 }
+        ]
+      },
+      {
+        "nom": "Développement",
+        "points": 12,
+        "sousCriteres": [
+          {
+            "nom": "Première thèse (Explication / Analyse de la thèse)",
+            "points": 3,
+            "details": "Argumentation, pertinence des concepts et références d'auteurs."
+          },
+          {
+            "nom": "Deuxième thèse (Antithèse / Critique ou Nuance)",
+            "points": 3,
+            "details": "Réfutation logique, limites de la première thèse, perspectives complémentaires."
+          },
+          {
+            "nom": "Synthèse / Dépassement",
+            "points": 3,
+            "details": "Dépassement du paradoxe, conciliation ou niveau d'analyse supérieur."
+          },
+          {
+            "nom": "Transition entre les parties & Cohérence",
+            "points": 3
+          }
+        ]
+      },
+      {
+        "nom": "Conclusion",
+        "points": 3,
+        "sousCriteres": [
+          { "nom": "Bilan de la réflexion", "points": 1.5 },
+          { "nom": "Prise de position personnelle argumentée", "points": 1 },
+          { "nom": "Ouverture du sujet (optionnelle mais valorisée)", "points": 0.5 }
+        ]
+      },
+      {
+        "nom": "Présentation générale & Expression",
+        "points": 2,
+        "sousCriteres": [
+          { "nom": "Niveau de langue et orthographe", "points": 1 },
+          { "nom": "Lisibilité, soin de la copie et transitions", "points": 1 }
+        ]
+      }
+    ]
+  },
+  "baremeStructureAlternatif": {
+    "titre": "Sujet d'Explication de texte (Sujet 3)",
+    "description": "L'explication de texte est structurée de manière analytique.",
+    "criteres": [
+      {
+        "nom": "Introduction",
+        "points": 3,
+        "sousCriteres": [
+          { "nom": "Thème du texte", "points": 0.5 },
+          { "nom": "Problème soulevé par l'auteur", "points": 1 },
+          { "nom": "Thèse de l'auteur", "points": 1 },
+          { "nom": "Structure / Plan du texte", "points": 0.5 }
+        ]
+      },
+      {
+        "nom": "Développement / Explication détaillée",
+        "points": 12,
+        "sousCriteres": [
+          {
+            "nom": "Explication des concepts clés et du texte (Analyse interne)",
+            "points": 5
+          },
+          {
+            "nom": "Étude critique / Intérêt philosophique (Analyse externe)",
+            "points": 5,
+            "details": "Portée du texte, limites, confrontation avec d'autres auteurs."
+          },
+          {
+            "nom": "Cohérence et rigueur de l'argumentation",
+            "points": 2
+          }
+        ]
+      },
+      {
+        "nom": "Conclusion",
+        "points": 3,
+        "sousCriteres": [
+          { "nom": "Résumé du parcours du texte", "points": 1.5 },
+          { "nom": "Réponse au problème posé & Intérêt du texte", "points": 1.5 }
+        ]
+      },
+      {
+        "nom": "Présentation & Expression",
+        "points": 2,
+        "sousCriteres": [
+          { "nom": "Orthographe, syntaxe et lisibilité", "points": 2 }
+        ]
+      }
+    ]
+  },
+  "criteresTransversaux": [
+    "Maîtrise des connaissances (Ressources) : définition précise des concepts (ex. liberté, déterminisme, état, conscience) et pertinence des citations/auteurs",
+    "Capacité d'argumentation (Compétences) : présence d'exemples concrets (notamment ancrés dans le contexte africain ou contemporain lorsque pertinent) et progression logique du raisonnement",
+    "Pénalités : le hors-sujet grave ou le traitement de la dissertation sous forme de simple récitation de cours entraîne généralement une note inférieure à 08/20"
+  ]
+}

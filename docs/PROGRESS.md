@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (CDC v1.30 — type d'exercice COMMENTAIRE_COMPOSE — voir §23)_
+_Dernière mise à jour : 2 septembre 2026 (seed ExempleCorrection — les 5 barèmes chargés en base — voir §24)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1657,9 +1657,52 @@ au programme de Français et sa source brute est versionnée
   l'enum + le changelog). En-tête page 1 : « v1.30 — 2 septembre 2026 ». Vérifié : 42 pages, pieds
   de page 1→42, 39 pages non touchées identiques au bit près.
 - **`CLAUDE.md`** : la ligne `docs/baremes/*.txt` liste maintenant les 5 types.
-- **Pas de seed `ExempleCorrection`** : il n'existe toujours aucun code chargeant les barèmes en base
-  (les `.txt` sont des sources brutes) ; ce sera à faire avec le pipeline de correction §2.5/§6.2.
+- **Seed `ExempleCorrection`** : fait au §24 (juste après).
 - **Graphe Graphify** : pas de `graphify --update` relancé pour ce petit changement (schema +
   migration = code/AST, mais CDC + `CLAUDE.md` demanderaient une passe sémantique) — à refaire au
   prochain update groupé.
+
+## 24. Seed ExempleCorrection — les 5 barèmes chargés en base (2 septembre 2026)
+
+Jusqu'ici les barèmes n'existaient qu'en sources brutes (`docs/baremes/*.txt`) — **aucune ligne
+`ExempleCorrection` en base**. L'utilisateur a fourni les 5 barèmes structurés en JSON
+(`docs/baremes/JSON/bareme_*.json`) ; `prisma/seed.ts` est étendu pour les charger.
+
+### `prisma/seed.ts` — `seedExemplesCorrection()`
+
+Lit les 5 fichiers de `docs/baremes/JSON/`, et pour chacun :
+
+- **`matiereId`** résolu par `prisma.matiere.findUnique({ where: { nom } })` sur le champ `matiere` du
+  JSON (« Français » ×4, « Philosophie » ×1) — lève une erreur si la matière n'existe pas (donc le
+  seed des programmes doit tourner d'abord, ce qui est le cas : même `main()`).
+- **`typeExercice`** = le champ `typeExercice` du JSON, validé contre l'enum
+  `TypeExerciceCorrection` (les 5 valeurs) — erreur explicite sinon.
+- **`baremeStructure`** = le **contenu JSON complet du fichier, tel quel** (aucune transformation) —
+  conserve donc aussi `seriesConcernees`, `totalPoints`, `remarquesImportantes`,
+  `criteresTransversaux`, `baremeStructureAlternatif`, `contexte`, etc.
+- **`enonceModele` / `exempleReponseModele` / `notesMethodologiques`** = `""` : seuls les barèmes
+  sont fournis, pas encore les exemples few-shot (énoncés + réponses modèles) — à compléter avec le
+  pipeline de correction (§6.2).
+- **Idempotence** : pas de contrainte d'unicité DB sur `(matiereId, typeExercice)` (seulement un
+  `@@index`), donc `findFirst` + `update | create` à la main — rejouable sans doublon (reseed vérifié).
+
+### Vérifié réellement en base (`psql`)
+
+- **5 lignes `exemples_correction`**, une par `typeExercice`, `count(DISTINCT typeExercice) = 5`.
+  `DISSERTATION_PHILO` → Philosophie ; les 4 autres → Français. `ajouteParAdminId` = compte seed,
+  `langue` = FR.
+- **`baremeStructure` complet et lisible, non tronqué** : `length(baremeStructure::text)` = 3261 /
+  1104 / 1185 / 1145 / 2978 octets — **identique aux fichiers source**. `jsonb_pretty()` du barème
+  `COMMENTAIRE_COMPOSE` affiche la structure entière (titre, 4 sections, tous les `sousCriteres`,
+  `points`, `details`, `remarquesImportantes`) — rien de coupé.
+- Extraction JSON de contrôle : `baremeStructure->>'typeExercice'` == colonne `typeExercice` pour les
+  5 ; `->>'totalPoints'` = 20/20/10/10/20 ; nombre de sections 4/5/4/4/4 ; clés optionnelles
+  préservées (`baremeStructureAlternatif` + `criteresTransversaux` pour PHILO, `remarquesImportantes`
+  pour COMMENTAIRE_COMPOSE).
+
+### À noter
+
+Le champ `noteImportante` de `bareme_commentaire_compose.json` (« Ce type d'exercice n'existe pas
+encore dans l'enum… à ajouter avant de charger en base ») est désormais obsolète (fait en v1.30) mais
+stocké tel quel — à nettoyer dans le JSON source si souhaité, sans impact fonctionnel.
 

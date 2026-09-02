@@ -3,27 +3,44 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { generateSecret } from "otplib";
-import type { Filiere, NiveauClasse, Prisma } from "@prisma/client";
+import type { Filiere, NiveauClasse, Prisma, TypeExerciceCorrection } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 
 /**
- * Ingestion des ProgrammeOfficiel (§4.2.3) depuis docs/programmes/. Idempotent
- * (upsert) — rejouable en dev sans dupliquer. Nécessite un Admin pour satisfaire
- * `ProgrammeOfficiel.ajouteParAdminId` (obligatoire) : un compte "seed système" est
- * créé s'il n'existe pas déjà, jamais destiné à un vrai login.
+ * Seed de configuration (données versionnées, pas du contenu élève). Idempotent —
+ * rejouable en dev sans dupliquer. Nécessite un Admin pour satisfaire les champs
+ * `ajouteParAdminId` obligatoires : un compte "seed système" est créé s'il n'existe
+ * pas déjà, jamais destiné à un vrai login.
  *
- * Entièrement piloté par les données : une ligne ProgrammeOfficiel est créée pour
- * chaque couple (matière, classe, série) présent dans les 9 fichiers JSON, et
- * `Matiere.filiereRequise` / `classesConcernees` sont l'union des séries/classes où
- * la matière apparaît. Ajout v1.29 (§2.1, §4.2) : SVT est désormais présente dans
- * les sections `svt` des programmes des séries C, D et TI (1ère + Terminale) en plus
- * de la série A et de la 3ème — le seed en dérive donc automatiquement
- * `filiereRequise = {A, C, D, TI}` pour SVT et matérialise les 6 nouveaux couples.
- * Le socle de référence §2.1 passe ainsi de 9 à 15 couples matière/classe/série.
+ * 1. ProgrammeOfficiel (§4.2.3) depuis docs/programmes/ — entièrement piloté par les
+ *    données : une ligne par couple (matière, classe, série) présent dans les 9
+ *    fichiers JSON, et `Matiere.filiereRequise` / `classesConcernees` sont l'union
+ *    des séries/classes où la matière apparaît. Ajout v1.29 (§2.1, §4.2) : SVT est
+ *    désormais présente dans les sections `svt` des programmes C, D et TI (1ère +
+ *    Terminale) en plus de la série A et de la 3ème — le seed en dérive
+ *    `filiereRequise = {A, C, D, TI}` pour SVT. Socle de référence §2.1 : 15 couples.
+ *
+ * 2. ExempleCorrection (§4.2.2) depuis docs/baremes/JSON/ — un barème structuré par
+ *    type d'exercice méthodologique (Français / Philosophie), chargé dans
+ *    `baremeStructure` tel quel (contenu JSON complet, non transformé). Les cinq
+ *    types sont couverts : DISSERTATION_PHILO, DISSERTATION_LITTERAIRE,
+ *    CONTRACTION_TEXTE, DISCUSSION, COMMENTAIRE_COMPOSE (ajouté CDC v1.30). Les
+ *    champs `enonceModele` / `exempleReponseModele` / `notesMethodologiques` restent
+ *    vides pour l'instant : seuls les barèmes sont fournis, pas encore les exemples
+ *    few-shot (énoncés + réponses modèles) — à compléter avec le pipeline §6.2.
  */
 
 const PROGRAMMES_DIR = path.join(__dirname, "..", "docs", "programmes");
+const BAREMES_JSON_DIR = path.join(__dirname, "..", "docs", "baremes", "JSON");
 const SEED_ADMIN_EMAIL = "seed@klarity.local";
+
+const TYPES_EXERCICE_VALIDES: readonly TypeExerciceCorrection[] = [
+  "DISSERTATION_PHILO",
+  "DISSERTATION_LITTERAIRE",
+  "CONTRACTION_TEXTE",
+  "DISCUSSION",
+  "COMMENTAIRE_COMPOSE",
+];
 
 // Clé JSON (docs/programmes/**/programme_*.json, objet "matieres") -> Matiere.nom (§4.1).
 const MATIERE_LABELS: Record<string, string> = {
@@ -99,6 +116,70 @@ async function upsertProgrammeOfficiel(params: {
   });
 }
 
+interface BaremeFichier {
+  typeExercice: string;
+  matiere: string;
+  baremeStructure: Prisma.InputJsonValue;
+  [autre: string]: unknown;
+}
+
+/**
+ * Charge les barèmes structurés de docs/baremes/JSON/ dans ExempleCorrection.
+ * `baremeStructure` reçoit le contenu JSON complet du fichier, tel quel. Pas de
+ * contrainte d'unicité DB sur (matiereId, typeExercice) — l'idempotence est gérée
+ * à la main (findFirst + update|create), comme pour les ProgrammeOfficiel filiere=NULL.
+ */
+async function seedExemplesCorrection(adminId: string): Promise<number> {
+  const fichiers = readdirSync(BAREMES_JSON_DIR).filter((f) => f.endsWith(".json"));
+  let count = 0;
+
+  for (const nomFichier of fichiers) {
+    const brut = readFileSync(path.join(BAREMES_JSON_DIR, nomFichier), "utf-8");
+    const data = JSON.parse(brut) as BaremeFichier;
+
+    if (!TYPES_EXERCICE_VALIDES.includes(data.typeExercice as TypeExerciceCorrection)) {
+      throw new Error(
+        `${nomFichier} : typeExercice "${data.typeExercice}" hors enum TypeExerciceCorrection`,
+      );
+    }
+    const typeExercice = data.typeExercice as TypeExerciceCorrection;
+
+    const matiere = await prisma.matiere.findUnique({ where: { nom: data.matiere } });
+    if (!matiere) {
+      throw new Error(`${nomFichier} : matière "${data.matiere}" introuvable (seed programmes d'abord)`);
+    }
+
+    // `baremeStructure` = le fichier JSON complet, sans transformation (tel quel).
+    const baremeStructure = data as unknown as Prisma.InputJsonValue;
+
+    const existant = await prisma.exempleCorrection.findFirst({
+      where: { matiereId: matiere.id, typeExercice },
+    });
+
+    if (existant) {
+      await prisma.exempleCorrection.update({
+        where: { id: existant.id },
+        data: { baremeStructure },
+      });
+    } else {
+      await prisma.exempleCorrection.create({
+        data: {
+          matiereId: matiere.id,
+          typeExercice,
+          baremeStructure,
+          enonceModele: "",
+          exempleReponseModele: "",
+          notesMethodologiques: "",
+          ajouteParAdminId: adminId,
+        },
+      });
+    }
+    count++;
+  }
+
+  return count;
+}
+
 async function main() {
   const admin = await prisma.admin.upsert({
     where: { email: SEED_ADMIN_EMAIL },
@@ -158,6 +239,9 @@ async function main() {
   }
 
   console.log(`[seed] ${matiereIds.size} matière(s), ${count} ProgrammeOfficiel upsertés.`);
+
+  const exemples = await seedExemplesCorrection(admin.id);
+  console.log(`[seed] ${exemples} ExempleCorrection (barèmes §4.2.2) upsertés.`);
 }
 
 main()

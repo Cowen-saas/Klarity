@@ -1,0 +1,87 @@
+{
+  "typeExercice": "COMMENTAIRE_COMPOSE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "totalPoints": 20,
+  "noteImportante": "Ce type d'exercice n'existe pas encore dans l'enum ExempleCorrection.typeExercice du CDC (§4.2.2) — actuellement limité à DISSERTATION_PHILO, DISSERTATION_LITTERAIRE, CONTRACTION_TEXTE, DISCUSSION. À ajouter à l'enum avant de charger ce barème en base.",
+  "baremeStructure": {
+    "titre": "Commentaire Composé",
+    "sections": [
+      {
+        "nom": "Introduction",
+        "points": 3,
+        "sousCriteres": [
+          {
+            "nom": "Situation / Insertion du texte",
+            "points": 0.5,
+            "details": "Présentation de l'auteur, du titre de l'œuvre, du contexte ou du thème général."
+          },
+          {
+            "nom": "Idée générale du texte",
+            "points": 0.5,
+            "details": "Résumé concis du sens global ou du propos principal du texte."
+          },
+          {
+            "nom": "Annonce des axes de lecture (Centres d'intérêt)",
+            "points": 1.5,
+            "details": "Formulation claire et cohérente des deux (ou trois) centres d'intérêt retenus."
+          },
+          {
+            "nom": "Transition vers le développement",
+            "points": 0.5
+          }
+        ]
+      },
+      {
+        "nom": "Développement",
+        "points": 12,
+        "description": "Le développement s'articule généralement autour de 2 centres d'intérêt (axes de lecture), notés à parts égales (soit 5,5 à 6 points par axe, complétés par la rigueur des transitions). Pour chaque idée/sous-partie, le correcteur vérifie la méthode O.C.I.E. (Observation, Citation, Interprétation, Effet produit).",
+        "sousCriteres": [
+          {
+            "nom": "Axe de lecture n°1",
+            "points": 5.5,
+            "details": "Annonce de l'axe et des sous-titres/idées secondaires. Repérage précis des indices littéraires et figures de style (outils d'analyse). Citations exactes du texte. Interprétation et explication des effets de sens."
+          },
+          {
+            "nom": "Axe de lecture n°2",
+            "points": 5.5,
+            "details": "Même démarche d'analyse stylistique et thématique rigoureuse."
+          },
+          {
+            "nom": "Transitions et liants logiques entre les parties",
+            "points": 1,
+            "details": "Qualité des bilans intermédiaires et amorce du centre d'intérêt suivant."
+          }
+        ]
+      },
+      {
+        "nom": "Conclusion",
+        "points": 3,
+        "sousCriteres": [
+          {
+            "nom": "Bilan de l'analyse",
+            "points": 1.5,
+            "details": "Synthèse concise des acquis de l'étude (résumé des centres d'intérêt développés)."
+          },
+          {
+            "nom": "Portée du texte / Ouverture",
+            "points": 1.5,
+            "details": "Mise en perspective du texte (résonance littéraire, prolongement thématique, style de l'auteur ou rapprochement avec une autre œuvre)."
+          }
+        ]
+      },
+      {
+        "nom": "Présentation & Maîtrise de la langue",
+        "points": 2,
+        "sousCriteres": [
+          { "nom": "Orthographe, grammaire et syntaxe", "points": 1 },
+          { "nom": "Présentation, lisibilité et alinéas", "points": 1 }
+        ]
+      }
+    ]
+  },
+  "remarquesImportantes": [
+    "Interdiction du paraphrasage : la simple paraphrase sans analyse des procédés stylistiques (champs lexicaux, figures de style, temps verbaux, rythme) entraîne une pénalité lourde (note généralement inférieure à 08/20)",
+    "Équilibre des axes : chaque centre d'intérêt doit obligatoirement comporter au moins 2 ou 3 sous-parties étayées par des citations précises du texte proposé"
+  ]
+}
