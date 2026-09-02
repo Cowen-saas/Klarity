@@ -1743,10 +1743,18 @@ les barèmes `ExempleCorrection` étaient documentés « chargés » sans l'avoi
   vides sur les 5 lignes — seuls les barèmes sont chargés, pas les exemples few-shot (énoncés types
   + réponses modèles). Le mécanisme few-shot de `corrigerCopie()` n'est donc pas encore exploitable
   de bout en bout.
-- **`Français` Terminale** : 4 `ProgrammeOfficiel` vides (`TERMINALE × {A,C,D,TI}`,
-  `contenuStructure.modules = []`). Gap **pré-existant** : la clé `francais` des fichiers
-  `docs/programmes/Terminale */programme_*.json` a `modules: []` depuis le premier commit
-  (`4896b0f`) — le programme officiel de Français Terminale n'est jamais chargé.
+- **`Français` Terminale — FAUX POSITIF de l'audit, corrigé.** L'audit avait signalé « 4
+  `ProgrammeOfficiel` vides » : c'était une **erreur de métrique**. La requête comptait
+  `jsonb_array_length(contenuStructure->'modules')`, or la clé `francais` de Terminale n'a **pas**
+  de tableau `modules` à plat — son contenu (4390 octets, 5 modules au total) est **imbriqué** sous
+  `series_scientifiques_techno.modules` (3 modules : étude de la langue, techniques de rédaction —
+  dont « Sujet 2 — Le commentaire composé » —, littérature) et `serie_litteraire_A.modules`
+  (2 modules : Langue française, Littérature/dissertation). Le fichier source **et** la ligne en
+  base contiennent bien ce contenu ; le seed l'a chargé correctement (`contenuStructure` = le JSON
+  verbatim). **Vraie observation** : incohérence de forme dans les données curriculum — 3ème et
+  Première Français utilisent `{ modules: [...] }` à plat comme toutes les autres matières, mais
+  Terminale Français utilise une structure imbriquée par série. Tout consommateur de
+  `ProgrammeOfficiel.contenuStructure` pour Français Terminale doit gérer cette forme imbriquée.
 
 ### Graphe Graphify — resynchronisé
 
@@ -1756,6 +1764,10 @@ attente, 0 nœud pour `COMMENTAIRE_COMPOSE` / `TypeExerciceCorrection` / `seedEx
 `CLAUDE.md` + `PROGRESS.md` + `Bareme_philosophie.txt`, en reproduisant l'inventaire de nœuds
 existant pour éviter la perte au `build_merge`). Résultat : **1125 nœuds / 1832 arêtes / 112
 communautés**, santé propre, `detect_incremental` = **0**. Les nœuds `v1.30`, `COMMENTAIRE_COMPOSE`,
-`TypeExerciceCorrection enum (5 valeurs)`, `seedExemplesCorrection()`, `PROGRESS 22/23/24` et même
-« Francais Terminale ProgrammeOfficiel vides (4) » sont présents et reliés.
+`TypeExerciceCorrection enum (5 valeurs)`, `seedExemplesCorrection()`, `PROGRESS 22/23/24` sont
+présents et reliés.
+
+> Note : un des sous-agents a créé un nœud « Francais Terminale ProgrammeOfficiel vides (4) » à
+> partir du faux positif de l'audit (voir ci-dessus). Ce nœud est **incorrect** ; il sera retiré au
+> prochain `graphify --update` (`graphify-out/` est local et gitignoré).
 
