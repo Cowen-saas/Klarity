@@ -68,6 +68,7 @@ enum TypeExerciceCorrection {
   DISSERTATION_LITTERAIRE
   CONTRACTION_TEXTE
   DISCUSSION
+  COMMENTAIRE_COMPOSE // épreuve de Français — analyse méthodique O.C.I.E. (CDC v1.30, §4.2.2)
 }
 
 enum StatutTentative {

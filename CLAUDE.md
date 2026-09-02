@@ -43,10 +43,11 @@ bank / correction pipeline. `Matiere.banqueDisponible` is the flag that distingu
 Thème → Contenus) for each classe/filière pair and is loaded verbatim into `ProgrammeOfficiel.contenuStructure`
 — it doubles as (1) system context for AI calls and (2) the taxonomy source for `Lacune.notion` /
 `CorrectionDetail.pointsManques[].notion` / `Video.notionAssociee`, so those three fields must stay on the same
-vocabulary. `docs/baremes/*.txt` holds official grading rubrics for French/Philo essay exercise types
-(dissertation philo, dissertation littéraire, contraction de texte, discussion) — these back `ExempleCorrection`
-few-shot prompts, which are **not** filière-specific (the methodology barème is the same across series; only the
-exam content varies).
+vocabulary. `docs/baremes/*.txt` holds official grading rubrics for the five French/Philo essay exercise types —
+`dissertation philo`, `dissertation littéraire`, `contraction de texte`, `discussion`, and
+`commentaire composé` (added CDC v1.30 — `COMMENTAIRE_COMPOSE` in the `TypeExerciceCorrection` enum) —
+these back `ExempleCorrection` few-shot prompts, which are **not** filière-specific (the methodology
+barème is the same across series; only the exam content varies).
 
 ### Tuteur IA (chat) vs. Correction IA (upload pipeline) — three code paths, no implicit bridge between them
 

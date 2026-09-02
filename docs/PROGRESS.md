@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (CDC v1.29 — SVT ajoutée aux séries C, D et TI — voir §22)_
+_Dernière mise à jour : 2 septembre 2026 (CDC v1.30 — type d'exercice COMMENTAIRE_COMPOSE — voir §23)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1628,9 +1628,38 @@ Le changement v1.29 est cohérent dans le graphe : `SVT (matiere)` → `shares_d
 de référence §2.1, `filiereRequise` et `ProgrammeOfficiel`. Graphify a aussi rapproché SVT de Chimie
 (`semantically_similar_to`) — les deux couvrent désormais C/D/TI.
 
-### Hors périmètre, à noter
+### Suites
 
-Deux fichiers barème non suivis sont apparus dans l'arbre de travail
-(`docs/baremes/Bareme_commentaire_compose.txt`, `Bareme_philososphie.txt`) — sans rapport avec ce
-changement, laissés non commités.
+- Les deux fichiers barème apparus dans l'arbre de travail
+  (`docs/baremes/Bareme_commentaire_compose.txt`, `Bareme_philosophie.txt` — typo `philososphie`
+  corrigée) ont été versionnés (commit `cf07a7c`) : ce sont les sources brutes des 5 barèmes
+  `ExempleCorrection`.
+- Le nouveau type d'exercice `COMMENTAIRE_COMPOSE` a été ajouté à l'enum et le CDC porté en v1.30
+  (voir §23).
+
+## 23. CDC v1.30 — type d'exercice COMMENTAIRE_COMPOSE (2 septembre 2026)
+
+Le back-office admin et la correction IA supposent 4 types d'exercice méthodologiques
+(`TypeExerciceCorrection`), mais un **cinquième barème** — le **commentaire composé** — est en réalité
+au programme de Français et sa source brute est versionnée
+(`docs/baremes/Bareme_commentaire_compose.txt`). Écart relevé par le graphe Graphify (arête
+`AMBIGUOUS` sur « commentaire composé » vs les 4 types du CDC). Corrigé :
+
+- **`prisma/schema.prisma`** : `COMMENTAIRE_COMPOSE` ajouté à l'enum `TypeExerciceCorrection`.
+  Migration `20260902113429_add_commentaire_compose_type_exercice` (`ALTER TYPE … ADD VALUE`),
+  appliquée ; `prisma validate` OK ; client régénéré.
+- **CDC (`Klarity_Cahier_des_Charges.pdf`, régénéré en place, v1.29 → v1.30)** : nouvelle entrée de
+  journal + signet TOC ; §4.2.2 — l'enum de `ExempleCorrection` liste désormais les 5 valeurs et le
+  texte parle de « 5 barèmes officiels ». Le barème du commentaire composé (Introduction 3 ·
+  Développement 12 — 2 axes de lecture, méthode **O.C.I.E.** Observation/Citation/Interprétation/Effet
+  · Conclusion 3 · Présentation & langue 2 = 20 pts) est décrit dans l'entrée de journal (la table
+  visuelle §4.2.2 reste à 4 lignes pour ne pas provoquer de re-pagination — le contenu normatif est
+  l'enum + le changelog). En-tête page 1 : « v1.30 — 2 septembre 2026 ». Vérifié : 42 pages, pieds
+  de page 1→42, 39 pages non touchées identiques au bit près.
+- **`CLAUDE.md`** : la ligne `docs/baremes/*.txt` liste maintenant les 5 types.
+- **Pas de seed `ExempleCorrection`** : il n'existe toujours aucun code chargeant les barèmes en base
+  (les `.txt` sont des sources brutes) ; ce sera à faire avec le pipeline de correction §2.5/§6.2.
+- **Graphe Graphify** : pas de `graphify --update` relancé pour ce petit changement (schema +
+  migration = code/AST, mais CDC + `CLAUDE.md` demanderaient une passe sémantique) — à refaire au
+  prochain update groupé.
 
