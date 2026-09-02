@@ -1756,6 +1756,45 @@ les barèmes `ExempleCorrection` étaient documentés « chargés » sans l'avoi
   Terminale Français utilise une structure imbriquée par série. Tout consommateur de
   `ProgrammeOfficiel.contenuStructure` pour Français Terminale doit gérer cette forme imbriquée.
 
+### `contexteMatiere` du chat-tuteur face à la structure imbriquée — vérifié en direct
+
+Question de suivi : le code qui alimente le chat-tuteur mode 1 (§6.2) suppose-t-il la forme
+`{ modules: [...] }` à plat ?
+
+**Réponse : non, aucun risque aujourd'hui — le contexte n'est jamais parsé.**
+
+- `src/lib/ai/types.ts` : `export type ContexteMatiere = unknown` — délibérément opaque, aucun
+  contrat de forme.
+- `src/app/api/eleve/chat/conversations/[id]/messages/route.ts:110` :
+  `aiProvider.chat(messages, programme?.contenuStructure ?? null)` — le JSON de `contenuStructure`
+  est transmis **verbatim**, sans lecture de sous-clé.
+- `src/lib/ai/mock-provider.ts` : `chat(messages, _contexteMatiere, …)` — le paramètre est préfixé
+  `_` et **totalement ignoré** par le mock.
+
+**Test HTTP réel** — élève Terminale C, inscription → connexion NextAuth → `GET /api/eleve/matieres`
+(Français listé) → `POST /api/eleve/chat/conversations` (matiereId = Français) → `POST …/messages`
+(question sur le commentaire composé). Route renvoie **201**, `messageAssistant` produit. Log
+temporaire posé sur la ligne 110 pendant le test :
+
+```
+[TEMP-CTX-AUDIT] matiereId=… classe=TERMINALE filiere=C ctx=object bytes=4298
+  topKeys=["description","series_concernees","serie_litteraire_A","series_scientifiques_techno"]
+  hasFlatModules=false head={"description":"Programme officiel complet (Office du Baccalauréat…
+```
+
+→ Le contexte passé à `chat()` est bien l'**objet imbriqué complet de 4298 octets** (pas `null`,
+pas vide, pas tronqué). Log retiré après le test ; `tsc --noEmit` = 0 erreur ; élève de test
+supprimé.
+
+**Piège latent pour le futur `ClaudeAIProvider` (§6.5), à retenir :** quand le provider réel
+sérialisera `contexteMatiere` dans le prompt système, il ne devra **pas** présumer
+`contenuStructure.modules[]`. Pour Français (toutes séries de Terminale) les modules sont sous
+`.series_scientifiques_techno.modules` (3) et `.serie_litteraire_A.modules` (2). Un accès naïf à
+`.modules` donnerait un prompt système vide/dégradé pour le Français Terminale sans lever d'erreur.
+Deux corrections possibles le moment venu : (a) normaliser la forme des fichiers
+`docs/programmes/Terminale */programme_*.json` (aplatir `francais`), ou (b) traiter la forme
+imbriquée dans le sérialiseur de contexte. À trancher lors de l'implémentation §6.5.
+
 ### Graphe Graphify — resynchronisé
 
 L'audit a confirmé que le graphe était **désynchronisé** : `detect_incremental` = 11 fichiers en
