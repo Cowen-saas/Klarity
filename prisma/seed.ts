@@ -7,10 +7,19 @@ import type { Filiere, NiveauClasse, Prisma } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 
 /**
- * Ingestion des 9 ProgrammeOfficiel (§4.2.3) depuis docs/programmes/. Idempotent
+ * Ingestion des ProgrammeOfficiel (§4.2.3) depuis docs/programmes/. Idempotent
  * (upsert) — rejouable en dev sans dupliquer. Nécessite un Admin pour satisfaire
  * `ProgrammeOfficiel.ajouteParAdminId` (obligatoire) : un compte "seed système" est
  * créé s'il n'existe pas déjà, jamais destiné à un vrai login.
+ *
+ * Entièrement piloté par les données : une ligne ProgrammeOfficiel est créée pour
+ * chaque couple (matière, classe, série) présent dans les 9 fichiers JSON, et
+ * `Matiere.filiereRequise` / `classesConcernees` sont l'union des séries/classes où
+ * la matière apparaît. Ajout v1.29 (§2.1, §4.2) : SVT est désormais présente dans
+ * les sections `svt` des programmes des séries C, D et TI (1ère + Terminale) en plus
+ * de la série A et de la 3ème — le seed en dérive donc automatiquement
+ * `filiereRequise = {A, C, D, TI}` pour SVT et matérialise les 6 nouveaux couples.
+ * Le socle de référence §2.1 passe ainsi de 9 à 15 couples matière/classe/série.
  */
 
 const PROGRAMMES_DIR = path.join(__dirname, "..", "docs", "programmes");

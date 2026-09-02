@@ -252,6 +252,126 @@
         }
       ]
     },
+    "svt": {
+      "modules": [
+        {
+          "titre": "Module 1 — Le Monde Vivant",
+          "themes": [
+            {
+              "theme": "Séquence 1 — Les enzymes, des biocatalyseurs",
+              "contenus": [
+                "Propriétés des enzymes (spécificité de substrat, sensibilité à la température et au pH)",
+                "Mode d'action enzymatique et cinétique enzymatique"
+              ]
+            },
+            {
+              "theme": "Séquence 2 — La photosynthèse",
+              "contenus": [
+                "Structure des chloroplastes et pigments chlorophylliens",
+                "Phase claire (dépendante de la lumière) et phase sombre (cycle de Calvin)"
+              ]
+            },
+            {
+              "theme": "Séquence 3 — L'utilisation de la matière organique par la cellule (la respiration et la fermentation)",
+              "contenus": [
+                "La glycolyse cytoplasmique",
+                "La respiration cellulaire (structure de la mitochondrie, cycle de Krebs, chaîne respiratoire)",
+                "Les fermentations (alcoolique et lactique) et comparaison des bilans énergétiques (ATP)"
+              ]
+            },
+            {
+              "theme": "Séquence 4 — La diversité du monde bactérien et viral",
+              "contenus": [
+                "Structure des bactéries et des virus",
+                "Modes de multiplication des bactéries et cycle lytique/lysogénique des virus"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 2 — L'Éducation à la Santé",
+          "themes": [
+            {
+              "theme": "Séquence 5 — L'approvisionnement de l'organisme en dioxygène et nutriments",
+              "contenus": [
+                "Mécanismes de la respiration et échanges gazeux tissulaires/pulmonaires",
+                "Digestion et absorption intestinale"
+              ]
+            },
+            {
+              "theme": "Séquence 6 — L'élimination des déchets de l'organisme",
+              "contenus": [
+                "Structure du rein et du néphron",
+                "Mécanismes de formation de l'urine (filtration glomérulaire, réabsorption, sécrétion)"
+              ]
+            },
+            {
+              "theme": "Séquence 7 — La contamination de l'organisme par les microorganismes",
+              "contenus": [
+                "Asepsie, antisepsie et modes de transmission des agents pathogènes"
+              ]
+            },
+            {
+              "theme": "Séquence 8 — La lutte contre la contamination et l'infection",
+              "contenus": [
+                "Antibiogramme, utilisation raisonnée des antibiotiques et limites"
+              ]
+            },
+            {
+              "theme": "Séquence 9 — L'hygiène du système nerveux et du système cardiovasculaire",
+              "contenus": [
+                "Effets des substances toxiques (drogues, alcool, tabac) sur le système nerveux",
+                "Prévention des maladies cardiovasculaires (hypertension, athérosclérose)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 3 — L'Éducation à l'Environnement et au Développement Durable",
+          "themes": [
+            {
+              "theme": "Séquence 10 — La tectonique des plaques et la dynamique interne de la Terre",
+              "contenus": [
+                "Structure interne du globe terrestre",
+                "La dérive des continents et la théorie de la tectonique des plaques",
+                "Magmatisme, métamorphisme et séismes associés aux limites de plaques"
+              ]
+            },
+            {
+              "theme": "Séquence 11 — Les écosystèmes et les flux de matière et d'énergie",
+              "contenus": [
+                "Structure d'un écosystème (biocénose et biotope)",
+                "Chaînes alimentaires, réseaux trophiques et pyramides écologiques",
+                "Cycles biogéochimiques (cycle du carbone et de l'azote)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 4 — La Biotechnologie",
+          "themes": [
+            {
+              "theme": "Séquence 12 — La fabrication du pain et des boissons fermentées",
+              "contenus": [
+                "Processus de fermentation par les levures (boulangerie, brasserie)"
+              ]
+            },
+            {
+              "theme": "Séquence 13 — La fabrication du yaourt et du fromage",
+              "contenus": [
+                "Fermentation lactique et transformation du lait"
+              ]
+            },
+            {
+              "theme": "Séquence 14 — Le compostage des déchets organiques",
+              "contenus": [
+                "Techniques de production du compost pour la fertilisation des sols"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "francais": {
       "series_concernees": ["A", "C", "D", "TI"],
       "modules": [

@@ -234,11 +234,149 @@
         }
       ]
     },
+    "svt": {
+      "modules": [
+        {
+          "titre": "Module 1 — Le Monde Vivant",
+          "themes": [
+            {
+              "theme": "Séquence 1 — L'organisation générale de la cellule",
+              "contenus": [
+                "La cellule en microscopie optique et électronique (ultrastructure)",
+                "Structure, rôle et interrelations entre les organites cellulaires"
+              ]
+            },
+            {
+              "theme": "Séquence 2 — Les échanges cellulaires chez les animaux et les végétaux",
+              "contenus": [
+                "Échanges d'eau et de solutés (osmose, dialyse, transport actif et passif)",
+                "Phénomènes d'endocytose et d'exocytose"
+              ]
+            },
+            {
+              "theme": "Séquence 3 — Du gène à la protéine",
+              "contenus": [
+                "Structure des acides nucléiques (ADN et ARN)",
+                "Mécanismes de la biosynthèse des protéines (transcription, maturation, traduction)",
+                "Code génétique et conservation de l'information génétique"
+              ]
+            },
+            {
+              "theme": "Séquence 4 — Les mécanismes fondamentaux de la reproduction sexuée",
+              "contenus": [
+                "Gamétogenèse (spermatogenèse et ovogenèse)",
+                "Méiose, brassages génétiques (interchromosomique et intrachromosomique) et fécondation"
+              ]
+            },
+            {
+              "theme": "Séquence 5 — La transmission des caractères héréditaires chez les diploïdes",
+              "contenus": [
+                "Monohybridisme et dihybridisme (lois de Mendel, gènes liés et linkage, crossing-over)"
+              ]
+            },
+            {
+              "theme": "Séquence 6 — La génétique humaine",
+              "contenus": [
+                "Analyse des arbres généalogiques (pédigrées)",
+                "Transmission de maladies héréditaires liées ou non au sexe (drépanocytose, hémophilie, daltonisme)"
+              ]
+            },
+            {
+              "theme": "Séquence 7 — Le fonctionnement du système nerveux",
+              "contenus": [
+                "Structure de la fibre nerveuse et genèse du potentiel de repos et d'action",
+                "Mécanismes de la transmission synaptique",
+                "Le réflexe myotatique et l'intégration nerveuse"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 2 — L'Éducation à la Santé",
+          "themes": [
+            {
+              "theme": "Séquence 8 — Le fonctionnement du système immunitaire",
+              "contenus": [
+                "Organisation de l'appareil immunitaire (organes lymphoïdes, cellules)",
+                "Notion du soi et du non-soi (système ABO, Rhesus, complexe majeur d'histocompatibilité - CMH)",
+                "Les phases de la réponse immunitaire (innée et acquise à médiation humorale ou cellulaire)"
+              ]
+            },
+            {
+              "theme": "Séquence 9 — Les dysfonctionnements du système immunitaire",
+              "contenus": [
+                "Le VIH/SIDA (mode d'action, étapes de l'infection, prévention)",
+                "Les hypersensibilités (allergies) et maladies auto-immunes"
+              ]
+            },
+            {
+              "theme": "Séquence 10 — La régulation des fonctions reproductrices",
+              "contenus": [
+                "Régulation hormonale de l'appareil génital masculin (axe hypothalamo-hypophysaire)",
+                "Régulation hormonale du cycle sexuel chez la femme (rétrocontrôles)",
+                "Contrôle des naissances (contraception, procréation médicalement assistée)"
+              ]
+            },
+            {
+              "theme": "Séquence 11 — La régulation de la glycémie",
+              "contenus": [
+                "Rôles du foie, du pancréas (insuline et glucagon)",
+                "Dysfonctionnements : les diabètes (types 1 et 2) et leur prévention"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 3 — L'Éducation à l'Environnement et au Développement Durable",
+          "themes": [
+            {
+              "theme": "Séquence 12 — Les risques géologiques et les catastrophes naturelles",
+              "contenus": [
+                "Séismes, volcanisme, glissements de terrain",
+                "Moyens de prévision, de prévention et gestion des risques par les populations"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 4 — La Biotechnologie",
+          "themes": [
+            {
+              "theme": "Séquence 13 — La transformation et la conservation des produits alimentaires locaux",
+              "contenus": [
+                "Techniques traditionnelles et modernes de transformation/conservation"
+              ]
+            },
+            {
+              "theme": "Séquence 14 — Les énergies renouvelables et la production de biomasse",
+              "contenus": [
+                "Biogaz, méthanisation et valorisation énergétique"
+              ]
+            },
+            {
+              "theme": "Séquence 15 — La gestion et la valorisation des déchets",
+              "contenus": [
+                "Tri, compostage, recyclage et protection des écosystèmes"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "francais": {
-      "series_concernees": ["A", "C", "D", "TI"],
+      "series_concernees": [
+        "A",
+        "C",
+        "D",
+        "TI"
+      ],
       "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
       "series_scientifiques_techno": {
-        "series": ["C", "D", "TI"],
+        "series": [
+          "C",
+          "D",
+          "TI"
+        ],
         "volume_horaire": "~3 h / semaine",
         "coefficient": "2 à 3",
         "modules": [
@@ -300,7 +438,9 @@
         ]
       },
       "serie_litteraire_A": {
-        "series": ["A"],
+        "series": [
+          "A"
+        ],
         "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
         "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
         "modules": [

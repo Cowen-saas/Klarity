@@ -34,8 +34,8 @@ Subject availability is **not uniform** — it depends on `classe` and, for Prem
 |---|---|---|
 | 3ème | (aucune) | Français, Maths, **PCT** (Physique-Chimie-Technologie combinée — pas de Physique/Chimie séparées en 3ème), SVT |
 | Première/Terminale | A | Maths, SVT, Français, **Philosophie** (réservée à la série A) |
-| Première/Terminale | C, D | Maths, Physique, Français, Chimie |
-| Première/Terminale | TI | Maths, Physique, Français, Chimie, Système d'information, Programmation, Réseau |
+| Première/Terminale | C, D | Maths, Physique, Français, Chimie, **SVT** (ajoutée v1.29 — Français conservé, obligatoire à l'examen national) |
+| Première/Terminale | TI | Maths, Physique, Français, Chimie, Système d'information, Programmation, Réseau, **SVT** (ajoutée v1.29) |
 
 Anglais and Histoire-Géo are covered by the general chat tutor on every track but are **never** part of the exam
 bank / correction pipeline. `Matiere.banqueDisponible` is the flag that distinguishes "chat-only" subjects from

@@ -338,11 +338,147 @@
         }
       ]
     },
+    "svt": {
+      "modules": [
+        {
+          "titre": "Module 1 — Le Monde Vivant",
+          "themes": [
+            {
+              "theme": "Séquence 1 — L'organisation générale de la cellule",
+              "contenus": [
+                "La cellule en microscopie optique et électronique",
+                "Structure et rôles des principaux organites cellulaires"
+              ]
+            },
+            {
+              "theme": "Séquence 2 — Les échanges cellulaires chez les animaux",
+              "contenus": [
+                "Échanges d'eau et phénomène d'osmose / dialyse",
+                "Échanges de substances dissoutes (transport passif/diffusion, transport actif)",
+                "Échanges de particules (endocytose et exocytose)"
+              ]
+            },
+            {
+              "theme": "Séquence 3 — Du gène à la protéine",
+              "contenus": [
+                "Structure des acides nucléiques (ADN et ARN)",
+                "Mécanismes de la synthèse protéique (transcription et traduction)",
+                "Maintien de l'identité cellulaire"
+              ]
+            },
+            {
+              "theme": "Séquence 4 — Les mécanismes fondamentaux de la reproduction sexuée chez les Mammifères",
+              "contenus": [
+                "Structure et rôles des gonades (testicules et ovaires)",
+                "Gamétogenèse et méiose",
+                "Variation de la quantité d'ADN au cours de la méiose et de la fécondation"
+              ]
+            },
+            {
+              "theme": "Séquence 5 — La transmission des caractères au sein d'une espèce",
+              "contenus": [
+                "Lois de Mendel et hérédité"
+              ]
+            },
+            {
+              "theme": "Séquence 6 — L'étude de quelques aspects de la génétique humaine",
+              "contenus": [
+                "Analyse d'arbres généalogiques (pédigrées)",
+                "Transmission de tarés ou anomalies génétiques chez l'Homme"
+              ]
+            },
+            {
+              "theme": "Séquence 7 — Le fonctionnement des neurones",
+              "contenus": [
+                "Structure du tissu nerveux et nature du message nerveux",
+                "Potentiel de repos, potentiel d'action et transmission synaptique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 2 — L'Éducation à la Santé",
+          "themes": [
+            {
+              "theme": "Séquence 8 — Les mécanismes de l'immunité",
+              "contenus": [
+                "Les bases de l'immunocompétence (origine des cellules immunitaires, marqueurs du soi et du non-soi)",
+                "Réponse immunitaire non spécifique et réponse spécifique (humorale et cellulaire)"
+              ]
+            },
+            {
+              "theme": "Séquence 9 — Les dysfonctionnements du système immunitaire",
+              "contenus": [
+                "Les maladies auto-immunes",
+                "Le VIH/SIDA et les déficiences immunitaires"
+              ]
+            },
+            {
+              "theme": "Séquence 10 — La santé reproductive",
+              "contenus": [
+                "Régulation hormonale des appareils reproducteurs chez l'homme et chez la femme",
+                "Causes et solutions liées à l'infertilité"
+              ]
+            },
+            {
+              "theme": "Séquence 11 — La santé nutritionnelle",
+              "contenus": [
+                "Régulation de la glycémie (rôles du foie et du pancréas)",
+                "Facteurs de variation et perturbations (diabète)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 3 — L'Éducation à l'Environnement et au Développement Durable",
+          "themes": [
+            {
+              "theme": "Séquence 12 — Les catastrophes naturelles et la réduction des risques",
+              "contenus": [
+                "Identification, préventions et gestion des catastrophes environnementales"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 4 — La Biotechnologie",
+          "themes": [
+            {
+              "theme": "Séquence 13 — La transformation et la conservation des fruits de saison",
+              "contenus": [
+                "Processus artisanaux et industriels de conservation des denrées"
+              ]
+            },
+            {
+              "theme": "Séquence 14 — Les énergies renouvelables",
+              "contenus": [
+                "Recherche et valorisation des nouvelles sources d'énergie (biogaz, etc.)"
+              ]
+            },
+            {
+              "theme": "Séquence 15 — La valorisation des déchets de l'environnement de l'Homme",
+              "contenus": [
+                "Recyclage, compostage et gestion durable des déchets"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "francais": {
-      "series_concernees": ["A", "C", "D", "TI"],
+      "series_concernees": [
+        "A",
+        "C",
+        "D",
+        "TI"
+      ],
       "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
       "series_scientifiques_techno": {
-        "series": ["C", "D", "TI"],
+        "series": [
+          "C",
+          "D",
+          "TI"
+        ],
         "volume_horaire": "~3 h / semaine",
         "coefficient": "2 à 3",
         "modules": [
@@ -404,7 +540,9 @@
         ]
       },
       "serie_litteraire_A": {
-        "series": ["A"],
+        "series": [
+          "A"
+        ],
         "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
         "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
         "modules": [

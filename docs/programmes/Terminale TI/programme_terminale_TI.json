@@ -349,11 +349,144 @@
         }
       ]
     },
+    "svt": {
+      "modules": [
+        {
+          "titre": "Module 1 — Le Monde Vivant",
+          "themes": [
+            {
+              "theme": "Séquence 1 — L'organisation générale de la cellule",
+              "contenus": [
+                "Observabilité et ultrastructure (microscopie optique et électronique)",
+                "Structure et rôles des organites cellulaires"
+              ]
+            },
+            {
+              "theme": "Séquence 2 — Les échanges cellulaires chez les animaux",
+              "contenus": [
+                "Phénomènes d'osmose et de dialyse",
+                "Transports passifs (diffusion) et transports actifs",
+                "Endocytose et exocytose"
+              ]
+            },
+            {
+              "theme": "Séquence 3 — Du gène à la protéine",
+              "contenus": [
+                "Structure des acides nucléiques (ADN et ARN)",
+                "Mécanismes de la biosynthèse protéique (transcription et traduction)"
+              ]
+            },
+            {
+              "theme": "Séquence 4 — Les mécanismes fondamentaux de la reproduction sexuée chez les Mammifères",
+              "contenus": [
+                "Structure des gonades et gamétogenèse",
+                "Méiose et fécondation"
+              ]
+            },
+            {
+              "theme": "Séquence 5 — La transmission des caractères au sein d'une espèce",
+              "contenus": [
+                "Lois de Mendel et notions d'hérédité"
+              ]
+            },
+            {
+              "theme": "Séquence 6 — L'étude de quelques aspects de la génétique humaine",
+              "contenus": [
+                "Analyse des arbres généalogiques (pédigrées)",
+                "Transmission des anomalies héréditaires"
+              ]
+            },
+            {
+              "theme": "Séquence 7 — Le fonctionnement des neurones",
+              "contenus": [
+                "Structure du tissu nerveux",
+                "Potentiel de repos, potentiel d'action et transmission synaptique"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 2 — L'Éducation à la Santé",
+          "themes": [
+            {
+              "theme": "Séquence 8 — Les mécanismes de l'immunité",
+              "contenus": [
+                "Marqueurs du soi et du non-soi",
+                "Réponses immunitaires non spécifiques et spécifiques (humorale et cellulaire)"
+              ]
+            },
+            {
+              "theme": "Séquence 9 — Les dysfonctionnements du système immunitaire",
+              "contenus": [
+                "Immunodéficiences (VIH/SIDA) et maladies auto-immunes"
+              ]
+            },
+            {
+              "theme": "Séquence 10 — La santé reproductive",
+              "contenus": [
+                "Régulation hormonale chez l'homme et la femme",
+                "Causes et approches de traitement de l'infertilité"
+              ]
+            },
+            {
+              "theme": "Séquence 11 — La santé nutritionnelle",
+              "contenus": [
+                "Régulation de la glycémie (foie et pancréas)",
+                "Diabète et dysfonctionnements métaboliques"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 3 — L'Éducation à l'Environnement et au Développement Durable",
+          "themes": [
+            {
+              "theme": "Séquence 12 — Les catastrophes naturelles et la réduction des risques",
+              "contenus": [
+                "Évaluation, prévention et gestion des risques environnementaux"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 4 — La Biotechnologie",
+          "themes": [
+            {
+              "theme": "Séquence 13 — La transformation et la conservation des fruits de saison",
+              "contenus": [
+                "Procédés de conservation et de transformation des denrées locales"
+              ]
+            },
+            {
+              "theme": "Séquence 14 — Les énergies renouvelables",
+              "contenus": [
+                "Valorisation des sources d'énergie propres (biogaz, biomasse)"
+              ]
+            },
+            {
+              "theme": "Séquence 15 — La valorisation des déchets de l'environnement de l'Homme",
+              "contenus": [
+                "Tri, recyclage, compostage et gestion durable"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "francais": {
-      "series_concernees": ["A", "C", "D", "TI"],
+      "series_concernees": [
+        "A",
+        "C",
+        "D",
+        "TI"
+      ],
       "description": "Programme officiel complet (Office du Baccalauréat du Cameroun — OBC / MINESEC) pour le sous-cycle de Terminale. Vise la maîtrise approfondie de la langue, le développement de l'esprit critique et l'analyse méthodique des discours et des textes littéraires en vue des épreuves du Baccalauréat.",
       "series_scientifiques_techno": {
-        "series": ["C", "D", "TI"],
+        "series": [
+          "C",
+          "D",
+          "TI"
+        ],
         "volume_horaire": "~3 h / semaine",
         "coefficient": "2 à 3",
         "modules": [
@@ -415,7 +548,9 @@
         ]
       },
       "serie_litteraire_A": {
-        "series": ["A"],
+        "series": [
+          "A"
+        ],
         "volume_horaire": "~6 h à 8 h / semaine (Langue française coeff. 3 ou 4 + Littérature coeff. 3 à 4 selon l'option A1/A2)",
         "description": "En Série A, la matière est découpée en deux épreuves distinctes et approfondies au Baccalauréat : l'épreuve de Langue française et l'épreuve de Littérature.",
         "modules": [

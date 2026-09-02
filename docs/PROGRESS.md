@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (Phase R2 validée bout en bout via le formulaire admin réel — voir §21)_
+_Dernière mise à jour : 2 septembre 2026 (CDC v1.29 — SVT ajoutée aux séries C, D et TI — voir §22)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -181,12 +181,14 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 
 ### Graphe de connaissances Graphify
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
-persistant (`graphify-out/`) : **513 nœuds, 741 arêtes, 39 communautés**, santé du graphe
-propre (aucune arête orpheline). Sert de garde-fou pour repérer les incohérences entre
-maquettes, CDC et code au fil du développement. **Snapshot du 27 août 2026** — n'inclut pas
-encore la Phase 2 paiement (§16) ni le travail du 1er septembre (§17 à §19 : SMS, back-office
-admin, rétention) ; un `graphify --update` sera nécessaire avant de s'en resservir comme
-référence.
+persistant (`graphify-out/`) : **1075 nœuds, 1702 arêtes, 100 communautés**, santé du graphe
+propre (aucune arête orpheline, aucun endpoint manquant, aucun doublon). Sert de garde-fou pour
+repérer les incohérences entre maquettes, CDC et code au fil du développement. **Snapshot du
+2 septembre 2026** (`graphify --update`) — couvre désormais la Phase 2 paiement, le travail du
+1er septembre (SMS, back-office admin, rétention), la bascule R2 réelle et le changement v1.29
+(SVT séries C/D/TI). Le nœud « v1.29 change: SVT added to bank/correction » est bien relié à la
+table de référence §2.1, à `Matiere.filiereRequise`, à `ProgrammeOfficiel` (15 couples) et à
+`corrigerCopie()`.
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
@@ -1561,4 +1563,74 @@ actuel (formulaire admin d'ajout d'épreuve). Les autres appelants (`archivage-p
 futur pipeline de correction §2.5) partagent la même interface et n'ont pas besoin d'adaptation. La
 banque d'épreuves reste vide en attendant la source de contenu (§18 : Supabase tierce) ; rien
 d'autre ne bloque côté stockage.
+
+## 22. CDC v1.29 — SVT ajoutée aux séries C, D et TI (2 septembre 2026)
+
+Mise à jour du cahier des charges (§2.1, §4.2) demandée par l'utilisateur : **SVT rejoint la banque
+d'épreuves et la correction automatisée pour les séries C, D et TI** (1ère et Terminale), en plus des
+matières déjà prévues. **Le Français n'est pas retiré** — c'est un complément, pas un remplacement :
+la justification actée est la centralisation sur les matières scientifiques pour C/D/TI tout en
+conservant le Français, obligatoire à l'examen national (BEPC / Probatoire / Baccalauréat).
+
+Nouvelle table de référence §2.1 pour ces 3 séries :
+
+| Série | Matières banque + correction |
+|---|---|
+| C | Maths, Physique, Français, Chimie, **SVT** |
+| D | Maths, Physique, Français, Chimie, **SVT** |
+| TI | Maths, Physique, Français, Chimie, Système d'Information, Programmation, Réseau, **SVT** |
+
+### Cahier des charges (`docs/specs/Klarity_Cahier_des_Charges.pdf`, régénéré en place)
+
+Bump **v1.28 → v1.29**. Édité avec PyMuPDF (redaction réelle du texte remplacé + réinsertion,
+polices `Liberation Sans` extraites du document), aucune page ajoutée donc **aucune renumérotation** :
+
+- Nouvelle entrée de journal des modifications « v1.28 → v1.29 » (page 8) + signet TOC.
+- §2.1 table de référence : SVT ajoutée aux lignes séries C / D / TI ; légende passée à « (v1.29) » ;
+  paragraphe de comptage réécrit — le socle passe de **9 à 15 couples matière/classe/série**
+  (9 historiques + 6 nouveaux couples SVT pour C/D/TI en 1ère et Terminale).
+- §4.2.3 : bloc « Précision v1.27 » réécrit en « Précision v1.27 / révision v1.29 » avec le nouveau
+  total de 15 et la note que SVT n'ajoute pas de fichier JSON, seulement une section aux fichiers
+  C/D/TI existants.
+- En-tête page 1 : « v1.29 — 2 septembre 2026 ».
+- Vérifié : 42 pages, séquence de pieds de page 1→42 intacte, 38 pages non touchées identiques au
+  bit près, plus aucune trace de « 19 août 2026 » ni « soit 9 au total ».
+
+### Données et code
+
+- **`docs/programmes/{Première,Terminale} {C,D,TI}/programme_*.json`** : les 6 fichiers ont reçu une
+  vraie section `svt` (4 modules, 14–15 thèmes chacun — programme officiel camerounais réel), déjà
+  présente dans l'arbre de travail au moment de la tâche. Confirmé par l'utilisateur : on charge le
+  vrai contenu. Fichiers `*:Zone.Identifier` (marque Windows « téléchargé d'Internet ») supprimés et
+  ajoutés à `.gitignore`.
+- **`prisma/seed.ts`** : aucune logique à changer (seed entièrement piloté par les données). Le seed
+  dérive automatiquement `Matiere.filiereRequise` de SVT = **{A, C, D, TI}** (était `{A}`) à partir
+  de la présence de la clé `svt` dans les 6 fichiers, et matérialise les 6 nouveaux
+  `ProgrammeOfficiel`. Commentaire d'en-tête mis à jour. Reseed exécuté : **48 ProgrammeOfficiel**
+  (était 42), dont **9 couples SVT** (était 3 : 3ème + 1ère A + Tle A → + C/D/TI en 1ère et Tle).
+- **`prisma/schema.prisma`** : aucun changement — `filiereRequise` est un `Filiere[]` dérivé.
+- **`CLAUDE.md`** : table « Curriculum structure » mise à jour (séries C/D et TI gagnent SVT).
+
+### Test réel — élève Terminale D voit SVT au chat-tuteur
+
+Test HTTP bout en bout : `POST /api/eleve/inscription` (Terminale D) → connexion NextAuth
+(`callback/eleve`, 302 + cookie de session) → `GET /api/eleve/matieres` (mode 1, branché sur
+`ProgrammeOfficiel` par `classe` + `filiere`). Réponse : **Chimie, Français, Mathématiques, Physique,
+SVT**. SVT présent ✅, Français toujours présent ✅. Élève de test supprimé après coup.
+
+### Graphe Graphify
+
+`graphify --update` (voir §3) : 129 fichiers ré-indexés, graphe reconstruit à 1075 nœuds / 1702
+arêtes / 100 communautés, **santé propre** (aucune arête orpheline / endpoint manquant / doublon).
+Le changement v1.29 est cohérent dans le graphe : `SVT (matiere)` → `shares_data_with` →
+`ProgrammeOfficiel (15 couples v1.29)`, `SVT` → `conceptually_related_to` →
+`Matiere.filiereRequise {A,C,D,TI}` et `corrigerCopie()`, et le nœud « v1.29 change » relie la table
+de référence §2.1, `filiereRequise` et `ProgrammeOfficiel`. Graphify a aussi rapproché SVT de Chimie
+(`semantically_similar_to`) — les deux couvrent désormais C/D/TI.
+
+### Hors périmètre, à noter
+
+Deux fichiers barème non suivis sont apparus dans l'arbre de travail
+(`docs/baremes/Bareme_commentaire_compose.txt`, `Bareme_philososphie.txt`) — sans rapport avec ce
+changement, laissés non commités.
 

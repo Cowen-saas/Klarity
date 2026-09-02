@@ -50,3 +50,6 @@ next-env.d.ts
 
 # StorageProvider mock — fichiers uploadés en dev (épreuves, corrigés), jamais versionnés
 /.storage-mock/
+
+# Windows "mark of the web" metadata déposé à côté des fichiers téléchargés (ex. JSON de programmes)
+*:Zone.Identifier

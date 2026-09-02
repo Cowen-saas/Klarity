@@ -485,8 +485,130 @@
         }
       ]
     },
+    "svt": {
+      "modules": [
+        {
+          "titre": "Module 1 — Le Monde Vivant",
+          "themes": [
+            {
+              "theme": "Séquence 1 — Les enzymes, des biocatalyseurs",
+              "contenus": [
+                "Propriétés des enzymes (spécificité, influence de la température et du pH)",
+                "Mode d'action et notion de complexe enzyme-substrat"
+              ]
+            },
+            {
+              "theme": "Séquence 2 — La photosynthèse",
+              "contenus": [
+                "Structure du chloroplaste et pigments chlorophylliens",
+                "Phase lumineuse et phase sombre (fixation du CO₂)"
+              ]
+            },
+            {
+              "theme": "Séquence 3 — L'utilisation de la matière organique par la cellule",
+              "contenus": [
+                "La respiration cellulaire (glycolyse, cycle de Krebs, chaîne respiratoire)",
+                "Les fermentations (alcoolique et lactique) et bilan d'ATP"
+              ]
+            },
+            {
+              "theme": "Séquence 4 — La diversité du monde bactérien et viral",
+              "contenus": [
+                "Structure des bactéries et des virus",
+                "Cycles de multiplication des bactéries et des virus"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 2 — L'Éducation à la Santé",
+          "themes": [
+            {
+              "theme": "Séquence 5 — L'approvisionnement de l'organisme en dioxygène et nutriments",
+              "contenus": [
+                "Mécanismes de la respiration et échanges gazeux",
+                "Digestion et absorption intestinale des nutriments"
+              ]
+            },
+            {
+              "theme": "Séquence 6 — L'élimination des déchets de l'organisme",
+              "contenus": [
+                "Structure du rein et du néphron",
+                "Mécanismes de formation de l'urine (filtration, réabsorption, sécrétion)"
+              ]
+            },
+            {
+              "theme": "Séquence 7 — La contamination de l'organisme par les microorganismes",
+              "contenus": [
+                "Asepsie, antisepsie et modes de transmission des germes"
+              ]
+            },
+            {
+              "theme": "Séquence 8 — La lutte contre la contamination et l'infection",
+              "contenus": [
+                "Utilisation des antibiotiques et antibiogramme"
+              ]
+            },
+            {
+              "theme": "Séquence 9 — L'hygiène du système nerveux et du système cardiovasculaire",
+              "contenus": [
+                "Effets des toxiques (drogues, alcool, tabac) sur les synapses",
+                "Prévention des maladies cardiovasculaires (hypertension, athérosclérose)"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 3 — L'Éducation à l'Environnement et au Développement Durable",
+          "themes": [
+            {
+              "theme": "Séquence 10 — La tectonique des plaques et la dynamique interne de la Terre",
+              "contenus": [
+                "Structure interne de la Terre",
+                "Théorie de la tectonique des plaques et phénomènes associés (séismes, volcanisme)"
+              ]
+            },
+            {
+              "theme": "Séquence 11 — Les écosystèmes et les flux de matière et d'énergie",
+              "contenus": [
+                "Composants d'un écosystème, chaînes et réseaux alimentaires",
+                "Cycles biogéochimiques du carbone et de l'azote"
+              ]
+            }
+          ]
+        },
+        {
+          "titre": "Module 4 — La Biotechnologie",
+          "themes": [
+            {
+              "theme": "Séquence 12 — La fabrication du pain et des boissons fermentées",
+              "contenus": [
+                "Utilisation des levures dans les processus d'excrétion et de fermentation"
+              ]
+            },
+            {
+              "theme": "Séquence 13 — La fabrication du yaourt et du fromage",
+              "contenus": [
+                "Processus de la fermentation lactique appliquée aux produits laitiers"
+              ]
+            },
+            {
+              "theme": "Séquence 14 — Le compostage des déchets organiques",
+              "contenus": [
+                "Techniques de transformation des déchets biodégradables en engrais organique"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "francais": {
-      "series_concernees": ["A", "C", "D", "TI"],
+      "series_concernees": [
+        "A",
+        "C",
+        "D",
+        "TI"
+      ],
       "modules": [
         {
           "titre": "Étude de la langue et outils d'analyse (toutes séries)",
