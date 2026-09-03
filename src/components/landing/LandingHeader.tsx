@@ -7,14 +7,15 @@ interface NavItem {
 }
 
 /**
- * Barre de navigation publique. "Épreuves" n'a pas encore de section/page
- * cible (la banque d'épreuves n'existe pas encore) -- reste du texte non
- * cliquable plutôt qu'un lien mort, même logique que les items "Bientôt" des
- * sidebars app (EleveShell/ParentShell).
+ * Barre de navigation publique. "Épreuves" mène à un vrai accès à la banque :
+ * `/connexion?from=/eleve/epreuves` affiche le sélecteur élève/parent (même
+ * logique que "Tarifs" / le chooser d'abonnement) et, après connexion élève,
+ * redirige vers la banque d'épreuves (`EleveLoginForm` honore `from` s'il
+ * commence par `/eleve`). Pas d'ancre morte vers une section de la page.
  */
 const NAV_ITEMS: NavItem[] = [
   { label: "Fonctionnalités", href: "/#comment-ca-marche" },
-  { label: "Épreuves" },
+  { label: "Épreuves", href: "/connexion?from=/eleve/epreuves" },
   { label: "Tarifs", href: "/abonnement" },
   // role=PARENT ouvre directement sur l'onglet Parent et le verrouille
   // (l'onglet Élève est grisé, non cliquable) — spécifique à ce point

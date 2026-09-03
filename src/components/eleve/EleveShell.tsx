@@ -17,7 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/eleve", label: "Accueil", icon: IconHome },
   { href: "/eleve/tuteur-ia", label: "Tuteur IA", icon: IconSparkles },
-  { href: "/eleve/epreuves", label: "Épreuves", icon: IconDocument, disabled: true },
+  { href: "/eleve/epreuves", label: "Épreuves", icon: IconDocument },
   { href: "/eleve/lacunes", label: "Mes lacunes", icon: IconBulb, disabled: true },
   { href: "/eleve/quiz", label: "Quiz", icon: IconPencil, disabled: true },
   { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },

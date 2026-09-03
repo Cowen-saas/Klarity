@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 2 septembre 2026 (premier exemple few-shot ExempleCorrection chargé — DISSERTATION_LITTERAIRE, voir §26)_
+_Dernière mise à jour : 3 septembre 2026 (banque d'épreuves élève débloquée — nav élève + landing, voir §27)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1856,4 +1856,55 @@ re-parsable). Idempotent (update pur).
 `exemple_dissertation_litteraire.json:Zone.Identifier` a été supprimé (déjà couvert par la règle
 `.gitignore`). Reste 4 types à fournir (DISSERTATION_PHILO, CONTRACTION_TEXTE, DISCUSSION,
 COMMENTAIRE_COMPOSE) — le seed les complètera automatiquement dès que les fichiers seront déposés.
+
+## 27. Banque d'épreuves élève — item "Épreuves" débloqué (3 septembre 2026)
+
+La banque contient maintenant du contenu réel (9 épreuves : 3ᵉ SVT, Tle A/C/D/TI Français, Tle
+D/TI Physique). L'item « Épreuves » est activé aux deux points d'entrée demandés.
+
+### 1. Nav élève — `/eleve/epreuves`
+
+- **`src/components/eleve/EleveShell.tsx`** : `disabled: true` retiré de l'item « Épreuves »
+  (badge « Bientôt » supprimé) — il devient un vrai lien. « Mes lacunes » et « Quiz » restent
+  grisés.
+- **`src/app/eleve/epreuves/page.tsx`** (nouveau, server component) : filtre
+  `prisma.epreuve.findMany({ where: { classe, filiere } })` — l'élève ne voit **que** sa propre
+  classe/série (§2.1, §4.3), filtrage côté serveur, jamais seulement UI. Pour chaque épreuve,
+  `getStorageProvider().obtenirUrlSignee()` génère une **URL signée R2 expirante** (SigV4,
+  `X-Amz-Expires=900`) pour la fiche **et** le corrigé de référence — régénérées à chaque rendu,
+  aucune URL publique stockée (§3, §4.2). Même patron que la page admin des épreuves.
+- **`src/components/eleve/BanqueEpreuves.tsx`** (nouveau, client) : fidèle à
+  `06_banque_epreuves.png` — titre, recherche par titre, pilules de filtre par matière
+  (affichées seulement si ≥ 2 matières), grille de cartes (matière · titre · classe/année ·
+  « Télécharger l'épreuve » + « Voir le corrigé de référence »). **État vide honnête** : « Aucune
+  épreuve pour l'instant » quand la classe n'a pas de contenu ; « Aucun résultat » quand la
+  recherche/le filtre ne rend rien.
+- **`src/components/icons.tsx`** : ajout `IconSearch` (`MagnifyingGlass`) et `IconDownload`
+  (`DownloadSimple`).
+
+### 2. Nav landing — lien réel vers un accès à la banque
+
+**`src/components/landing/LandingHeader.tsx`** : `{ label: "Épreuves" }` (span « Bientôt », ancre
+morte) → `{ label: "Épreuves", href: "/connexion?from=/eleve/epreuves" }`. `/connexion` affiche le
+sélecteur élève/parent (`RoleSwitcher`, non verrouillé — vrai chooser), et après connexion élève
+`EleveLoginForm` redirige vers `from` puisqu'il commence par `/eleve`. Même logique de chooser que
+« Tarifs ».
+
+### Testé réellement
+
+| Cas | Résultat |
+|---|---|
+| Élève **Terminale D** (a du contenu) | 3 cartes (Evaluation2 - Français, Evaluation2_JEAN_TABI - Physique, epreuve-prepa-physique-2019), pilules « Toutes / Français / Physique », **6 URLs signées R2** distinctes. Vérifié aussi dans le navigateur (arbre a11y). |
+| **Filtrage** | Ce Terminale D ne voit **pas** le Français Terminale C, ni la SVT 3ᵉ, ni le Physique TI. |
+| Élève **Première C** (aucun contenu) | HTTP **200**, page rendue, **état vide honnête** « Aucune épreuve pour l'instant » mentionnant « 1ʳᵉ · Série C », **pas d'erreur 500**, pas de carte. |
+| Élève **Troisième** | 1 carte SVT, mention « 3ᵉ », pas d'état vide. |
+| **URL signée R2** (fiche + corrigé d'une épreuve réelle) | `GET` → **HTTP 200**, `content-type: application/pdf` — le PDF se télécharge vraiment. |
+| **Visiteur anonyme → `/eleve/epreuves`** | Redirigé par le middleware vers `/connexion?from=/eleve/epreuves`. |
+| **Lien landing « Épreuves »** | `href="/connexion?from=/eleve/epreuves"` (plus une ancre `#`) ; `/connexion?from=/eleve/epreuves` affiche le `RoleSwitcher` (onglets Élève/Parent, Parent **non** verrouillé) ; session élève authentifiée → `/eleve/epreuves` → **200**. |
+
+`tsc --noEmit` = 0 erreur ; `lint` = 0 erreur (4 warnings préexistants). Élèves de test supprimés.
+
+> Limite connue (identique à la page admin) : les URL signées expirent au bout de 15 min. Si l'élève
+> laisse la page ouverte longtemps puis clique, le lien est mort et il faut recharger. Un endpoint
+> de redirection régénérant l'URL à la demande sera à ajouter si ça devient gênant.
 

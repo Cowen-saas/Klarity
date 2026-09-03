@@ -32,6 +32,8 @@ import {
   Camera,
   Robot,
   SignOut,
+  MagnifyingGlass,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 
 /**
@@ -76,3 +78,5 @@ export const IconCamera = Camera;
  */
 export const IconRobot = Robot;
 export const IconSignOut = SignOut;
+export const IconSearch = MagnifyingGlass;
+export const IconDownload = DownloadSimple;
