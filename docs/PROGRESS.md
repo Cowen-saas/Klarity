@@ -66,16 +66,15 @@ _Dernière mise à jour : 3 septembre 2026 (banque d'épreuves élève débloqu�
 
 ## 1. Où en est le projet, dans l'ensemble
 
-Le cadrage produit et technique est consolidé (cahier des charges v1.28,
-`docs/specs/Klarity_Cahier_des_Charges.pdf`), le schéma de données est finalisé et migré, et le
-socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est entamée : inscription
-élève, connexion élève/parent, connexion admin cloisonnée (`/admin/connexion`, création CLI
-uniquement), chargement du programme officiel, chat-tuteur IA mode 1 (généraliste,
-`MockAIProvider`) et dashboards élève/parent/admin fonctionnent bout en bout contre de vraies
-données, avec une fidélité visuelle pixel aux maquettes desktop (voir §6 à §11). Tout ce qui
-dépend du contenu réel des épreuves (banque d'épreuves — source externe Supabase pas encore
-accessible, upload/correction, chat mode 2, lacunes réelles, quiz) reste hors scope tant que cette
-source de données n'est pas branchée.
+Le cadrage produit et technique est consolidé (cahier des charges **v1.30**,
+`docs/specs/Klarity_Cahier_des_Charges.pdf`), le schéma de données est finalisé et migré
+(2 migrations), et le socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est
+entamée : inscription élève, connexion élève/parent, connexion admin cloisonnée
+(`/admin/connexion`, création CLI uniquement), chargement du programme officiel, chat-tuteur IA
+mode 1 (généraliste, `MockAIProvider`), **banque d'épreuves élève** (§27) et dashboards
+élève/parent/admin fonctionnent bout en bout contre de vraies données, avec une fidélité visuelle
+pixel aux maquettes desktop (voir §6 à §11). Restent hors scope tant que la clé API Anthropic
+n'est pas branchée : upload/correction IA, chat mode 2, lacunes réelles, quiz, pipeline vidéo.
 
 Phase 2 (§2.4, §2.6, §5 du CDC — Paiement) est maintenant construite en mode mock (§16) :
 parcours complet Choisir formule → Paiement Mobile Money → Vérification → abonnement Premium
@@ -97,12 +96,21 @@ Depuis le 1er septembre 2026 (§17 à §19) :
 
 **Cloudflare R2 est passé en réel le 1er septembre 2026** (`STORAGE_MODE=r2`, `R2StorageProvider`,
 clés fournies par l'utilisateur — voir §20) : upload, URL signée expirante et suppression vérifiés
-bout en bout contre le vrai bucket. La clé **YouTube Data API v3** est branchée et l'API répond,
-mais le pipeline vidéo §2.5 lui-même reste à construire (et son étape de filtrage dépend de la clé
-Anthropic). Les trois accès externes encore en attente — CamerPay live, clé API Anthropic Claude,
-fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur interface + un mock, et
-basculeront en réel par un simple changement de config (`PAYMENT_MODE` / `AI_MODE` / `SMS_MODE`),
-sans réécriture du code appelant.
+bout en bout contre le vrai bucket, puis via le vrai formulaire admin (§21) et la banque d'épreuves
+élève (§27). La clé **YouTube Data API v3** est branchée et l'API répond, mais le pipeline vidéo
+§2.5 lui-même reste à construire (et son étape de filtrage dépend de la clé Anthropic) — aucun code
+de `src/` ne lit encore `YOUTUBE_API_KEY` (relevé à l'audit §25). Les trois accès externes encore
+en attente — CamerPay live, clé API Anthropic Claude, fournisseur SMS (Orange SMS Cameroun /
+Africa's Talking) — ont chacun leur interface + un mock, et basculeront en réel par un simple
+changement de config (`PAYMENT_MODE` / `AI_MODE` / `SMS_MODE`), sans réécriture du code appelant.
+
+**Travail des 2–3 septembre 2026 (§21 à §27) :** Phase R2 fermée (§21) ; CDC porté en v1.29 puis
+v1.30 — SVT ajoutée à la banque/correction pour les séries C, D, TI (§22), nouveau type d'exercice
+`COMMENTAIRE_COMPOSE` (§23) ; les 5 barèmes `ExempleCorrection` enfin chargés en base depuis
+`docs/baremes/JSON/`, avec le premier exemple few-shot complet (DISSERTATION_LITTERAIRE) (§24, §26) ;
+audit complet contre le code et la base réels + resynchronisation du graphe Graphify (§25) ; item
+« Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
+classe/série et URL signées R2 pour fiche + corrigé (§27).
 
 `next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
 le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
@@ -132,8 +140,9 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
 - **Next.js 15.5** scaffoldé (App Router, TypeScript, Tailwind v4, ESLint).
 - **Docker Compose** : `app`, `worker`, `postgres`, `redis`, `adminer` (outil de dev en plus du
   minimum requis).
-- **Prisma** : `schema.prisma` finalisé (26 modèles, 22 enums, conforme au §4 du CDC) et migré
-  (`prisma/migrations/20260819070754_init`).
+- **Prisma** : `schema.prisma` finalisé (26 modèles, 22 enums, conforme au §4 du CDC) et migré —
+  2 migrations : `20260819070754_init` puis `20260902113429_add_commentaire_compose_type_exercice`
+  (§23).
 - **Auth.js v5**, sessions JWT stateless avec rotation de refresh token (`src/auth.ts`) :
   - Provider `eleve` — code élève + PIN (verrouillage après échecs répétés, `PIN_MAX_ATTEMPTS`).
   - Provider `parent` — code élève + téléphone + OTP (`/api/auth/parent/request-otp`), qui
@@ -267,17 +276,19 @@ tout futur ajout de dépendance.
 ## 5. Ouvert / à surveiller (pas oublié, juste pas encore adressé)
 
 1. 🟡 **Environnement de dev non surveillé en continu** — le stack Docker avait tourné 31h sans
-   qu'aucun flux ne soit exercé avant l'audit du 25 août ; rien ne garantit qu'un futur ajout de
-   dépendance ne retombe pas dans le piège du volume anonyme `node_modules` (§4 ci-dessus) si on
-   l'oublie.
+   qu'aucun flux ne soit exercé avant l'audit du 25 août ; le piège du volume anonyme
+   `node_modules` (§4 ci-dessus) **s'est reproduit le 2 septembre** après l'ajout du SDK AWS —
+   `docker compose up -d` seul faisait crasher le `worker` (§21). Réflexe à garder : après tout
+   commit touchant les dépendances, `docker compose up -d --build --renew-anon-volumes`.
 2. 🟡 **Outils navigateur Chrome — disponibles depuis le 1er septembre 2026, mais extension
-   instable.** Utilisés avec succès ce jour-là pour click-tester la transition live du stepper de
-   paiement (§16), le dashboard admin et les 3 écrans du back-office (§18), et une partie du
-   parcours rétention (§19). L'extension a toutefois multiplié les timeouts / crashs d'onglet
-   pendant la session, et les captures d'écran sont refusées sur `localhost:3000` (permission de
-   site non accordée) — plusieurs vérifications se sont donc faites par inspection du DOM plutôt
-   que visuellement. Le rendu pixel des écrans Phase 1 (§6 à §11) et de l'écran de clôture parent
-   n'a toujours pas été comparé aux maquettes au navigateur.
+   instable.** Utilisés avec succès le 1er sept pour click-tester le stepper de paiement (§16), le
+   back-office (§18) et une partie de la rétention (§19). L'instabilité a **récidivé les 2–3 sept**
+   (§25, §27) : captures d'écran toujours refusées sur `localhost:3000`, et la navigation par clic
+   ne se déclenche pas de façon fiable sur le serveur `next dev` — les vérifications navigateur se
+   font désormais **via l'arbre d'accessibilité (`read_page`)**, qui rend bien tout le contenu
+   (cartes, liens signés R2, bannières). Le rendu pixel des écrans Phase 1 (§6 à §11), de l'écran
+   de clôture parent et de la banque d'épreuves (§27) n'a toujours pas été comparé visuellement aux
+   maquettes.
 3. ✅ **`DateExamen` — résolu (§18).** L'écran admin `/admin/dates-examens` existe ; deux dates
    ont été saisies (BAC 2026-2027 au 19 juin 2027, Probatoire 2026-2027 « courant mai 2027 »,
    attribuées à `admin@klarity.com`) et le compte à rebours du dashboard parent affiche désormais
@@ -621,16 +632,21 @@ le réflexe 3001 reste.
 
 1. Comparaison pixel systématique avec les maquettes dans Chrome. Les outils navigateur sont
    disponibles depuis le 1er septembre (§5 point 2) et ont servi à click-tester le comportement de
-   plusieurs écrans (stepper §16, back-office admin §18, rétention §19), mais l'extension est
-   instable et les captures d'écran sont bloquées sur `localhost` — une passe de fidélité visuelle
-   complète reste à faire, notamment pour les écrans Phase 1 (§6-§11), l'écran de clôture parent
-   (12b) et les 4 écrans de paiement (§16).
+   plusieurs écrans (stepper §16, back-office admin §18, rétention §19, connexion + banque
+   d'épreuves §27), mais l'extension est instable et les captures d'écran sont bloquées sur
+   `localhost` — une passe de fidélité visuelle complète reste à faire, notamment pour les écrans
+   Phase 1 (§6-§11), l'écran de clôture parent (12b), les 4 écrans de paiement (§16) et la banque
+   d'épreuves (§27, comparer à `06_banque_epreuves.png`).
 2. ~~Corriger l'erreur `tsc` résiduelle dans `src/auth.ts:241`~~ — fait en §16 (assignation
    `session.user.email` rendue conditionnelle) ; `npx tsc --noEmit` dans le conteneur est propre.
 3. Compléter et faire valider juridiquement les 3 documents légaux avant tout déploiement public
    (voir le bandeau bloquant en tête de ce document).
-4. Quand la banque d'épreuves (source Supabase tierce) devient accessible : upload/correction,
-   chat mode 2, lacunes réelles, quiz — tout ce qui était explicitement hors scope de §8.
+4. ~~Quand la banque d'épreuves (source Supabase tierce) devient accessible~~ — **partiellement
+   fait** : du contenu réel a été ajouté (9 épreuves, directement en base), l'écran élève de
+   consultation est en ligne (§27). Reste bloqué sur la **clé API Anthropic** (pas Supabase) :
+   upload/correction IA, chat mode 2, lacunes réelles, quiz — tout ce qui était hors scope de §8.
+   Le pipeline de correction lui-même (route d'upload → `TentativeEpreuve` → job BullMQ →
+   `corrigerCopie()` → `CorrectionDetail` + `Lacune`) n'existe pas encore dans `src/`.
 5. Job BullMQ de rappel de renouvellement (§5.5 du CDC) — cron quotidien J-3 avant
    `dateProchainRenouvellement`, bascule `ACTIF → EXPIRE` après le délai de grâce — explicitement
    hors scope de la tâche Phase 2 traitée en §16 (qui couvrait §2.4/§2.6/§5.1-§5.4, pas §5.5).
@@ -1798,12 +1814,14 @@ imbriquée dans le sérialiseur de contexte. À trancher lors de l'implémentati
 
 L'audit a confirmé que le graphe était **désynchronisé** : `detect_incremental` = 11 fichiers en
 attente, 0 nœud pour `COMMENTAIRE_COMPOSE` / `TypeExerciceCorrection` / `seedExemplesCorrection` /
-`v1.30`. `graphify --update` rejoué (2 sous-agents d'extraction sémantique sur CDC v1.30 +
-`CLAUDE.md` + `PROGRESS.md` + `Bareme_philosophie.txt`, en reproduisant l'inventaire de nœuds
-existant pour éviter la perte au `build_merge`). Résultat : **1125 nœuds / 1832 arêtes / 112
-communautés**, santé propre, `detect_incremental` = **0**. Les nœuds `v1.30`, `COMMENTAIRE_COMPOSE`,
-`TypeExerciceCorrection enum (5 valeurs)`, `seedExemplesCorrection()`, `PROGRESS 22/23/24` sont
-présents et reliés.
+`v1.30`. Le premier `graphify --update` a buté sur le garde-fou anti-rétrécissement (`build_merge`
+remplace **tous** les nœuds d'un fichier ré-extrait ; une ré-extraction incrémentale plus maigre
+aurait supprimé ~48 nœuds encore valides). `graph.json` restauré, puis relancé avec 2 sous-agents
+d'extraction sémantique (CDC v1.30 + `CLAUDE.md` + `PROGRESS.md` + `Bareme_philosophie.txt`) à qui
+on a fourni l'inventaire de nœuds existant comme plancher. Résultat : **1125 nœuds / 1832 arêtes /
+112 communautés** (était 1075 / 1702 / 100), santé propre, `detect_incremental` = **0**. Les nœuds
+`v1.30`, `COMMENTAIRE_COMPOSE`, `TypeExerciceCorrection enum (5 valeurs)`, `seedExemplesCorrection()`,
+`PROGRESS 22/23/24` sont présents et reliés.
 
 > Note : un des sous-agents a créé un nœud « Francais Terminale ProgrammeOfficiel vides (4) » à
 > partir du faux positif de l'audit (voir ci-dessus). Ce nœud est **incorrect** ; il sera retiré au
