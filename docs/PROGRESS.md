@@ -1890,6 +1890,16 @@ sélecteur élève/parent (`RoleSwitcher`, non verrouillé — vrai chooser), et
 `EleveLoginForm` redirige vers `from` puisqu'il commence par `/eleve`. Même logique de chooser que
 « Tarifs ».
 
+### 3. Bannière inscription pour visiteur sans compte (retour utilisateur)
+
+Après clic sur « Épreuves », un visiteur sans compte était renvoyé vers `/connexion` sans piste
+pour s'inscrire (contrairement au parcours « Tarifs »). **`src/components/connexion/ConnexionForm.tsx`** :
+la bannière « besoin d'un compte » (auparavant réservée à `from` commençant par `/abonnement`) est
+généralisée à `from` commençant par `/eleve`. Sur l'onglet Élève elle affiche « Connecte-toi pour
+accéder à la banque d'épreuves. Pas encore de compte ? [Inscris-toi] » (lien `/inscription`) ;
+message générique « … à ton espace élève » pour les autres `/eleve/*`. L'onglet Parent conserve son
+message (code élève + SMS). Non-régression `/abonnement` et `/connexion` sans `from` vérifiée.
+
 ### Testé réellement
 
 | Cas | Résultat |
@@ -1901,6 +1911,7 @@ sélecteur élève/parent (`RoleSwitcher`, non verrouillé — vrai chooser), et
 | **URL signée R2** (fiche + corrigé d'une épreuve réelle) | `GET` → **HTTP 200**, `content-type: application/pdf` — le PDF se télécharge vraiment. |
 | **Visiteur anonyme → `/eleve/epreuves`** | Redirigé par le middleware vers `/connexion?from=/eleve/epreuves`. |
 | **Lien landing « Épreuves »** | `href="/connexion?from=/eleve/epreuves"` (plus une ancre `#`) ; `/connexion?from=/eleve/epreuves` affiche le `RoleSwitcher` (onglets Élève/Parent, Parent **non** verrouillé) ; session élève authentifiée → `/eleve/epreuves` → **200**. |
+| **Bannière inscription** | `/connexion?from=/eleve/epreuves` affiche « Connecte-toi pour accéder à la banque d'épreuves. » + lien « Inscris-toi » → `/inscription` (confirmé dans le navigateur, arbre a11y). Non-régression : `/connexion?from=/abonnement/paiement` garde « continuer ton abonnement » + lien ; `/connexion` sans `from` n'affiche aucune bannière. |
 
 `tsc --noEmit` = 0 erreur ; `lint` = 0 erreur (4 warnings préexistants). Élèves de test supprimés.
 

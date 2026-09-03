@@ -44,18 +44,32 @@ export function ConnexionForm() {
   const [parentEtape, setParentEtape] = useState<"demande" | "verification">("demande");
 
   const panneau = role === "ELEVE" ? PANNEAU.ELEVE.default : PANNEAU.PARENT[parentEtape];
-  const viensDeLabonnement = from?.startsWith("/abonnement") ?? false;
+
+  // Bannière "besoin d'un compte" (avec lien inscription) affichée quand on arrive
+  // depuis un point d'entrée public qui suppose un compte — abonnement (§2.6) ou
+  // l'espace élève (ex. lien "Épreuves" de la landing → /connexion?from=/eleve/epreuves).
+  const contexte: "abonnement" | "eleve" | null = from?.startsWith("/abonnement")
+    ? "abonnement"
+    : from?.startsWith("/eleve")
+      ? "eleve"
+      : null;
+  const messageEleve =
+    contexte === "abonnement"
+      ? "Connecte-toi pour continuer ton abonnement."
+      : from?.startsWith("/eleve/epreuves")
+        ? "Connecte-toi pour accéder à la banque d'épreuves."
+        : "Connecte-toi pour accéder à ton espace élève.";
 
   return (
     <div className="flex w-full max-w-4xl overflow-hidden rounded-3xl bg-surface shadow-xl md:min-h-[600px]">
       <ConnexionSidePanel {...panneau} />
 
       <div className="flex-1 p-6 sm:p-10 md:p-12">
-        {viensDeLabonnement && (
+        {contexte && (
           <div className="mb-6 rounded-xl bg-primary-light px-4 py-3 text-sm text-texte">
             {role === "ELEVE" ? (
               <>
-                <p className="font-semibold">Connecte-toi pour continuer ton abonnement.</p>
+                <p className="font-semibold">{messageEleve}</p>
                 <p className="mt-1 text-texte-muted">
                   Pas encore de compte ?{" "}
                   <Link href="/inscription" className="font-semibold text-primary hover:underline">
