@@ -21,10 +21,13 @@ import { prisma } from "../src/lib/prisma";
  *    `filiereRequise = {A, C, D, TI}` pour SVT. Socle de référence §2.1 : 15 couples.
  *
  * 2. ExempleCorrection (§4.2.2) depuis docs/baremes/JSON/ — un barème structuré par
- *    type d'exercice méthodologique (Français / Philosophie), chargé dans
- *    `baremeStructure` tel quel (contenu JSON complet, non transformé). Les cinq
- *    types sont couverts : DISSERTATION_PHILO, DISSERTATION_LITTERAIRE,
- *    CONTRACTION_TEXTE, DISCUSSION, COMMENTAIRE_COMPOSE (ajouté CDC v1.30).
+ *    type d'exercice (Français / Philosophie), chargé dans `baremeStructure` tel quel
+ *    (contenu JSON complet, non transformé). Sept types sont couverts : les cinq
+ *    méthodologiques (DISSERTATION_PHILO, DISSERTATION_LITTERAIRE, CONTRACTION_TEXTE,
+ *    DISCUSSION, COMMENTAIRE_COMPOSE — ajouté CDC v1.30) plus deux types propres à la
+ *    3ème en Français, ajoutés CDC v1.31 : EXPRESSION_ECRITE (grille sur 10 pts,
+ *    doublée sur 20) et CORRECTION_ORTHOGRAPHIQUE (comptage de fautes avec conditions
+ *    d'attribution par mot — pas de critères pondérés).
  *
  * 3. Exemples few-shot depuis docs/baremes/exemples/exemple_*.json (préparés à
  *    partir de copies corrigées réelles) — complètent `enonceModele` /
@@ -44,6 +47,8 @@ const TYPES_EXERCICE_VALIDES: readonly TypeExerciceCorrection[] = [
   "CONTRACTION_TEXTE",
   "DISCUSSION",
   "COMMENTAIRE_COMPOSE",
+  "EXPRESSION_ECRITE",
+  "CORRECTION_ORTHOGRAPHIQUE",
 ];
 
 // Clé JSON (docs/programmes/**/programme_*.json, objet "matieres") -> Matiere.nom (§4.1).

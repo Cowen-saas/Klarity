@@ -1,0 +1,90 @@
+{
+  "typeExercice": "EXPRESSION_ECRITE",
+  "matiere": "Français",
+  "classesConcernees": ["TROISIEME"],
+  "totalPoints": 10,
+  "noteImportante": "Type d'exercice propre à la 3ème (Français) — non concerné en 1ère/Terminale.",
+  "baremeStructure": {
+    "titre": "Grille de notation détaillée (sur 10 points)",
+    "criteres": [
+      {
+        "nom": "Pertinence de la production",
+        "points": 3,
+        "sousCriteres": [
+          {
+            "nom": "Adéquation avec le sujet / Respect de la consigne",
+            "points": 1,
+            "details": "Le candidat a bien identifié le type de texte demandé : narratif, descriptif, explicatif, argumentatif, lettre, etc."
+          },
+          {
+            "nom": "Respect de la longueur minimale et des contraintes",
+            "points": 0.5
+          },
+          {
+            "nom": "Compréhension du problème / Idée générale",
+            "points": 1.5,
+            "details": "Traitement effectif du thème sans hors-sujet."
+          }
+        ]
+      },
+      {
+        "nom": "Cohérence de la production",
+        "points": 3,
+        "sousCriteres": [
+          {
+            "nom": "Organisation et structure du devoir",
+            "points": 1,
+            "details": "Présence explicite d'une introduction, d'un développement et d'une conclusion."
+          },
+          {
+            "nom": "Enchaînement logique des idées",
+            "points": 1,
+            "details": "Progression des paragraphes, utilisation appropriée des connecteurs logiques et temporels."
+          },
+          {
+            "nom": "Absence de contradictions internes",
+            "points": 1
+          }
+        ]
+      },
+      {
+        "nom": "Correction de la langue",
+        "points": 3,
+        "sousCriteres": [
+          {
+            "nom": "Vocabulaire et lexique",
+            "points": 1,
+            "details": "Emploi d'un vocabulaire précis, adapté au thème et au niveau de langue."
+          },
+          {
+            "nom": "Grammaire et orthographe",
+            "points": 1,
+            "details": "Respect des règles d'accord, de la conjugaison et de l'orthographe d'usage/grammaticale."
+          },
+          {
+            "nom": "Syntaxe et ponctuation",
+            "points": 1,
+            "details": "Phrases correctement construites, usage approprié de la ponctuation."
+          }
+        ]
+      },
+      {
+        "nom": "Présentation et propreté du devoir",
+        "points": 1,
+        "sousCriteres": [
+          {
+            "nom": "Lisibilité et écriture",
+            "points": 0.5,
+            "details": "Copie propre, écriture lisible, absence de ratures excessives."
+          },
+          {
+            "nom": "Disposition aérée",
+            "points": 0.5,
+            "details": "Présence d'alinéas au début de chaque paragraphe."
+          }
+        ]
+      }
+    ],
+    "equivalenceSur20": "Lorsque le devoir est évalué sur 20 points, le barème est doublé."
+  }
+}

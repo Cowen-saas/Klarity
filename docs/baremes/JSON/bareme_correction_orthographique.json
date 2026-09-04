@@ -1,0 +1,32 @@
+{
+  "typeExercice": "CORRECTION_ORTHOGRAPHIQUE",
+  "matiere": "Français",
+  "classesConcernees": ["TROISIEME"],
+  "totalPoints": 20,
+  "noteImportante": "Type d'exercice propre à la 3ème (Français) — non concerné en 1ère/Terminale. Barème atypique : notation par identification et correction de fautes (comptage), avec conditions d'attribution par mot — pas de critères pondérés classiques comme les autres types d'exercice.",
+  "baremeStructure": {
+    "titre": "Règle de comptage des points",
+    "description": "L'épreuve comporte généralement 20 fautes dissimulées dans le texte. 1 point par faute correctement identifiée et corrigée.",
+    "conditionAttributionParMot": {
+      "description": "Pour obtenir le point attribué à un mot (ex : 1 point), deux conditions indissociables doivent être remplies :",
+      "conditions": [
+        "Rayer correctement le mot erroné (d'un seul trait propre)",
+        "Écrire l'orthographe exacte au-dessus du mot rayé"
+      ]
+    },
+    "casParticuliers": [
+      {
+        "cas": "Mot faux rayé mais mal réécrit",
+        "points": 0
+      },
+      {
+        "cas": "Mot juste écrit mais mot faux non rayé",
+        "points": 0
+      },
+      {
+        "cas": "Élève raye un mot qui était déjà correct",
+        "points": "Pénalité de 0,5 point ou 1 point (selon les consignes du secrétariat du centre d'examen pour éviter le rayage au hasard)"
+      }
+    ]
+  }
+}

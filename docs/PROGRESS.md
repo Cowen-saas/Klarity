@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 3 septembre 2026 (banque d'épreuves élève débloquée — nav élève + landing, voir §27)_
+_Dernière mise à jour : 4 septembre 2026 (CDC v1.31 — 2 types d'exercice 3ème Français : EXPRESSION_ECRITE + CORRECTION_ORTHOGRAPHIQUE, voir §28)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -1936,4 +1936,102 @@ message (code élève + SMS). Non-régression `/abonnement` et `/connexion` sans
 > Limite connue (identique à la page admin) : les URL signées expirent au bout de 15 min. Si l'élève
 > laisse la page ouverte longtemps puis clique, le lien est mort et il faut recharger. Un endpoint
 > de redirection régénérant l'URL à la demande sera à ajouter si ça devient gênant.
+
+## 28. CDC v1.30 → v1.31 — EXPRESSION_ECRITE + CORRECTION_ORTHOGRAPHIQUE (types 3ème Français) (4 septembre 2026)
+
+Deux barèmes de correction fournis par l'utilisateur pour la **3ème** (Français uniquement), à ajouter
+à l'enum, au CDC et en base — même procédure qu'au §24 pour les 5 précédents.
+
+### Schéma + migration
+
+- **`prisma/schema.prisma`** : `EXPRESSION_ECRITE` et `CORRECTION_ORTHOGRAPHIQUE` ajoutés à l'enum
+  `TypeExerciceCorrection` (qui passe de 5 à 7 valeurs).
+- Migration **`20260904074258_add_expression_ecrite_correction_orthographique_type_exercice`**
+  (`ALTER TYPE … ADD VALUE` × 2), créée et appliquée via `prisma migrate dev` dans le conteneur ;
+  client régénéré. Vérifié en base : `pg_enum` de `TypeExerciceCorrection` = **7 valeurs**, les 2
+  nouvelles en fin d'ordre.
+
+### Fichiers barème (`docs/baremes/JSON/`)
+
+- `bareme_expression_ecrite.json` (grille pondérée par critères /10 : Pertinence 3 · Cohérence 3 ·
+  Correction de la langue 3 · Présentation 1 ; `equivalenceSur20` : barème doublé si l'épreuve est
+  notée sur 20) et `bareme_correction_orthographique.json` (mécanisme de **comptage de fautes** :
+  ~20 fautes, 1 pt/faute, `conditionAttributionParMot` = rayer + réécrire au-dessus, `casParticuliers`
+  dont pénalité pour un mot correct rayé à tort — **pas de critères pondérés**).
+- Sources brutes `.txt` versionnées aussi (`Bareme_Expression_ecrite.txt`,
+  `Bareme_Correction_orthographique.txt`), comme pour les 5 autres (§22).
+- **2 retouches mineures aux JSON** (validées avec l'utilisateur, patron §24) : clause obsolète
+  « à ajouter à l'enum … avant chargement en base » retirée de `noteImportante` ; `classesConcernees`
+  passé de `["3EME"]` à `["TROISIEME"]` (valeur de l'enum `NiveauClasse`).
+
+### Seed
+
+- **`prisma/seed.ts`** : `TYPES_EXERCICE_VALIDES` passe de 5 à 7 entrées ; commentaire d'en-tête
+  mis à jour. `seedExemplesCorrection()` (inchangé pour le reste) charge automatiquement les 2 nouveaux
+  fichiers, `matiereId` résolu sur « Français ».
+- Reseed exécuté : `[seed] 7 ExempleCorrection (barèmes §4.2.2) upsertés.`
+
+### Vérifié réellement en base (`psql`, cf. mémoire « verify against running system »)
+
+| Contrôle | Résultat |
+|---|---|
+| `pg_enum` `TypeExerciceCorrection` | 7 valeurs, dont `EXPRESSION_ECRITE`, `CORRECTION_ORTHOGRAPHIQUE` |
+| `exemples_correction` | **7 lignes**, `count(DISTINCT typeExercice) = 7` |
+| Les 2 nouvelles lignes | `matiere` = Français, `langue` = FR, `jsonb_typeof(baremeStructure)` = `object` |
+| `length(baremeStructure::text)` | 2123 (EXPRESSION_ECRITE) / 1238 (CORRECTION_ORTHOGRAPHIQUE) octets |
+| `enonceModele` / `exempleReponseModele` / `notesMethodologiques` | `""` (0) sur les 2 — pas encore d'exemple few-shot, comme 3 des 5 autres |
+| Re-parse JSON | `baremeStructure->>'typeExercice'` == colonne ; `->>'totalPoints'` = 10 / 20 ; `->'classesConcernees'` = `["TROISIEME"]` ; `#>'{baremeStructure}'` = `object` |
+| Non-troncature | `jsonb_pretty()` des 2 barèmes affiché entier (4 critères + sous-critères pour EXPRESSION_ECRITE ; `description` + `conditionAttributionParMot` + 3 `casParticuliers` pour CORRECTION_ORTHOGRAPHIQUE) |
+| Les 5 lignes existantes | intactes (tailles 3261 / 1104 / 1185 / 1145 / 2704 octets inchangées) |
+
+### CDC — `docs/specs/Klarity_Cahier_des_Charges.pdf`, v1.30 → v1.31 (redaction PyMuPDF, Option A)
+
+Choix acté avec l'utilisateur après avoir signalé que la page 8 du journal est pleine au pixel près :
+**Option A** = sous-ensemble sûr, sans repagination de la table visuelle §4.2.2.
+
+- **En-tête page 1** : « v1.30 — 2 septembre 2026 » → « v1.31 — 4 septembre 2026 ».
+- **Insertion d'une page dédiée** (nouvelle **page 9**) portant l'entrée de journal « v1.30 → v1.31 »
+  (même style que les autres entrées : titre bold + puce, polices `Liberation Sans` extraites du
+  document). Toute la logique de notation des 2 types y est décrite en toutes lettres, y compris que
+  `CORRECTION_ORTHOGRAPHIQUE` suit un **comptage de fautes fondamentalement distinct** des barèmes
+  pondérés par critères, et que les 2 types ne concernent **ni la 1ère ni la Terminale**.
+- **§4.2.2** (entité `ExempleCorrection`, désormais page 28) : liste d'enum `typeExercice` étendue à
+  `… COMMENTAIRE_COMPOSE/ EXPRESSION_ECRITE/ CORRECTION_ORTHOGRAPHIQUE)` (tient dans la hauteur de
+  ligne existante, `createdAt` reste au-dessus de la bordure) ; « (les 5 barèmes » → « (les 7 barèmes ».
+- **Renumérotation** des pieds de page 10→43 (chiffre seul redigé) et **TOC** : `new_page` décale
+  automatiquement les cibles ≥ page 9 de +1, + nouveau signet « v1.30 → v1.31 » → page 9. Titre des
+  métadonnées → v1.31.
+- **La table visuelle des types d'exercice §4.2.2 n'est PAS étendue** — même choix qu'en v1.30 pour
+  `COMMENTAIRE_COMPOSE` (repagination des pages 27→42 impossible en redaction PyMuPDF). Le normatif est
+  l'enum + l'entrée de journal. Cette dette de documentation est explicitée dans l'entrée v1.30 → v1.31
+  et dans `CLAUDE.md`.
+
+**Vérification du PDF** (43 pages) — script `_cdc_verify_v131.py` : pieds de page séquentiels 1→43 ;
+page 1 corps identique à l'octet sauf la chaîne de version ; **pages 2-8 identiques à l'octet** ;
+**pages 10-43 identiques (corps, texte + pixels) aux anciennes 9-42** — la seule différence de rendu
+est confinée à la bande de 18 px du pied de page (numéro redigé + ligne « KLARITY … » re-rastérisée) ;
+TOC correct ; delta de tokens page 28 = exactement `+7 +COMMENTAIRE_COMPOSE/ +EXPRESSION_ECRITE/
++CORRECTION_ORTHOGRAPHIQUE) −COMMENTAIRE_COMPOSE),`. Rendus visuels des pages 1/8/9/10/28 contrôlés.
+
+> Piège PyMuPDF rencontré : `apply_redactions()` supprime sporadiquement la ligne de pied de page
+> centrale partagée (« KLARITY — Cahier des charges technique… ») sur certaines pages lors de la
+> renumérotation. Contourné par un garde `ensure_center_footer()` qui la ré-insère verbatim si elle a
+> disparu, appliqué à chaque page redigée.
+
+### `CLAUDE.md`
+
+Le paragraphe `docs/baremes/*.txt` réécrit : **7** types d'exercice, les 5 méthodologiques 1ère/Tle
+(barème identique par série) + les 2 propres à la 3ème Français (jamais 1ère/Tle) ; `CORRECTION_ORTHOGRAPHIQUE`
+signalé comme comptage de fautes, mécanisme délibérément différent des barèmes pondérés ; note que la
+table visuelle §4.2.2 reste à 4 lignes.
+
+`tsc --noEmit` = 0 erreur ; `eslint prisma/seed.ts` = 0 erreur.
+
+### Reste à faire (hors scope de cette tâche)
+
+- Exemples few-shot (`docs/baremes/exemples/exemple_*.json`) pour les 2 nouveaux types — le seed
+  `seedExemplesFewShot()` les complétera automatiquement dès dépôt des fichiers.
+- CDC : si le tableau visuel §4.2.2 doit un jour montrer les 7 types (et combler la dette
+  `COMMENTAIRE_COMPOSE`), il faudra reconstruire le CDC depuis une source Markdown/HTML → WeasyPrint
+  (Option B écartée cette fois) — la redaction PyMuPDF ne sait pas refaire le flux.
 

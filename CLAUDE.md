@@ -43,11 +43,19 @@ bank / correction pipeline. `Matiere.banqueDisponible` is the flag that distingu
 Thème → Contenus) for each classe/filière pair and is loaded verbatim into `ProgrammeOfficiel.contenuStructure`
 — it doubles as (1) system context for AI calls and (2) the taxonomy source for `Lacune.notion` /
 `CorrectionDetail.pointsManques[].notion` / `Video.notionAssociee`, so those three fields must stay on the same
-vocabulary. `docs/baremes/*.txt` holds official grading rubrics for the five French/Philo essay exercise types —
+vocabulary. `docs/baremes/*.txt` holds official grading rubrics for **seven** Français/Philo exercise
+types, all values of the `TypeExerciceCorrection` enum, backing `ExempleCorrection` rows resolved by
+`matiereId` + `typeExercice`. Five are the essay/method types shared across 1ère/Terminale —
 `dissertation philo`, `dissertation littéraire`, `contraction de texte`, `discussion`, and
-`commentaire composé` (added CDC v1.30 — `COMMENTAIRE_COMPOSE` in the `TypeExerciceCorrection` enum) —
-these back `ExempleCorrection` few-shot prompts, which are **not** filière-specific (the methodology
-barème is the same across series; only the exam content varies).
+`commentaire composé` (added CDC v1.30 — `COMMENTAIRE_COMPOSE`) — whose methodology barème is the same
+across series (only the exam content varies), so their few-shot prompts are **not** filière-specific.
+Two more are **3ème Français only** (never 1ère/Terminale), added CDC v1.31: `EXPRESSION_ECRITE`
+(weighted grid on 10 pts, doubled when the paper is marked out of 20) and `CORRECTION_ORTHOGRAPHIQUE` —
+the latter scored by **fault-counting** (≈20 hidden errors, 1 pt each only if the wrong word is struck
+*and* the correct spelling written above; a correct word struck by mistake is penalised), a mechanism
+deliberately unlike the criteria-weighted barèmes of every other type. As of CDC v1.31 the visual
+§4.2.2 exercise-type table still shows only 4 rows — `COMMENTAIRE_COMPOSE` and the two 3ème types are
+normative via the enum + the changelog, not that table (extending it would repaginate the PDF).
 
 ### Tuteur IA (chat) vs. Correction IA (upload pipeline) — three code paths, no implicit bridge between them
 

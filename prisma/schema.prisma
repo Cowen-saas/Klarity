@@ -69,6 +69,8 @@ enum TypeExerciceCorrection {
   CONTRACTION_TEXTE
   DISCUSSION
   COMMENTAIRE_COMPOSE // épreuve de Français — analyse méthodique O.C.I.E. (CDC v1.30, §4.2.2)
+  EXPRESSION_ECRITE // Français 3ème uniquement — grille sur 10 pts, doublée sur 20 (CDC v1.31, §4.2.2)
+  CORRECTION_ORTHOGRAPHIQUE // Français 3ème uniquement — comptage de fautes, conditions par mot, pas de critères pondérés (CDC v1.31, §4.2.2)
 }
 
 enum StatutTentative {

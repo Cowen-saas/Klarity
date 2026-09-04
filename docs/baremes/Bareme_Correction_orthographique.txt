@@ -1,0 +1,20 @@
+Règle de comptage des points :
+
+L'épreuve comporte généralement 20 fautes dissimulées dans le texte.
+
+1 point par faute correctement identifiée et corrigée.
+
+Condition d'attribution du point (par mot) :
+Pour obtenir le point attribué à un mot (ex: 1 point), deux conditions indissociables doivent être remplies :
+
+Rayer correctement le mot erroné (d'un seul trait propre).
+
+Écrire l'orthographe exacte au-dessus du mot rayé.
+
+Si le mot faux est rayé mais mal réécrit : 0 point
+
+Si le mot juste est écrit mais que le mot faux n'a pas été rayé : 0 point
+
+Si l'élève raye un mot qui était déjà correct : Pénalité de 0,5 point ou 1 point (selon les consignes du secrétariat du centre d'examen pour éviter le rayage au hasard).
+
+
