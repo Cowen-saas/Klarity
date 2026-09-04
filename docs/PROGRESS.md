@@ -293,6 +293,27 @@ tout futur ajout de dépendance.
    ont été saisies (BAC 2026-2027 au 19 juin 2027, Probatoire 2026-2027 « courant mai 2027 »,
    attribuées à `admin@klarity.com`) et le compte à rebours du dashboard parent affiche désormais
    « BAC dans N jours ».
+4. 🟡 **Méthode d'édition du CDC — limite structurelle atteinte, à replanifier un jour (non urgent).**
+   Le cahier des charges (`docs/specs/Klarity_Cahier_des_Charges.pdf`) n'a **pas de source
+   Markdown/HTML** — chaque bump de version depuis v1.28 se fait par **redaction PyMuPDF directement
+   sur le PDF** (§22, §23, §28). Or PyMuPDF **ne sait pas refaire le flux du texte** : dès qu'un ajout
+   dépasse le blanc disponible, il faut soit insérer une page dédiée + renuméroter (fait en v1.31
+   pour le journal, §28), soit renoncer à l'édition. Conséquence : une **dette de documentation
+   visuelle s'accumule** — le tableau des types d'exercice de **§4.2.2 ne montre que 4 lignes**
+   (DISSERTATION_PHILO, DISSERTATION_LITTERAIRE, CONTRACTION_TEXTE, DISCUSSION) alors que l'enum
+   `TypeExerciceCorrection` en compte **7** : `COMMENTAIRE_COMPOSE` (omis en v1.30, §23),
+   `EXPRESSION_ECRITE` et `CORRECTION_ORTHOGRAPHIQUE` (omis en v1.31, §28) n'y figurent pas. Ils
+   restent normatifs via l'enum + les entrées de journal + `CLAUDE.md`, mais le tableau est
+   désynchronisé et chaque version suivante aggrave l'écart.
+   **Solution de fond — Option B (écartée jusqu'ici) : reconstruire le CDC depuis une source
+   Markdown (ou HTML/CSS) régénérée via WeasyPrint** (le moteur d'origine du document — cf. métadonnée
+   `producer: WeasyPrint 69.0`). Une fois la source en place, toute repagination (tableau §4.2.2
+   complet, dette `COMMENTAIRE_COMPOSE` comblée, versions futures) devient un simple `weasyprint`.
+   Coût : reconstruire ~43 pages en Markdown, et une rupture unique de la continuité « pages
+   inchangées identiques au bit près ». **À faire quand** : soit le tableau §4.2.2 (ou un autre)
+   doit impérativement refléter l'état réel, soit le document continue de grandir au point que la
+   redaction PyMuPDF n'est plus tenable. WeasyPrint n'est pas installé dans l'environnement actuel
+   (dépendances système pango/cairo, pas de `sudo`) — à prévoir aussi.
 
 _(Le blocage `lightningcss`/Tailwind v4 qui figurait ici a été corrigé le 25 août — voir §4. L'IDOR,
 différé jusqu'ici faute de route par ID, est traité en §8 dès la première route concernée.)_
