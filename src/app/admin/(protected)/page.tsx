@@ -237,10 +237,13 @@ export default async function AdminDashboardPage() {
 
       <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <h2 className="text-base font-bold text-texte">Monitoring usage IA — coût par utilisateur</h2>
-            <p className="text-xs text-texte-muted">Moyenne : {formatFCFA(moyenneCoutXAF)} / mois</p>
+            <Link href="/admin/usage-ia" className="shrink-0 text-xs font-semibold text-primary hover:underline">
+              Voir le détail →
+            </Link>
           </div>
+          <p className="mt-1 text-xs text-texte-muted">Moyenne : {formatFCFA(moyenneCoutXAF)} / mois</p>
           {lignesUsageIA.length === 0 ? (
             <p className="mt-4 text-sm text-texte-muted">Aucun usage IA sur les 30 derniers jours.</p>
           ) : (
@@ -271,7 +274,12 @@ export default async function AdminDashboardPage() {
         </section>
 
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
-          <h2 className="text-base font-bold text-texte">Observabilité sécurité</h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-base font-bold text-texte">Observabilité sécurité</h2>
+            <Link href="/admin/securite" className="shrink-0 text-xs font-semibold text-primary hover:underline">
+              Voir le journal →
+            </Link>
+          </div>
           <div className="mt-4 space-y-2">
             <SecuriteLigne label="Connexions échouées (24h)" valeur={connexionsEchouees24h} niveau={connexionsEchouees24h > 0 ? "attention" : "ok"} />
             <SecuriteLigne label="Webhooks invalides (24h)" valeur={webhooksInvalides24h} niveau={webhooksInvalides24h > 0 ? "critique" : "ok"} />
@@ -325,20 +333,27 @@ export default async function AdminDashboardPage() {
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-texte">Exemples de correction — Français / Philo</h2>
-            <button type="button" disabled className="cursor-not-allowed rounded-xl bg-primary/40 px-4 py-2 text-sm font-semibold text-white">
+            <Link
+              href="/admin/exemples-corriges"
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+            >
               + Ajouter une copie
-            </button>
+            </Link>
           </div>
           {exemplesCorrection.length === 0 ? (
             <p className="mt-4 text-sm text-texte-muted">Aucun exemple de correction pour l&apos;instant.</p>
           ) : (
             <div className="mt-3 divide-y divide-border">
               {exemplesCorrection.map((ex, i) => (
-                <div key={i} className="py-3">
+                <Link
+                  key={i}
+                  href="/admin/exemples-corriges"
+                  className="block rounded-lg px-2 py-3 transition-colors hover:bg-fond"
+                >
                   <p className="text-sm font-semibold text-texte">
                     {ex.matiere.nom} · {ex.typeExercice}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

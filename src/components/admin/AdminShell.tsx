@@ -30,11 +30,11 @@ interface NavItem {
 function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
   return [
     { href: "/admin", label: "Vue d'ensemble", icon: IconChart },
-    { href: "/admin/utilisateurs", label: "Utilisateurs", icon: IconUsers, disabled: true },
-    { href: "/admin/eleves", label: "Élèves", icon: IconUser, disabled: true },
-    { href: "/admin/parents", label: "Parents", icon: IconUsers, disabled: true },
+    { href: "/admin/utilisateurs", label: "Utilisateurs", icon: IconUsers },
+    { href: "/admin/eleves", label: "Élèves", icon: IconUser },
+    { href: "/admin/parents", label: "Parents", icon: IconUsers },
     { href: "/admin/epreuves", label: "Épreuves", icon: IconDocument },
-    { href: "/admin/exemples-corriges", label: "Exemples corrigés", icon: IconPencil, disabled: true },
+    { href: "/admin/exemples-corriges", label: "Exemples corrigés", icon: IconPencil },
     {
       href: "/admin/corrections-signalees",
       label: "Corrections signalées",
@@ -42,8 +42,8 @@ function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
       badge: correctionsSignaleesCount,
     },
     { href: "/admin/dates-examens", label: "Dates d'examens", icon: IconCalendar },
-    { href: "/admin/usage-ia", label: "Usage IA", icon: IconSparkles, disabled: true },
-    { href: "/admin/securite", label: "Sécurité", icon: IconShield, disabled: true },
+    { href: "/admin/usage-ia", label: "Usage IA", icon: IconSparkles },
+    { href: "/admin/securite", label: "Sécurité", icon: IconShield },
     { href: "/admin/paiements", label: "Paiements", icon: IconCreditCard, disabled: true },
     { href: "/admin/revenus", label: "Revenus", icon: IconCoins, disabled: true },
     { href: "/admin/parametres", label: "Paramètres", icon: IconSettings, disabled: true },

@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 5 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–5 septembre (§28 à §32)_
+_Dernière mise à jour : 5 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–5 septembre (§28 à §33)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -112,7 +112,7 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
-**Travail des 4–5 septembre 2026 (§28 à §32) :**
+**Travail des 4–5 septembre 2026 (§28 à §33) :**
 - **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
   l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
   `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
@@ -136,6 +136,12 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
 - **Dette de méthode CDC documentée** (§5 point 4) : la redaction PyMuPDF ne sait pas refaire le
   flux ; le tableau visuel §4.2.2 reste à 4 lignes alors que l'enum en a 7 — solution de fond =
   reconstruire le CDC depuis une source Markdown → WeasyPrint, le jour où ce sera nécessaire.
+- **6 écrans admin débloqués** (§33) : audit des 3 dashboards (items grisés « Bientôt ») puis
+  construction des 6 écrans back-office qui ne dépendaient d'aucun accès externe (banque
+  d'épreuves / clé Anthropic / CamerPay / SMS) — juste jamais construits : **Utilisateurs, Élèves,
+  Parents, Exemples corrigés, Sécurité, Usage IA**. Tous branchés sur les vraies données déjà en
+  base, badges « Bientôt » retirés dans `AdminShell`. Restent grisés : Paiements, Revenus,
+  Paramètres.
 - Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
   2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
   attente après merge (`graphify-out/` local, gitignoré).
@@ -2312,4 +2318,78 @@ Parent ne doit pas seulement être grisée : elle doit **disparaître**, et l'un
   bannière "banque d'épreuves" + lien Inscription présents ; `/connexion` nu → sélecteur complet ;
   `?from=/parent&role=PARENT` → sélecteur avec Parent actif et Élève grisé non cliquable (§16
   intact). `tsc --noEmit` et `eslint` sur les fichiers touchés : 0 erreur.
+
+## 33. Audit des 3 dashboards + déblocage des 6 écrans admin « catégorie 5 » (5 septembre 2026)
+
+### Audit demandé — de quoi dépend réellement chaque item grisé
+
+Passage en revue de tous les items de navigation / sections marqués « Bientôt » ou grisés dans les
+3 dashboards (élève, parent, admin), avec pour chacun la dépendance réelle : (1) banque d'épreuves
+réelle, (2) clé API Anthropic, (3) CamerPay live, (4) fournisseur SMS réel, ou (5) **aucune des
+quatre — juste jamais construit** alors que rien ne l'empêche techniquement.
+
+Constat : **aucun item grisé n'est bloqué de façon unique par les accès externes 1/3/4.** Les
+32 `epreuves` sont déjà en base (écran banque d'épreuves actif depuis §27) ; le SMS ne concerne
+que l'OTP parent (mock) et l'envoi de notifications (job worker). Tout item grisé tombe donc soit
+en **catégorie 2** (a besoin d'une vraie correction IA pour avoir des données — Élève « Mes
+lacunes » / « Quiz », Parent « Progression » / « Notes » / « Lacunes », bouton export PDF), soit
+en **catégorie 5** (données déjà en base, écran jamais construit).
+
+Items catégorie 5 identifiés : côté **parent**, « Temps passé » (dépend d'un écrivain
+`SessionActivite` à construire, non externe) ; côté **admin**, les 6 écrans ci-dessous.
+
+### 6 écrans admin construits
+
+Tous en Server Components sous `src/app/admin/(protected)/` (route group déjà gaté par le
+middleware + `layout.tsx` + un `if (session.user.role !== "ADMIN") redirect("/admin/connexion")`
+en tête de chaque page — triple défense) :
+
+- **`/admin/utilisateurs`** — synthèse des 3 rôles : tuiles cliquables (élèves / parents / admins),
+  état des comptes élève (`statutCompte`), liaison parent↔enfant, table « derniers inscrits » tous
+  rôles. Téléphone parent masqué (`+237 •••• 73`).
+- **`/admin/eleves`** — table paginée (15/page, `?page=`), colonnes identité + `codeEleve`,
+  classe/filière, statut rétention, dernière activité relative, nb parents liés, nb corrections,
+  plan d'abonnement. **`select` Prisma restreint** — jamais `pinHash` / `pinVerrouilleJusqua`.
+- **`/admin/parents`** — table paginée, téléphone masqué, enfants liés en puces `codeEleve`
+  (via `ParentEleveLink`), dernière connexion.
+- **`/admin/exemples-corriges`** — bibliothèque des 7 `ExempleCorrection` + panneau détail (`?id=`)
+  affichant `baremeStructure` (JSON formaté), `enonceModele`, `exempleReponseModele`,
+  `notesMethodologiques` ; **formulaire d'ajout** (`ExempleCorrectionForm`, client) →
+  `POST /api/admin/exemples-corriges` (nouveau, `exigerRole("ADMIN")`, zod + validation « objet
+  JSON bien formé » pour le barème). Matières limitées à Français / Philosophie.
+- **`/admin/securite`** — journal `AuditLogSecurite` complet, paginé (20/page) + **chips de filtre
+  par `typeEvenement`** (`?type=`, comptes affichés), tuiles 24h, section webhooks rejetés
+  (`WebhookLog` `signatureValide = false`). `utilisateurId` affiché tel quel (déjà un id opaque),
+  jamais de secret.
+- **`/admin/usage-ia`** — totaux (appels / tokens / coût FCFA), répartition par modèle et par type
+  d'usage, coût par élève 30 j (repris de la vue d'ensemble), journal des appels paginé.
+
+Composant partagé **`src/components/admin/Pagination.tsx`** (Server Component, `<Link>` +
+helper `lirePage`).
+
+### Nav + vue d'ensemble
+
+- `AdminShell.tsx` : `disabled: true` retiré sur les 6 items. **Restent grisés « Bientôt » :
+  Paiements, Revenus, Paramètres** (les deux premiers attendent CamerPay live pour des chiffres
+  réels ; Paramètres attend une décision produit sur le périmètre configurable).
+- `admin/(protected)/page.tsx` : bouton « + Ajouter une copie » (était `disabled`) → `Link` vers
+  `/admin/exemples-corriges` ; liste des exemples rendue cliquable ; ajout de liens « Voir le
+  détail → » / « Voir le journal → » vers Usage IA et Sécurité.
+
+### Vérifié bout en bout
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur** (3 warnings préexistants,
+  fichiers non touchés).
+- Requêtes Prisma exactes des 6 pages rejouées en conteneur contre la base réelle : 3 élèves,
+  1 parent, 2 admins, 7 exemples (barème = objet, textes non tronqués), 37 logs sécurité
+  (2 pages ; répartition `PIN_FAIL:21 OTP_FAIL:7 LOGIN_FAIL:6 IDOR_BLOCKED:2 WEBHOOK_INVALID:1`),
+  2 usages IA (CHAT/HAIKU, 44 tokens). Assertion explicite qu'aucun `select` ne contient `pinHash`.
+- Routes non authentifiées → **307 vers `/admin/connexion?from=…`** ; `POST` API sans session →
+  **401**.
+- **Click-test navigateur avec la session ADMIN réelle de l'utilisateur** (il s'est connecté
+  lui-même — règle §11) : les 6 écrans affichent les vraies données ; sidebar sans badge sur les
+  6 items ; pagination Sécurité (page 1→2, `?page=2`) OK ; filtre Sécurité `?type=IDOR_BLOCKED` →
+  « 2 événements (filtré) » OK ; panneau détail Exemples OK ; **round-trip formulaire d'ajout** :
+  création d'une ligne de test (`ajouteParAdminId` = compte de l'utilisateur), compteur passé à
+  « 8 exemples », puis **ligne de test supprimée en base** — retour à 7 vérifié.
 
