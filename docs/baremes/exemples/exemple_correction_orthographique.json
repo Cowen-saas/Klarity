@@ -1,0 +1,49 @@
+{
+  "typeExercice": "CORRECTION_ORTHOGRAPHIQUE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "source": "Tout Pour Réussir, Correction orthographique — Sujet I, n°1. Texte extrait de : Micelle Clément-Malnord [orthographe du nom à vérifier], « La fourche à loup », Édition Mazait [orthographe à vérifier]",
+  "enonceModele": {
+    "sujetType": "Sujet I. Correction orthographique n°1",
+    "texteAvecFautes": "Le premier cou atteignit la louve aux pattes de devant, elle fléchit un moment, reprit le mouton et essaya encore de passé le muret ; le second coup la prit sur l'échine et le fit retomber. Elle se redressa, les babines troussés comme d'un horible sourire ; un grondement sortait de sa gorge. Marie cria plus fort, à se déchirer la poitrine, s'était sur elle, elle le sentait, que la louve maintenant allait bondir.] Son bâton s'aba-ttit sur le museau. l'animal reccula en secouant la tete, puis de nouveau fit front. Le bâton à présent ne s'arrêtait plu, chaque coup portait, (...) Soudain, il n'y eut plus rien devant Marie, l'agneau seulement dans une flaque de sang. Elle tomba près de lui, elle ne pouvait plus s'arrêter de crié.",
+    "consigne": "Relevez les fautes d'orthographe contenues dans le texte, en précisant leur ligne, et proposez leur correction.",
+    "classesConcernees": "Toutes séries (A, C, D, TI)"
+  },
+  "exempleReponseModele": {
+    "tableauCorrections": [
+      { "fauteReperee": "Cou", "localisation": "Ligne N°1", "correction": "Coup" },
+      { "fauteReperee": "Passé", "localisation": "Ligne N°2", "correction": "Passer" },
+      { "fauteReperee": "Troussés", "localisation": "Ligne N°3", "correction": "Troussées" },
+      { "fauteReperee": "Horible", "localisation": "Ligne N°3", "correction": "Horrible" },
+      { "fauteReperee": "s'était", "localisation": "Ligne N°4", "correction": "C'était" },
+      { "fauteReperee": "Santait", "localisation": "Ligne N°5", "correction": "Sentait" },
+      { "fauteReperee": "s'aba-ttit", "localisation": "Ligne N°5", "correction": "S'abat-Tit" },
+      { "fauteReperee": "museau.l'", "localisation": "Ligne N°6", "correction": "museau. L'" },
+      { "fauteReperee": "la tete", "localisation": "Ligne N°6", "correction": "La tête" },
+      { "fauteReperee": "Fit", "localisation": "Ligne N°6", "correction": "Fit" },
+      { "fauteReperee": "Reccula", "localisation": "Ligne N°6", "correction": "Recula" },
+      { "fauteReperee": "Eût", "localisation": "Ligne N°7", "correction": "Eut" },
+      { "fauteReperee": "Plu", "localisation": "Ligne N°7", "correction": "Plus" },
+      { "fauteReperee": "L'âgneau", "localisation": "Ligne N°8", "correction": "L'agneau" },
+      { "fauteReperee": "Crié", "localisation": "Ligne N°9", "correction": "Crier" }
+    ]
+  },
+  "notesMethodologiques": {
+    "methode": [
+      "1. Lire le texte intégralement une première fois pour saisir le sens général",
+      "2. Relire ligne par ligne en repérant les mots dont l'orthographe, l'accord ou la conjugaison semble fautive",
+      "3. Pour chaque faute repérée, noter précisément la ligne où elle se trouve",
+      "4. Proposer la correction en tenant compte du contexte grammatical (accord, homophones, conjugaison)"
+    ],
+    "typesDeFautesIllustrees": [
+      "Confusion homophonique : Cou/Coup, Plu/Plus, Eût/Eut",
+      "Erreur de conjugaison/mode : Passé/Passer",
+      "Accord manquant : Troussés/Troussées, s'aba-ttit/S'abat-Tit",
+      "Faute de lettre simple : Horible/Horrible, Santait/Sentait, Reccula/Recula",
+      "Erreur d'apostrophe/contraction : s'était/C'était",
+      "Ponctuation et majuscule : museau.l' / museau. L', la tete/La tête",
+      "Confusion verbe/participe : Crié/Crier"
+    ],
+    "remarque": "Ce corrigé reproduit fidèlement le tableau source (Tout Pour Réussir), y compris l'entrée 'Fit → Fit' identique en faute et en correction, présente telle quelle sur le document original. La référence bibliographique exacte de l'œuvre citée (auteur, éditeur) reste à confirmer par Cowen — l'écriture sur la photo est partiellement floue à cet endroit."
+  }
+}

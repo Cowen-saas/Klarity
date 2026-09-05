@@ -1,0 +1,32 @@
+{
+  "typeExercice": "COMMENTAIRE_COMPOSE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "source": "Adaptation dramatique autour du procès du Chef Rudolph Dualla Manga Bell — source exacte du document non confirmée par Cowen, plan méthodologique à l'apparence générée par IA",
+  "enonceModele": {
+    "sujetType": "Épreuve de commentaire composé",
+    "texteAEtudier": "Niedermeyer : Vous niez donc avoir adressé une lettre d'appel au secours aux puissances étrangères contre l'Allemagne ?\nDualla Manga : Je plaide non coupable.\nNiedermeyer : Ce n'est pas une réponse. Je vous demande si vous avez écrit ou non cette lettre.\nDualla Manga : Je vous ai déjà répondu. Je n'ai trahi ni l'Empereur ni l'État allemand. Je ne sais pas mentir. C'est la stricte vérité.\nNiedermeyer : La vérité ! Vous osez parler de vérité alors que les preuves accumulées contre vous sont accablantes ? Les chefs qui ont signé cette pétition avec vous ont avoué !\nDualla Manga : Je le sais. Mais même si on écarte l'idée de punition, mes lèvres n'ont jamais proféré de contre-vérité.\nNiedermeyer : Assez de discours ! Reconnaissez vos fautes et vous aurez peut-être la vie sauve. L'Allemagne sait se montrer clémente envers ceux qui se repentent.\nDualla Manga : Non ! Je vous mets au défi de le faire ! Ma conscience est pure et mon peuple sait pour quelle cause je me bats.",
+    "reference": "Adaptation dramatique autour du procès du Chef Rudolph Dualla Manga Bell",
+    "consigne": "Vous ferez de ce texte un commentaire composé. Vous pourrez, par exemple, montrer comment à travers les lourdes accusations du juge Niedermeyer, s'exprime la résistance sereine et héroïque de Dualla Manga.",
+    "classesConcernees": "Toutes séries (A, C, D, TI)"
+  },
+  "exempleReponseModele": {
+    "introduction": "Le texte proposé est extrait d'une adaptation dramatique portant sur le procès du chef Rudolf Duala Manga Bell, figure majeure de la résistance camerounaise face à la colonisation allemande. Ce dialogue met en scène l'affrontement verbal et idéologique entre le juge colonial Niedermeyer et le chef résistant, accusé de trahison pour avoir adressé une lettre d'appel aux puissances étrangères contre l'Allemagne. Nous montrerons d'abord comment s'exprime, à travers les lourdes accusations du juge Niedermeyer, la logique inquisitoriale et manipulatrice du pouvoir colonial, avant d'analyser en quoi ce texte met en relief la résistance sereine et la dignité héroïque de Dualla Manga.",
+    "axe1_titre": "Les lourdes accusations et manœuvres du juge Niedermeyer",
+    "axe1_sousAxeA": "D'emblée, le ton du juge Niedermeyer se caractérise par un usage systématique des phrases interrogatives directes, telles que « Vous niez donc avoir adressé une lettre d'appel au secours... ? », rapidement suivies d'injonctions sèches comme « Assez de discours ! ». Ce jeu entre interrogation et ordre trahit une volonté qui n'est pas de débattre, mais bien d'extorquer un aveu à tout prix. Niedermeyer incarne ainsi le pouvoir colonial autoritaire, qui n'admet pas la contradiction et cherche à imposer son hégémonie par la seule force de la parole.",
+    "axe1_sousAxeB": "Par ailleurs, le juge recourt à l'argument d'autorité et à un marché fallacieux pour fléchir l'accusé : « Reconnaissez vos fautes et vous aurez peut-être la vie sauve. L'Allemagne sait se montrer clémente envers ceux qui se repentent. » Il invoque également la pression du nombre en affirmant que « les chefs qui ont signé cette pétition avec vous ont avoué ! ». Par ces procédés, Niedermeyer tente de briser le moral de Dualla Manga en jouant sur l'espoir d'une clémence illusoire et sur l'isolement psychologique de l'accusé.",
+    "transition": "Si le juge déploie ainsi tout un arsenal rhétorique pour contraindre l'accusé à céder, Dualla Manga, de son côté, oppose à ces manœuvres une résistance à la fois sereine et héroïque.",
+    "axe2_titre": "La résistance sereine et la dignité héroïque de Dualla Manga",
+    "axe2_sousAxeA": "Face aux accusations répétées, Dualla Manga adopte des phrases déclaratives catégoriques : « Je plaide non coupable », « C'est la stricte vérité », renforcées par la forme négative : « je n'ai trahi ni l'Empereur ni l'État allemand ». Ce refus en bloc de la qualification de traître traduit une inébranlable rigueur morale, que l'accusé oppose sans faiblir à l'autorité du tribunal.",
+    "axe2_sousAxeB": "Plus loin, l'indignation du chef éclate dans un adverbe d'opposition tranchant : « Non ! », suivi d'un défi lancé au registre polémique : « Je vous mets au défi de le faire ! ». L'emploi du champ lexical de l'assurance morale — conscience, vérité, cause — souligne combien Dualla Manga place la légitimité de son combat au-dessus même de sa propre vie. Loin de céder à la peur de la mort, il retourne l'accusation contre son juge et fait ainsi preuve d'un courage authentiquement héroïque.",
+    "conclusion": "En définitive, ce face-à-face dramatique illustre le choc entre deux logiques opposées : la force coloniale, incarnée par les menaces et les manœuvres du juge Niedermeyer, et la force morale de la résistance, portée par la dignité sereine de Dualla Manga. La rigueur des procédés d'écriture — phrases déclaratives, injonctions, figures de défi — met ainsi en relief l'héroïsme du martyr. Ce texte s'inscrit par conséquent dans la tradition de la littérature d'engagement et de mémoire nationale, aux côtés d'autres figures de résistants anticoloniaux représentées dans le théâtre africain contemporain."
+  },
+  "notesMethodologiques": {
+    "ideeGenerale": "L'affrontement verbal et idéologique entre le juge colonial Niedermeyer et le chef résistant Dualla Manga.",
+    "axesDeLecture": [
+      "Axe 1 : la stratégie d'accusation et d'intimidation du juge colonial",
+      "Axe 2 : la résistance sereine, morale et héroïque de Dualla Manga"
+    ],
+    "remarque": "Rédaction-modèle produite dans les mots de Cowen à partir d'un plan méthodologique (axes/sous-axes/observation-interprétation) dont la source précise n'a pas été confirmée. Contenu historique vérifié : Rudolf Duala Manga Bell est une figure réelle de la résistance camerounaise face à la colonisation allemande, exécuté en 1914. Le texte étudié est explicitement présenté comme une adaptation dramatique, non comme une transcription authentique du procès."
+  }
+}

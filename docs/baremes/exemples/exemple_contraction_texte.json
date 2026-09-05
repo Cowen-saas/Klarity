@@ -1,0 +1,38 @@
+{
+  "typeExercice": "CONTRACTION_TEXTE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "source": "M. Josep Varela i Serra, L'école face aux nouveaux défis, décembre 2000",
+  "enonceModele": {
+    "sujetType": "Sujet de type 1 : Contraction de texte et discussion",
+    "texteOriginal": "L'éducation, depuis la naissance de l'enfant jusqu'à l'âge adulte, est un mélange de facteurs et d'influences. Deux institutions, cependant, jouent un rôle primordial et ont des responsabilités éducatives formelles devant la loi et la société : la famille et l'école.\n\nLes parents sont les premiers et les plus importants éducateurs de l'enfant, non seulement parce que c'est un rôle qu'ils assument dès sa naissance mais surtout parce que la responsabilité de l'éducation des jeunes leur incombe. Ce sont eux qui doivent mettre en place les bases intellectuelles et émotionnelles de sa vie dans la société et développer les attitudes et les valeurs appropriées. Leur rôle est décisif car l'avenir des enfants est fortement conditionné par leurs premières années de vie. Pour que l'école puisse jouer son rôle, ce sont encore les parents qui ont l'obligation - légale- d'y assurer la présence et la participation active de l'enfant. Ainsi, les parents doivent éduquer leurs enfants alors que l'État doit les former en bons professionnels et citoyens.\n\nLes changements profonds dans la société moderne ont énormément affecté ces dernières décennies la structure familiale traditionnelle et sont aussi en train de bouleverser le système éducatif. Il est certain qu'à présent ni la famille, ni l'école sont, à elles seules, capables de transmettre aux jeunes toutes les connaissances, compétences et valeurs dont ils ont besoin pour réussir leur insertion dans la société.\n\nEn plus, les parents et l'école doivent faire face à des situations de plus en plus complexes auxquelles ni les uns, ni les autres semblent suffisamment préparés. Il s'agit, d'une part, de certains phénomènes de société tels que la marginalisation, l'exclusion ou la violence. D'autre part, la rapidité d'accroissement du volume des connaissances, ainsi que les changements de nature des compétences nécessaires dans la vie professionnelle, posent des défis sans précédent au système éducatif.\n\nOn constate, en résultat, une confusion croissante quant au rôle respectif que doivent jouer les parents et les enseignants. Ils ont tendance à se reprocher mutuellement de ne pas faire le nécessaire pour éduquer les enfants. Nul ne conteste le fait que les deux ont des responsabilités, mais dans les conditions sociales, économiques et culturelles en pleine mutation la répartition des tâches change aussi, de même que la façon dont chacun perçoit ces responsabilités. L'influence respective des parents et de l'école varie aussi d'un pays à l'autre, selon les différentes cultures, traditions et religions.\n\nIl est par conséquent important de parvenir à une définition plus claire des responsabilités respectives des parents et des enseignants et surtout de les inciter à en prendre davantage conscience. Cependant, dans cette réalité complexe, où les influences de la famille, de l'école et de la société s'entremêlent, il serait impossible et inutile d'essayer de dresser une liste rigide de responsabilités respectives. Le dialogue accru et l'établissement d'un vrai partenariat représentait la meilleure voie qui permettra de progresser.\n\nPour l'instant, cette coopération n'est pas suffisante même au niveau de l'école primaire et elle diminue encore pendant les étapes suivantes de la scolarité.\n\nPourtant, l'éducation apporte une richesse inestimable à la société et joue un rôle primordial dans le fonctionnement de la démocratie. Par conséquent, les autorités publiques devraient prêter davantage leur attention sur les problèmes dans ce domaine.",
+    "consigneResume": "Ce texte compte 534 mots. Vous ferez un résumé de 133 mots. Une marge de 13 mots en plus ou en moins sera tolérée. Vous préciserez le nombre de mots utilisés à la fin de votre résumé.",
+    "consigneDiscussion": null,
+    "duree": null,
+    "classesConcernees": "Toutes séries (A, C, D, TI)"
+  },
+  "exempleReponseModele": {
+    "resume": "La famille et l'école sont les deux milieux essentiels qui assurent la formation intégrale des jeunes. Dès la naissance de l'enfant, les parents en sont les premiers éducateurs : ils posent les bases intellectuelles et affectives de sa vie, l'État n'intervenant que pour son insertion professionnelle. Or, de nombreux facteurs de la société actuelle affaiblissent ce travail parental et scolaire, rendant leur mission plus difficile. Ces deux milieux doivent pourtant aider les jeunes à affronter de nouveaux défis, comme l'accroissement rapide des connaissances et l'évolution des compétences requises. Plutôt que de se renvoyer mutuellement la responsabilité, parents et enseignants devraient revoir leur rôle respectif. Il serait d'ailleurs vain de vouloir répartir rigidement les tâches ; l'urgence est à la prise de conscience commune. Or cette coopération reste insuffisante dès l'école primaire, ce qui affecte tout le parcours scolaire. Vu les bénéfices de l'éducation, l'État doit s'y investir davantage.",
+    "nombreDeMots": 146,
+    "discussion": null
+  },
+  "notesMethodologiques": {
+    "themeEtThese": "Thème : la famille et l'école comme lieux privilégiés de la formation des jeunes. Thèse : ces deux institutions partagent une responsabilité éducative qu'aucune ne peut assumer seule.",
+    "structureDuTexteSource": [
+      "§1 : la famille et l'école, deux milieux qui influencent la formation intégrale de l'enfant",
+      "§2 : les parents, éducateurs par excellence dès la naissance ; l'État complète par l'insertion professionnelle",
+      "§3 : la société actuelle dilue le travail éducatif accompli par les parents et l'école",
+      "§4 : ces deux milieux doivent aider les jeunes à intégrer les nouveaux défis sociaux",
+      "§5 : face à la mutation sociale, parents et enseignants doivent revoir leurs responsabilités respectives",
+      "§6 : il est vain de vouloir répartir rigidement les responsabilités ; l'urgence est à la prise de conscience",
+      "§7 : la coopération famille-école reste insuffisante dès l'éducation de base",
+      "§8 : vu les bénéfices sociaux de l'éducation, l'État doit s'investir davantage"
+    ],
+    "criteresEvaluationResume": [
+      "Compréhension : le résumé restitue-t-il fidèlement les idées du texte, sans les trahir, en respectant les proportions voulues par l'auteur ?",
+      "Maîtrise technique : le résumé respecte-t-il la chronologie et le système d'énonciation du texte original (mêmes pronoms, mêmes temps verbaux), tout en étant rédigé dans les mots du candidat et non recopié ?",
+      "Correction de l'expression : le vocabulaire est-il personnel, les accords et la syntaxe corrects ?"
+    ],
+    "remarque": "La partie Discussion du sujet n'est pas encore disponible pour cet exemple — à compléter dès que Cowen fournit le corrigé correspondant. Le champ discussion reste à null en attendant."
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "typeExercice": "EXPRESSION_ECRITE",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "source": "Tout Pour Réussir, Expression écrite — Sujet II. Texte support : « L'argent sale », in Vivre ensemble, document produit par le Ministère des Enseignements Secondaires",
+  "enonceModele": {
+    "sujetType": "Sujet II. Épreuve d'expression écrite",
+    "miseEnSituation": "Face à la crise économique qui sévit actuellement dans notre pays et compte tenu des difficultés de plus en plus grandes de trouver un emploi, certaines personnes utilisent des moyens peu orthodoxes pour gagner leur vie. Seulement, utiliser des moyens peu honnêtes pour vivre n'est pas sans inconvénients comme le montre ce texte :",
+    "texteSupport": {
+      "titre": "L'argent sale",
+      "texte": "Tolo, notre voisin immédiat, n'exerçait pas de métier précis. Il vivait d'escroqueries, d'arnaques et de coups bas. Pourtant, il était riche, vraiment trop riche. Que de dignitaires de ce monde il recevait dans le palace qu'il s'était construit !\n\nUne nuit, on a suivi chez lui des coups de feu. Au-dessus des pleurs et des cris de détresse, une voix s'est élevée pour déclarer froidement : « Madame, gardez votre argent sale, c'est lui qu'on voulait ». Le matin, à la vue de son corps, personne n'était surpris parce que, disait-on, il était « Feyman ».",
+      "reference": "In « Vivre ensemble », document produit par le Ministère des Enseignements Secondaires"
+    },
+    "situationDeCommunication": "Tu décides donc de sensibiliser les jeunes de ton quartier contre les tentations de l'argent « facile ». Produis un texte à dominante narrative et argumentative dans lequel :",
+    "consignes": [
+      "1. Tu relates, en une quinzaine de lignes, l'aventure de ton voisin qui vivait d'expédients et qui en a subi les conséquences désastreuses (arrestation, emprisonnement, humiliation, etc.).",
+      "2. Tu dénonces, dans deux paragraphes d'une dizaine de lignes chacun, les escroqueries et autres moyens malhonnêtes que les gens inventent pour gagner facilement de l'argent et les conséquences de ces actes.",
+      "3. Tu expliques, en une dizaine de phrases, les avantages des biens honnêtement gagnés."
+    ],
+    "classesConcernees": "Toutes séries (A, C, D, TI)"
+  },
+  "exempleReponseModele": {
+    "consigne1_recit": "Mon voisin Talla n'exerçait aucun métier stable, pourtant il menait un train de vie qui intriguait tout le quartier. On le voyait changer de véhicule presque chaque mois, organiser de grandes fêtes et distribuer de l'argent à qui le sollicitait. Personne ne savait vraiment d'où provenaient ces richesses, mais les rumeurs allaient bon train : escroqueries en ligne, fausses promesses d'emploi contre de l'argent, arnaques aux téléphones portables. Un matin, des hommes en uniforme ont encerclé sa maison. Talla a été arrêté devant tout le voisinage, menottes aux poignets, sous les regards stupéfaits des enfants qui jouaient encore la veille avec les siens. Au tribunal, on a découvert qu'il avait dépouillé des dizaines de familles de leurs économies en leur promettant de multiplier leur argent. Il a été condamné à plusieurs années de prison. Sa femme et ses enfants, autrefois enviés pour leur aisance, ont dû quitter le quartier dans la honte, incapables de supporter le regard des voisins. Ce que Talla présentait comme une réussite n'était en réalité qu'un château bâti sur le mensonge, et il s'est effondré aussi vite qu'il s'était construit.",
+    "consigne2_paragraphe1_denonciation": "De nos jours, beaucoup de jeunes, pressés de s'enrichir sans effort, se tournent vers des pratiques malhonnêtes pour gagner de l'argent facilement. Certains se livrent à des escroqueries en ligne, promettant à leurs victimes de faux investissements ou de fausses opportunités d'emploi à l'étranger. D'autres organisent des arnaques téléphoniques, se faisant passer pour des proches en difficulté afin de soutirer de l'argent à des personnes crédules, souvent des parents ou des personnes âgées. On assiste également à la multiplication des vols et des combines diverses, où l'honnêteté est sacrifiée au profit d'un gain rapide et illusoire. Ces pratiques, loin d'être des solutions durables, exposent ceux qui s'y adonnent à de graves dangers, tout en détruisant la confiance qui devrait exister entre les membres d'une même communauté.",
+    "consigne2_paragraphe2_consequences": "Les conséquences de ces actes malhonnêtes sont lourdes, tant pour leurs auteurs que pour leurs victimes. Sur le plan judiciaire, ceux qui se livrent à ces pratiques s'exposent à l'arrestation, à l'emprisonnement et à une condamnation qui ternit durablement leur réputation ainsi que celle de leur famille. Sur le plan social, ils perdent la confiance et le respect de leur entourage, une fois leurs manœuvres découvertes. Quant aux victimes, elles se retrouvent souvent ruinées, humiliées, parfois même incapables de subvenir à leurs besoins essentiels après avoir été dépouillées de leurs économies. Loin d'apporter la prospérité durable qu'elle promettait, l'argent mal acquis finit ainsi par détruire ceux qui le poursuivent autant que ceux qui en sont victimes.",
+    "consigne3_avantages": "Contrairement à l'argent facile, les biens honnêtement gagnés apportent une véritable tranquillité d'esprit. Celui qui travaille dur pour gagner sa vie n'a rien à craindre de la justice ni du regard des autres. Le fruit d'un travail honnête procure une fierté durable, car il est le résultat mérité d'efforts réels. Il permet également de bâtir une réputation solide, gage de confiance auprès de la famille, des amis et de la communauté. Une richesse acquise honnêtement dure généralement plus longtemps, car elle repose sur des bases stables et non sur des combines fragiles. Elle offre aussi la possibilité de transmettre à ses enfants de bonnes valeurs plutôt que la peur d'être un jour découverts. De plus, l'honnêteté dans le travail encourage la persévérance et développe des compétences utiles pour l'avenir. Elle contribue enfin au développement de la société tout entière, en renforçant la confiance entre ses membres. Ainsi, même si le chemin de l'honnêteté paraît parfois plus long, il conduit à une réussite véritable et durable. C'est pourquoi il vaut toujours mieux privilégier la patience et le travail honnête plutôt que la tentation de l'argent facile."
+  },
+  "notesMethodologiques": {
+    "structureAttendue": "Texte à dominante narrative (consigne 1 : situation initiale, péripéties, situation finale) puis argumentative (consignes 2 et 3 : dénonciation structurée + argumentation sur les avantages).",
+    "remarque": "Rédaction-modèle produite dans les mots de Cowen à partir de la consigne et des critères de notation (Tout Pour Réussir), sans reprendre le texte support 'L'argent sale' mot pour mot — seuls le nom du voisin et les détails narratifs ont été inventés pour l'exemple.",
+    "baremeStructure_a_verifier_avant_insertion": {
+      "avertissement": "Ce baremeStructure n'a PAS de confirmation qu'il existe déjà en base pour EXPRESSION_ECRITE (type récemment ajouté à l'enum, contrairement aux 5 barèmes originaux). À vérifier en base avant toute insertion — ne pas écraser un baremeStructure existant s'il y en a déjà un.",
+      "consigne1": {
+        "critere1_comprehension_pertinence": "L'élève reçoit 2 points s'il raconte, dans un paragraphe d'une quinzaine de lignes, l'aventure d'un voisin qui gagnait malhonnêtement sa vie et qui en a subi les conséquences négatives.",
+        "critere2_organisation_coherence": "L'élève reçoit 2 points si son texte comporte les étapes canoniques d'une narration : situation initiale, péripéties, situation finale.",
+        "critere3_expression_correction": "L'élève reçoit 2 points si son expression verbale est correcte (énonciation appropriée, orthographe, vocabulaire et syntaxe corrects, etc.)",
+        "critere4_originalite": "L'élève reçoit 2 points s'il utilise un registre de langue soutenu ou des figures de style (comparaisons ou métaphores)."
+      },
+      "consigne2": {
+        "critere1_comprehension_pertinence": "L'élève reçoit 2 points s'il dénonce dans le 1er paragraphe les moyens malhonnêtes (escroqueries, vols, arnaques, etc.) dont les gens usent pour gagner de l'argent, et s'il déplore dans le 2e paragraphe les conséquences pour les victimes de ces actes malhonnêtes.",
+        "critere2_organisation_coherence": "L'élève reçoit 2 points si les arguments avancés dénoncent effectivement la malhonnêteté de ceux qui usent de combines pour gagner de l'argent, sans contradiction, et si ses idées sont clairement exposées et bien structurées avec une idée directrice, un argument, un exemple et des connecteurs.",
+        "critere3_expression_correction": "L'élève reçoit 2 points s'il emploie et agence correctement des phrases de types variés, et s'il respecte les règles d'orthographe et de grammaire.",
+        "critere4_originalite": "L'élève reçoit 2 points si les idées qu'il avance sortent des sentiers battus, et si sa copie est bien présentée (propreté, lisibilité de l'écriture, etc.)."
+      },
+      "consigne3": {
+        "critere1_comprehension_pertinence": "L'élève reçoit 2 points s'il explique, en une dizaine de phrases, les avantages des biens honnêtement acquis.",
+        "critere2_organisation_coherence": "L'élève reçoit 2 points si ses explications sont probantes et logiquement exposées (de manière progressive).",
+        "critere3_expression_correction": "L'élève reçoit 2 points si son expression verbale est correcte (énonciation appropriée, orthographe, vocabulaire et syntaxe corrects, etc.)"
+      },
+      "totalParColonne": {
+        "critere1": "6pts (consigne1) + 6pts (consigne2) + 6pts (consigne3, transcrit comme total de la ligne mais à confirmer)",
+        "note": "Le tableau source affichait les totaux 6pts / 6pts / 6pts / 2pts en bas de chaque colonne pour les consignes 2 et 3 uniquement visibles sur la photo — le total consigne1 n'apparaissait pas dans le cadrage de l'image. Barème global de l'épreuve à confirmer (total /20 vraisemblable vu les autres types déjà chargés)."
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 5 septembre 2026 (durée réelle du refresh token — bug de session de facto infinie trouvé et corrigé, voir §30)_
+_Dernière mise à jour : 5 septembre 2026 (les 7 ExempleCorrection few-shot complets et vérifiés en base, voir §31)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -2212,4 +2212,48 @@ qu'il ne soit pas réintroduit par erreur.
 (`session.maxAge` global dans `src/auth.ts`) — la correction ci-dessus s'applique donc identiquement
 à l'élève : pas de re-saisie du PIN à chaque session sur un même appareil tant qu'il reste utilisé
 au moins une fois dans la fenêtre de 30 j, testé explicitement ci-dessus avec un compte élève.
+
+## 31. Les 7 exemples few-shot ExempleCorrection chargés et vérifiés en base (5 septembre 2026)
+
+Les 7 fichiers `docs/baremes/exemples/exemple_*.json` sont maintenant tous présents (préparés à
+partir de copies corrigées réelles), y compris `DISSERTATION_PHILO` qui manquait — c'est la
+dernière pièce du dispositif RAG/few-shot §4.2.2. `seedExemplesFewShot()` (3ᵉ passe du seed, §26 —
+`update` des 3 seuls champs `enonceModele` / `exempleReponseModele` / `notesMethodologiques`,
+`baremeStructure` jamais touché) a été relancé : `7 ExempleCorrection complété(s) avec un exemple
+few-shot` (était 1 au §26). Aucune erreur — les 7 `typeExercice` valides, 7 matières résolues
+(`Philosophie` ×1, `Français` ×6), 7 lignes `ExempleCorrection` retrouvées (créées par
+`seedExemplesCorrection()`, §24/§28). Fichiers `*:Zone.Identifier` supprimés (règle `.gitignore`).
+
+### Récapitulatif complet — vérifié directement en base (`psql`), rien pris pour « complet » sans ça
+
+| `typeExercice` | Matière | `enonceModele` | `exempleReponseModele` | `notesMethodologiques` | `baremeStructure` |
+|---|---|---|---|---|---|
+| `DISSERTATION_PHILO` | Philosophie | 2792 o (JSON — `sujetType`, `partieA` texte Njoh-Mouelle, `partieB` sujet Montaigne) | **25 594 o** (JSON — `partieA.comprehensionDuTexte` … `partieB`, se termine sur une citation de Nietzsche) | 1249 o (`structureBaremeeOriginale` A + B) | `object`, **3261 o — inchangé** |
+| `DISSERTATION_LITTERAIRE` | Français | 482 o (JSON — citation Claude Roy + consigne + TAF) | 2999 o (JSON — `introduction` complète, finit « …par le biais de l'imaginaire. ») | 750 o (`typeDePlan` analytique, `problematique`, 6 étapes) | `object`, **1104 o — inchangé** |
+| `CONTRACTION_TEXTE` | Français | 3942 o (JSON — `sujetType`, `texteOriginal` complet à contracter) | 1076 o (JSON — `resume` de 146 mots + `nombreDeMots` + `discussion: null` **volontaire**, voir plus bas) | 1748 o (`themeEtThese`, `structureDuTexteSource`) | `object`, **1185 o — inchangé** |
+| `DISCUSSION` | Français | 591 o (JSON — citation Varela i Serra + consigne) | 2902 o (JSON — `introduction` … finit « …pour l'éducation des générations futures. ») | 1268 o (`themeEtThese` + problématique, `typeDePlan`) | `object`, **1145 o — inchangé** |
+| `COMMENTAIRE_COMPOSE` | Français | 1428 o (JSON — `texteAEtudier` : dialogue du procès Dualla Manga) | 3728 o (JSON — `introduction` … finit sur « …le théâtre africain contemporain. ») | 777 o (`ideeGenerale`, 2 `axesDeLecture`) | `object`, **2704 o — inchangé** |
+| `EXPRESSION_ECRITE` | Français | 1937 o (JSON — `sujetType`, `miseEnSituation` crise économique) | 4066 o (JSON — `consigne1_recit` (Talla) … argumentation, finit « …la tentation de l'argent facile. ») | 3690 o (`structureAttendue` narratif→argumentatif, `remarque`) | `object`, **2123 o — inchangé** |
+| `CORRECTION_ORTHOGRAPHIQUE` | Français | 1001 o (JSON — `sujetType`, `texteAvecFautes` : la louve/l'agneau) | 1675 o (JSON — `tableauCorrections[]` : `fauteReperee` → `localisation` → `correction`, tableau bien fermé) | 1249 o (`methode` en étapes numérotées) | `object`, **1238 o — inchangé** |
+
+**Contrôles passés** (`scripts/_audit_exemples.sql`, jetable) :
+- Aucun des 21 champs few-shot n'est vide ; requête ciblant les champs vides ou anormalement courts
+  (énoncé < 80 o, réponse < 300 o, notes < 80 o) → **0 ligne**.
+- Les 3 champs de chaque ligne commencent par `{` et la réponse se termine par `}` → tous stockés en
+  JSON *pretty* bien formé, aucune troncature en milieu de structure ; les extraits début+fin le
+  confirment sur les 7.
+- `baremeStructure` : `jsonb_typeof` = `object` pour les 7, `->>'typeExercice'` == la colonne, et les
+  **7 tailles octet pour octet identiques à l'audit §28** (3261 / 1104 / 1185 / 1145 / 2704 / 2123 /
+  1238) → le champ n'a pas bougé, comme prévu (`seedExemplesFewShot()` ne l'écrit jamais).
+
+**Seul point signalé, après examen : non problématique.** `CONTRACTION_TEXTE.exempleReponseModele`
+contient `"discussion": null`. Le `sujetType` du fichier est « Contraction de texte et discussion »
+(sujet de type 1, série A, qui combine les deux), mais la ligne est classée `CONTRACTION_TEXTE` :
+l'exemple modélise **volontairement** la seule contraction (résumé de 146 mots, complet), la partie
+discussion étant couverte par l'exemple `DISCUSSION` séparé. C'est cohérent avec le CDC §4.2.2 (« le
+pipeline résout les deux `ExempleCorrection` correspondants — `CONTRACTION_TEXTE` puis `DISCUSSION` —
+et évalue chaque partie séparément »). `null` explicite ≠ champ tronqué.
+
+`tsc --noEmit` : hors périmètre (aucun changement de code — seed déjà en place depuis §26/§28, seuls
+6 fichiers JSON de données ajoutés). Reseed idempotent revérifié (même sortie au 2ᵉ passage).
 

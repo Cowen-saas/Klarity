@@ -1,0 +1,30 @@
+{
+  "typeExercice": "DISCUSSION",
+  "matiere": "Français",
+  "seriesConcernees": ["A", "C", "D", "TI"],
+  "source": "Sujet adossé au texte de M. Josep Varela i Serra, L'école face aux nouveaux défis, décembre 2000",
+  "enonceModele": {
+    "sujetType": "Discussion",
+    "citation": "M. Josep Varela i Serra affirme : « Les changements profonds dans la société moderne ont énormément affecté ces dernières décennies la structure familiale traditionnelle et sont aussi en train de bouleverser le système éducatif. »",
+    "consigne": "Pensez-vous que les changements apportés par la modernité soient toujours source d'échec dans l'éducation des enfants ? Vous répondrez à cette question dans un développement argumenté illustré d'exemples tirés de votre expérience de la vie.",
+    "classesConcernees": "Toutes séries (A, C, D, TI)"
+  },
+  "exempleReponseModele": {
+    "introduction": "La société contemporaine connaît de profonds bouleversements qui n'épargnent ni la famille, ni l'école. M. Josep Varela i Serra affirme d'ailleurs que les changements profonds dans la société moderne ont énormément affecté la structure familiale traditionnelle et sont en train de bouleverser le système éducatif. Dès lors, on peut se demander si les changements apportés par la modernité sont toujours source d'échec dans l'éducation des enfants. Nous verrons d'abord que la modernité entraîne effectivement plusieurs dérives dans l'éducation des jeunes, avant de montrer qu'elle constitue aussi une opportunité pour leur épanouissement.",
+    "partie1_these": "D'abord, la modernité expose les jeunes à des formes de violence inédites : les réseaux sociaux et le cinéma diffusent des contenus violents auxquels les jeunes sont exposés dès le plus jeune âge, contribuant à banaliser certains comportements agressifs. Ensuite, le développement des technologies numériques a favorisé l'émergence de nouvelles formes de délinquance : le cyberharcèlement, les arnaques en ligne ou l'exposition à des contenus inappropriés touchent de plus en plus de jeunes, parfois dès le collège. Enfin, la multiplication des loisirs numériques détourne souvent les jeunes des activités constructives : certains privilégient des contenus sans réelle valeur éducative au détriment de leur scolarité, ce qui peut freiner leur insertion sociale et professionnelle.",
+    "transition": "Si l'on admet que la modernité s'accompagne de dérives réelles, il convient cependant de reconnaître qu'elle offre aussi de nouvelles possibilités pour l'éducation des jeunes.",
+    "partie2_antithese": "En effet, la modernité met à la disposition des jeunes des outils d'information et de communication qui élargissent considérablement leurs possibilités d'apprentissage : l'accès à Internet permet aujourd'hui de se former, de rechercher des connaissances et de communiquer instantanément, ce qui était impensable il y a quelques décennies. Par ailleurs, la diversification des formations et des parcours offre aux jeunes davantage de chances de trouver une orientation qui leur correspond, alors que les systèmes éducatifs traditionnels imposaient des parcours plus rigides. Enfin, la modernité permet aux jeunes de s'épanouir à travers de nouvelles formes de loisirs et de culture, accessibles à tous, qui participent aussi à leur ouverture sur le monde.",
+    "conclusion_synthese": "En définitive, la modernité ne saurait être réduite à une source d'échec pour l'éducation des jeunes. Si elle génère effectivement des dérives qu'il convient de ne pas minimiser, elle constitue également un formidable outil de progrès lorsqu'elle est bien encadrée. Plutôt que de rejeter la modernité, la société gagnerait donc à en accompagner les usages, afin d'en tirer le meilleur parti pour l'éducation des générations futures."
+  },
+  "notesMethodologiques": {
+    "themeEtThese": "Thème : les changements modernes comme source d'échec dans l'éducation des enfants. Thèse : la modernité est responsable de dérives dans l'éducation de la jeunesse. Problématique : la modernité constitue-t-elle toujours un échec dans l'éducation des jeunes ?",
+    "typeDePlan": "Plan dialectique (thèse / antithèse / synthèse)",
+    "criteresEvaluation": [
+      "Compréhension/Pertinence : respect du type de production (discussion), reformulation correcte du sujet, qualité des idées et des exemples",
+      "Organisation/Cohérence : respect de la structure introduction/développement/conclusion, enchaînement logique des idées avec connecteurs, convergence vers un même but",
+      "Correction de l'expression : vocabulaire juste et varié, orthographe, syntaxe et temps verbaux corrects",
+      "Originalité de la production : originalité des idées et de l'expression, mise en page et copie propres et lisibles"
+    ],
+    "remarque": "Contenu rédigé dans les mots de Cowen à partir de la structure argumentative d'une ressource tierce (Grandprof.org), sans reproduction verbatim de son texte ni de sa grille de notation. Ce sujet de discussion est adossé au même texte source que l'ExempleCorrection CONTRACTION_TEXTE, mais constitue une entrée distincte."
+  }
+}
