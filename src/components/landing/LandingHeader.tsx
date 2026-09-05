@@ -8,10 +8,11 @@ interface NavItem {
 
 /**
  * Barre de navigation publique. "Épreuves" mène à un vrai accès à la banque :
- * `/connexion?from=/eleve/epreuves` affiche le sélecteur élève/parent (même
- * logique que "Tarifs" / le chooser d'abonnement) et, après connexion élève,
- * redirige vers la banque d'épreuves (`EleveLoginForm` honore `from` s'il
- * commence par `/eleve`). Pas d'ancre morte vers une section de la page.
+ * `/connexion?from=/eleve/epreuves`. La banque d'épreuves étant réservée à
+ * l'élève, cet écran de connexion **retire** l'option Parent (pas seulement
+ * grisée) et centre l'unique option "Élève" — cf. `eleveUniquement` dans
+ * `ConnexionForm`. Après connexion, `EleveLoginForm` honore `from` (préfixe
+ * `/eleve`) et renvoie sur la banque. Pas d'ancre morte vers une section.
  */
 const NAV_ITEMS: NavItem[] = [
   { label: "Fonctionnalités", href: "/#comment-ca-marche" },

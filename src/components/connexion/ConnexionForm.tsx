@@ -40,8 +40,18 @@ export function ConnexionForm() {
   const from = searchParams.get("from");
   const roleParam = searchParams.get("role");
   const sessionExpiree = searchParams.get("raison") === "expiree";
+
+  // Destination réservée à l'élève (banque d'épreuves via le lien "Épreuves" de
+  // la landing, ou toute page /eleve/* d'où le middleware renvoie ici) : un
+  // parent ne peut de toute façon jamais y accéder. Dans ce cas on n'affiche pas
+  // du tout le sélecteur Élève/Parent — l'option Parent est retirée (pas juste
+  // grisée), et l'unique option "Élève" est centrée.
+  const eleveUniquement = from?.startsWith("/eleve") ?? false;
+
   const roleVerrouille = roleParam === "PARENT" || roleParam === "ELEVE";
-  const [role, setRole] = useState<Role>(roleVerrouille ? roleParam : roleDepuisFrom(from));
+  const [role, setRole] = useState<Role>(
+    eleveUniquement ? "ELEVE" : roleVerrouille ? roleParam : roleDepuisFrom(from)
+  );
   const [parentEtape, setParentEtape] = useState<"demande" | "verification">("demande");
 
   const panneau = role === "ELEVE" ? PANNEAU.ELEVE.default : PANNEAU.PARENT[parentEtape];
@@ -102,14 +112,20 @@ export function ConnexionForm() {
             )}
           </div>
         )}
-        <RoleSwitcher
-          value={role}
-          locked={roleVerrouille}
-          onChange={(next) => {
-            setRole(next);
-            setParentEtape("demande");
-          }}
-        />
+        {eleveUniquement ? (
+          <div className="mb-6 flex justify-center">
+            <span className="rounded-full bg-primary px-8 py-2 text-sm font-semibold text-white">Élève</span>
+          </div>
+        ) : (
+          <RoleSwitcher
+            value={role}
+            locked={roleVerrouille}
+            onChange={(next) => {
+              setRole(next);
+              setParentEtape("demande");
+            }}
+          />
+        )}
         {role === "ELEVE" && <EleveLoginForm from={from} />}
         {role === "PARENT" && <ParentLoginForm from={from} onEtapeChange={setParentEtape} />}
       </div>

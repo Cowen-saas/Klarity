@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 5 septembre 2026 (les 7 ExempleCorrection few-shot complets et vérifiés en base, voir §31)_
+_Dernière mise à jour : 5 septembre 2026 (connexion depuis "Épreuves" : option Parent retirée, Élève centrée, voir §32)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -2256,4 +2256,29 @@ et évalue chaque partie séparément »). `null` explicite ≠ champ tronqué.
 
 `tsc --noEmit` : hors périmètre (aucun changement de code — seed déjà en place depuis §26/§28, seuls
 6 fichiers JSON de données ajoutés). Reseed idempotent revérifié (même sortie au 2ᵉ passage).
+
+## 32. Connexion depuis "Épreuves" (landing) — option Parent retirée, Élève centrée (5 septembre 2026)
+
+Retour utilisateur : au clic sur "Épreuves" dans la nav de la landing, on arrive sur
+`/connexion?from=/eleve/epreuves` où le sélecteur Élève/Parent s'affichait encore (§27). La banque
+d'épreuves étant réservée à l'élève — un parent ne peut jamais atteindre `/eleve/*` —, l'option
+Parent ne doit pas seulement être grisée : elle doit **disparaître**, et l'unique option "Élève"
+être centrée.
+
+- **`ConnexionForm.tsx`** : nouveau `eleveUniquement = from?.startsWith("/eleve")`. Quand vrai : le
+  rôle est forcé à `ELEVE`, `RoleSwitcher` **n'est pas rendu** du tout (remplacé par une simple
+  pastille "Élève" centrée, style de l'onglet actif), et seul `EleveLoginForm` s'affiche.
+  Portée volontairement `/eleve/*` (pas seulement le lien "Épreuves") : couvre aussi une redirection
+  du middleware / d'une expiration de session (§29/§30) depuis n'importe quelle page de l'espace
+  élève, où un onglet Parent n'aurait pas plus de sens.
+- **Inchangé** : `/connexion` nu (sélecteur complet Élève/Parent cliquable), et le verrou
+  `?role=PARENT` du lien "Parents" / `?role=ELEVE`/`PARENT` du chooser d'abonnement (§16 — l'onglet
+  non choisi reste grisé-visible, comportement demandé explicitement à l'époque). Le `href` du lien
+  "Épreuves" (`/connexion?from=/eleve/epreuves`) n'a pas changé ; seule la logique d'affichage l'a
+  fait.
+- **Vérifié** (HTML rendu + captures navigateur) : `?from=/eleve/epreuves` → aucun `RoleSwitcher`
+  (`aria-label="Type de compte"` absent), pastille "Élève" centrée, pas de "Parent" dans le DOM,
+  bannière "banque d'épreuves" + lien Inscription présents ; `/connexion` nu → sélecteur complet ;
+  `?from=/parent&role=PARENT` → sélecteur avec Parent actif et Élève grisé non cliquable (§16
+  intact). `tsc --noEmit` et `eslint` sur les fichiers touchés : 0 erreur.
 
