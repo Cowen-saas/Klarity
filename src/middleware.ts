@@ -41,7 +41,11 @@ export default async function middleware(req: NextRequest) {
   const session = await getMiddlewareSession(req);
   if (!session || session.role !== zone.role || session.error) {
     const url = new URL(zone.connexion, req.nextUrl.origin);
-    url.searchParams.set("from", pathname);
+    url.searchParams.set("from", pathname + req.nextUrl.search);
+    // Session partie en erreur (compte anonymisé/verrouillé, rotation échouée) :
+    // on le signale pour afficher « Ta session a expiré » plutôt qu'un simple
+    // écran de connexion (§2.7).
+    if (session?.error) url.searchParams.set("raison", "expiree");
     return NextResponse.redirect(url);
   }
 

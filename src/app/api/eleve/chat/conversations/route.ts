@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Filiere, NiveauClasse } from "@prisma/client";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -11,10 +11,9 @@ import { prisma } from "@/lib/prisma";
 const bodySchema = z.object({ matiereId: z.string().min(1) });
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ELEVE") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ELEVE");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

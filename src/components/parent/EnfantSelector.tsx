@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { apiFetch } from "@/lib/api-client";
 
 interface Enfant {
   id: string;
@@ -26,7 +27,7 @@ export function EnfantSelector({ enfants, selectedId }: EnfantSelectorProps) {
   }
 
   function handleChange(eleveId: string) {
-    fetch("/api/parent/dernier-enfant", {
+    apiFetch("/api/parent/dernier-enfant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eleveId }),

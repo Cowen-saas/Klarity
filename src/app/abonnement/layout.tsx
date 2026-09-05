@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import type { ReactNode } from "react";
 import { IconGraduationCap } from "@/components/icons";
+import { AuthenticatedArea } from "@/components/auth/AuthenticatedArea";
 
 /**
  * Layout autonome (pas de sidebar) pour le parcours d'abonnement (§2.4, §2.6)
@@ -18,6 +19,7 @@ export default async function AbonnementLayout({ children }: { children: ReactNo
   const connecte = !!session && !session.error && (session.user.role === "ELEVE" || session.user.role === "PARENT");
 
   return (
+    <AuthenticatedArea session={session}>
     <div className="min-h-screen bg-fond">
       <header className="flex items-center justify-between px-6 py-5 sm:px-10">
         <div className="flex items-center gap-2">
@@ -42,5 +44,6 @@ export default async function AbonnementLayout({ children }: { children: ReactNo
       </header>
       <main className="px-4 pb-16 sm:px-6">{children}</main>
     </div>
+    </AuthenticatedArea>
   );
 }

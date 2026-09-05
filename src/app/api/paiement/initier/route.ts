@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getPaymentProvider } from "@/lib/payment";
@@ -43,10 +43,9 @@ const LIMIT = 10;
 const WINDOW_SECONDS = 60 * 60;
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.error || (session.user.role !== "ELEVE" && session.user.role !== "PARENT")) {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole(["ELEVE", "PARENT"]);
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconWarning } from "@/components/icons";
 import { PaiementStepper } from "@/components/abonnement/PaiementStepper";
 
@@ -31,7 +32,7 @@ export function VerificationPoll({ paiementId, statutInitial, eleveId, retourDas
     if (statut !== "EN_ATTENTE") return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/paiement/${paiementId}`);
+        const res = await apiFetch(`/api/paiement/${paiementId}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.statut && data.statut !== "EN_ATTENTE") {

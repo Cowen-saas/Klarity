@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "@/lib/api-client";
 import { MatiereSwitcher } from "./MatiereSwitcher";
 import { MessageBubble } from "./MessageBubble";
 import { IconSparkles, IconSend } from "@/components/icons";
@@ -29,10 +30,10 @@ export function ChatPanel() {
 
   useEffect(() => {
     let annule = false;
-    fetch("/api/eleve/matieres")
+    apiFetch("/api/eleve/matieres")
       .then((res) => res.json())
-      .then((data: { matieres: Matiere[] }) => {
-        if (annule) return;
+      .then((data: { matieres?: Matiere[] }) => {
+        if (annule || !data.matieres) return;
         setMatieres(data.matieres);
         if (data.matieres.length > 0) {
           selectionnerMatiere(data.matieres[0].id);
@@ -49,7 +50,6 @@ export function ChatPanel() {
     return () => {
       annule = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function ChatPanel() {
     setChargement(true);
     setErreur(null);
     try {
-      const res = await fetch("/api/eleve/chat/conversations", {
+      const res = await apiFetch("/api/eleve/chat/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matiereId }),
@@ -88,7 +88,7 @@ export function ChatPanel() {
     setEnvoiEnCours(true);
     setErreur(null);
     try {
-      const res = await fetch(`/api/eleve/chat/conversations/${conversationId}/messages`, {
+      const res = await apiFetch(`/api/eleve/chat/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contenu }),

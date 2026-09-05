@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { IconCalendar, IconCheckCircle } from "@/components/icons";
 
 type TypeExamen = "BEPC" | "PROBATOIRE" | "BAC";
@@ -54,7 +55,7 @@ export function DateExamenManager({ dates }: { dates: DateExamenVue[] }) {
     setEnCours(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/admin/dates-examens", {
+      const res = await apiFetch("/api/admin/dates-examens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

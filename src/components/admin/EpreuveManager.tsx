@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { IconDocument, IconCheckCircle } from "@/components/icons";
 
 type NiveauClasse = "TROISIEME" | "PREMIERE" | "TERMINALE";
@@ -76,7 +77,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
     setEnCours(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/admin/epreuves", { method: "POST", body: form });
+      const res = await apiFetch("/api/admin/epreuves", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) {
         setMessage({ type: "erreur", texte: data.error ?? "Ajout impossible." });

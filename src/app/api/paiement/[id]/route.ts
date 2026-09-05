@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { chargerPaiementAutorise } from "@/lib/payment/idor";
 
 /**
@@ -8,12 +8,10 @@ import { chargerPaiementAutorise } from "@/lib/payment/idor";
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  if (!session || session.error || (session.user.role !== "ELEVE" && session.user.role !== "PARENT")) {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole(["ELEVE", "PARENT"]);
+  if (!garde.ok) return garde.response;
 
-  const paiement = await chargerPaiementAutorise(id, session);
+  const paiement = await chargerPaiementAutorise(id, garde.session);
   if (!paiement) {
     return NextResponse.json({ error: "Paiement introuvable." }, { status: 404 });
   }

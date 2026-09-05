@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ComponentType, SVGProps } from "react";
+import { apiFetch } from "@/lib/api-client";
 import {
   IconChatText,
   IconWhatsapp,
@@ -71,7 +72,7 @@ export function NotificationForm({ canalInitial, frequenceInitiale }: Notificati
     setEnregistrement(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/parent/notifications", {
+      const res = await apiFetch("/api/parent/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ canal, frequence }),

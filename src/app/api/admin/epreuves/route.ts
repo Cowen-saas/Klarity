@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
 
@@ -36,10 +36,9 @@ function validerFichier(f: FormDataEntryValue | null, champ: string): { ok: true
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ADMIN");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   let form: FormData;
   try {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Filiere, NiveauClasse } from "@prisma/client";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -9,10 +9,9 @@ import { prisma } from "@/lib/prisma";
  * Matiere.classesConcernees/filiereRequise (trop imprécis, cf. décision seed).
  */
 export async function GET() {
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ELEVE") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ELEVE");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const classe = session.user.classe as NiveauClasse;
   const filiere = (session.user.filiere ?? null) as Filiere | null;

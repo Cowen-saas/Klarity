@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 
 const MOT_CONFIRMATION = "CLÔTURER";
 
@@ -31,7 +32,7 @@ export function ClotureCompteForm({ eleveId, nom, codeEleve, classeLabel }: Clot
     setEnCours(true);
     setErreur(null);
     try {
-      const res = await fetch(`/api/parent/eleve/${eleveId}/cloture`, {
+      const res = await apiFetch(`/api/parent/eleve/${eleveId}/cloture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comprend: true, confirmationTexte: saisie.trim() }),

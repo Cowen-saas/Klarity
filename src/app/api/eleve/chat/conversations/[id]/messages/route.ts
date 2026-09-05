@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Filiere, NiveauClasse } from "@prisma/client";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { getAIProvider, AIRateLimitError, type ChatMessage } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
@@ -45,10 +45,9 @@ async function chargerConversationAutorisee(id: string, eleveId: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ELEVE") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ELEVE");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const conversation = await chargerConversationAutorisee(id, session.user.id);
   if (!conversation) {
@@ -66,10 +65,9 @@ const bodySchema = z.object({ contenu: z.string().min(1).max(4000) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ELEVE") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ELEVE");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { cibleRetour } from "@/lib/api-client";
 import { IconShieldCheck } from "@/components/icons";
 
 export function AdminLoginForm({ from }: { from: string | null }) {
@@ -33,7 +34,7 @@ export function AdminLoginForm({ from }: { from: string | null }) {
         setTotpCode("");
         return;
       }
-      router.push(from && from.startsWith("/admin") ? from : "/admin");
+      router.push(cibleRetour(from, "ADMIN"));
       router.refresh();
     } catch {
       setErreur("Impossible de contacter le serveur.");

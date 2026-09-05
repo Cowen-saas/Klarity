@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconWarning } from "@/components/icons";
 
 interface CorrectionVue {
@@ -32,7 +33,7 @@ export function CorrectionSignaleeDetail({ correction }: { correction: Correctio
     setEnCours(true);
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/corrections/${correction.id}/override`, {
+      const res = await apiFetch(`/api/admin/corrections/${correction.id}/override`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ noteOverride: Number(note), justificationOverride: justification.trim() }),

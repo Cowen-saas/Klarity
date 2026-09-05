@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { anonymiserEleve } from "@/lib/retention/anonymisation";
 
@@ -21,10 +21,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "PARENT") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("PARENT");
+  if (!garde.ok) return garde.response;
+  const session = garde.session;
 
   const { id: eleveId } = await params;
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));

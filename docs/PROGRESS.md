@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 4 septembre 2026 (CDC v1.31 — 2 types d'exercice 3ème Français : EXPRESSION_ECRITE + CORRECTION_ORTHOGRAPHIQUE, voir §28)_
+_Dernière mise à jour : 4 septembre 2026 (gestion centralisée de l'expiration de session — les 3 rôles, voir §29)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -2055,4 +2055,100 @@ table visuelle §4.2.2 reste à 4 lignes.
 - CDC : si le tableau visuel §4.2.2 doit un jour montrer les 7 types (et combler la dette
   `COMMENTAIRE_COMPOSE`), il faudra reconstruire le CDC depuis une source Markdown/HTML → WeasyPrint
   (Option B écartée cette fois) — la redaction PyMuPDF ne sait pas refaire le flux.
+
+## 29. Gestion centralisée de l'expiration de session — les 3 rôles (4-5 septembre 2026)
+
+Signalement utilisateur : message générique « Non autorisé. » rencontré en ajoutant une épreuve
+(`/admin/epreuves`) — chaque route API dupliquait son propre contrôle de session, sans détection
+centralisée ni redirection propre. Demande en 4 points, appliquée aux 3 rôles.
+
+### 1. Détection centralisée (serveur) — `src/lib/auth/api-guard.ts::exigerRole()`
+
+Un seul endroit remplace le `if (!session || session.error || session.user.role !== "X") return
+401 "Non autorisé."` recopié dans **11 routes API** (`admin/epreuves`, `admin/dates-examens`,
+`admin/corrections/[id]/override`, `admin/storage`, `parent/notifications`, `parent/dernier-enfant`,
+`parent/eleve/[id]/cloture`, `eleve/matieres`, `eleve/chat/conversations`,
+`eleve/chat/conversations/[id]/messages` ×2, `paiement/initier`, `paiement/[id]`). `exigerRole(role)`
+distingue désormais deux cas que l'ancien code confondait :
+- **Session absente/expirée/invalidée** (`!session` ou `session.error`) → 401 **structurée**
+  `{ error, code: "SESSION_EXPIREE", connexion: "/connexion" | "/admin/connexion" }`.
+- **Rôle simplement incorrect** (cas anormal, le middleware l'aurait déjà bloqué côté page) → 403
+  opaque, inchangé.
+
+### 2 + 3. Redirection automatique + retour à la page d'origine (client)
+
+- **`src/lib/api-client.ts::apiFetch()`** — remplace `fetch()` sur les **13 appels `/api/*`** des
+  composants client authentifiés (`EpreuveManager`, `DateExamenManager`,
+  `CorrectionSignaleeDetail`, `NotificationForm`, `ClotureCompteForm`, `EnfantSelector`, `ChatPanel`
+  ×3, `PaiementForm`, `VerificationPoll`). Sur une 401 `SESSION_EXPIREE`, déclenche
+  `redirigerVersConnexion()` : navigation dure vers `connexion` avec `?from=<page courante
+  complète>&raison=expiree` — la réponse 401 (avec le message clair du serveur) est quand même
+  renvoyée à l'appelant, donc le message correct s'affiche brièvement avant la navigation, jamais
+  le générique.
+- **`src/middleware.ts`** — gate déjà `?from=` pour les redirections de page (inchangé) ; ajoute
+  `?raison=expiree` quand `session.error` (compte invalidé, rotation échouée).
+- **`cibleRetour(from, role)`** (`api-client.ts`) — allowlist par rôle (`ELEVE`→`/eleve`+`/abonnement`,
+  `PARENT`→`/parent`+`/abonnement`, `ADMIN`→`/admin`), anti open-redirect, utilisée par les 3
+  formulaires de connexion (`EleveLoginForm`, `ParentLoginForm`, `AdminLoginForm`) pour revenir
+  automatiquement sur `from` après reconnexion — même mécanisme que celui déjà en place pour le
+  paiement, généralisé et partagé plutôt que dupliqué par rôle.
+- **`ConnexionForm` / `AdminConnexionForm`** — bandeau « Ta session a expiré. Reconnecte-toi pour
+  reprendre là où tu en étais. » quand `?raison=expiree` ; supprime dans ce cas la bannière « besoin
+  d'un compte » existante (from `/eleve`/`/abonnement`) — redondante et trompeuse pour quelqu'un qui a
+  clairement déjà un compte.
+
+### 4. Avertir avant l'expiration effective — `src/components/auth/`
+
+- **`AuthenticatedArea.tsx`** — enveloppe `SessionProvider` (next-auth/react) montée par les 4
+  layouts authentifiés (`eleve`, `parent`, `admin/(protected)`, `abonnement`), `session` passée
+  depuis le layout serveur (pas de fetch initial supplémentaire). `refetchInterval={300}` (5 min) +
+  `refetchOnWindowFocus` : revalide périodiquement tant que l'onglet est ouvert — ce qui, en
+  pratique, **maintient la session vivante** pendant qu'un formulaire long est rempli (rotation du
+  cookie à chaque refetch réussi), et fait tomber un compte invalidé en moins de 5 min sans action
+  de l'utilisateur.
+- **`SessionExpiryWatcher.tsx`** — monté à l'intérieur : redirige **proactivement** (avant toute
+  soumission) dès qu'un refetch constate `session.error` (compte anonymisé/supprimé, rotation
+  échouée) OU que la session a purement disparu après avoir été valide dans le même onglet (cookie
+  supprimé/expiré, déconnecté ailleurs) — cf. bug trouvé en testant, ci-dessous. Bandeau discret
+  « Ta session expire bientôt » + bouton « Rester connecté » (force un `update()`) quand
+  l'échéance réelle du cookie (`session.expires`, roulante) tombe sous 5 min — rare en usage normal,
+  couvre l'onglet laissé ouvert très longtemps.
+
+### Bug trouvé en testant, corrigé avant de considérer le point 4 fait
+
+Premier jet du watcher : ne redirigeait que sur `session.error`. Testé en simulant une
+déconnexion pendant que l'utilisateur reste inactif sur un écran (aucune soumission) — la session
+devient `null`/`unauthenticated` (pas une erreur), et le premier jet ne faisait **rien** dans ce cas,
+laissant l'utilisateur sur un écran qui a l'air normal jusqu'à sa prochaine interaction. Corrigé :
+le veilleur retient (`dejaAuthentifie`) que la session a été valide au moins une fois dans cet
+onglet, et redirige dès qu'elle disparaît ensuite — pas seulement sur une erreur explicite, jamais
+au tout premier rendu (un visiteur jamais connecté n'a rien à voir avec une session « expirée »).
+
+### Testé réellement
+
+- **Preuve directe du bug rapporté** — `curl -X POST /api/admin/epreuves` sans session (le cas
+  exact signalé) : **401** `{"error":"Ta session a expiré. Reconnecte-toi pour continuer.",
+  "code":"SESSION_EXPIREE","connexion":"/admin/connexion"}` au lieu de l'ancien `{"error":"Non
+  autorisé."}`. Même vérifié sur `eleve/matieres`, `parent/notifications`, `paiement/initier`.
+- **Parcours complet en navigateur** (compte élève de test auto-provisionné via `/inscription` —
+  jamais de compte admin créé par Claude Code, règle actée §11/§20 ; le mécanisme testé est
+  strictement le même code partagé `exigerRole`/`apiFetch` que la route admin) : connexion réelle →
+  `/eleve/tuteur-ia` → question tapée dans le champ du chat (« Peux-tu m'expliquer les dérivées ? »)
+  → session tuée côté serveur pendant que le champ reste rempli et l'utilisateur ignorant de rien
+  (`POST /api/auth/signout` réel, confirmé par `GET /api/auth/session` → `null`) → clic « Envoyer »
+  → **redirection fluide** vers `/connexion?from=%2Feleve%2Ftuteur-ia&raison=expiree`, bandeau « Ta
+  session a expiré » affiché (capture d'écran), aucune bannière « besoin d'un compte » redondante →
+  reconnexion avec le même compte → **retour automatique sur `/eleve/tuteur-ia`** (pas le dashboard
+  générique). Aucun blocage brutal, aucun message générique à aucune étape.
+- **Non confirmé en direct** : le sous-cas du point 4 où la redirection proactive se déclenche
+  *sans aucune interaction* (purement via le refetch périodique de 5 min, onglet inactif) — la
+  logique est corrigée et vérifiée par lecture de code + `tsc`, mais une attente live de 5 min (ou
+  la resimulation via un `refetchInterval` temporairement raccourci) a buté sur une instabilité du
+  CSRF token dans le harnais de test par `fetch()` brut (pas un bug produit identifié) ; signalé
+  plutôt que présenté comme testé.
+- Compte élève de test (`ELE-74R-WQV`) et toutes ses lignes dépendantes supprimés après coup —
+  vérifié 0 ligne orpheline (`conversations_chat`, `audit_log_securite`).
+- `tsc --noEmit` : 0 erreur. `eslint src/` : 0 erreur, 3 warnings préexistants (au lieu de 4 —
+  la directive `eslint-disable` obsolète de `ChatPanel.tsx`, déjà relevée en dette au passage,
+  retirée puisque le fichier était de toute façon touché).
 

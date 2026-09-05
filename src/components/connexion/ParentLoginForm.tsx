@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PinInput } from "@/components/ui/PinInput";
 import { IconUser, IconLock } from "@/components/icons";
 import { masquerTelephone } from "@/lib/format";
+import { cibleRetour } from "@/lib/api-client";
 
 const DELAI_RENVOI_SECONDES = 60;
 
@@ -86,7 +87,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
         setOtp("");
         return;
       }
-      router.push(from && (from.startsWith("/parent") || from.startsWith("/abonnement")) ? from : "/parent");
+      router.push(cibleRetour(from, "PARENT"));
       router.refresh();
     } catch {
       setErreur("Impossible de contacter le serveur.");

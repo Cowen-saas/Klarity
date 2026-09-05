@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { exigerRole } from "@/lib/auth/api-guard";
 import { lireFichierSigneMock } from "@/lib/storage/mock-provider";
 
 /**
@@ -10,10 +10,8 @@ import { lireFichierSigneMock } from "@/lib/storage/mock-provider";
  * cette route disparaît — R2 sert directement ses URLs signées.
  */
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session || session.error || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  }
+  const garde = await exigerRole("ADMIN");
+  if (!garde.ok) return garde.response;
 
   const url = new URL(request.url);
   const key = url.searchParams.get("key");

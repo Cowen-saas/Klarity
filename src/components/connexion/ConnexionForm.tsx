@@ -39,6 +39,7 @@ export function ConnexionForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const roleParam = searchParams.get("role");
+  const sessionExpiree = searchParams.get("raison") === "expiree";
   const roleVerrouille = roleParam === "PARENT" || roleParam === "ELEVE";
   const [role, setRole] = useState<Role>(roleVerrouille ? roleParam : roleDepuisFrom(from));
   const [parentEtape, setParentEtape] = useState<"demande" | "verification">("demande");
@@ -65,7 +66,16 @@ export function ConnexionForm() {
       <ConnexionSidePanel {...panneau} />
 
       <div className="flex-1 p-6 sm:p-10 md:p-12">
-        {contexte && (
+        {sessionExpiree && (
+          <div className="mb-6 rounded-xl border border-accent/30 bg-accent-light px-4 py-3 text-sm text-texte">
+            <p className="font-semibold">Ta session a expiré.</p>
+            <p className="mt-1 text-texte-muted">Reconnecte-toi pour reprendre là où tu en étais.</p>
+          </div>
+        )}
+        {/* Une session qui vient d'expirer implique déjà un compte existant — la
+            bannière "besoin d'un compte" (avec lien inscription) serait à côté
+            de la plaque, donc on la tait dans ce cas. */}
+        {contexte && !sessionExpiree && (
           <div className="mb-6 rounded-xl bg-primary-light px-4 py-3 text-sm text-texte">
             {role === "ELEVE" ? (
               <>

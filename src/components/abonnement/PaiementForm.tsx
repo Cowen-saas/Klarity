@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconLock } from "@/components/icons";
 import { PinInput } from "@/components/ui/PinInput";
 
@@ -53,7 +54,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
   async function soumettrePaiement(pinConfirmation?: string) {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/paiement/initier", {
+      const res = await apiFetch("/api/paiement/initier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

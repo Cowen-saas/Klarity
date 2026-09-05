@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { PinInput } from "@/components/ui/PinInput";
+import { cibleRetour } from "@/lib/api-client";
 import { IconGraduationCap } from "@/components/icons";
 
 export function EleveLoginForm({ from }: { from: string | null }) {
@@ -32,7 +33,7 @@ export function EleveLoginForm({ from }: { from: string | null }) {
         setPin("");
         return;
       }
-      router.push(from && (from.startsWith("/eleve") || from.startsWith("/abonnement")) ? from : "/eleve");
+      router.push(cibleRetour(from, "ELEVE"));
       router.refresh();
     } catch {
       setErreur("Impossible de contacter le serveur.");
