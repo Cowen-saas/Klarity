@@ -19,6 +19,18 @@ import type { ActeurRole } from "@/types/next-auth";
  * session serveur (cf. réf. sécurité §2, "jamais de session en mémoire locale").
  */
 
+// §30 : REFRESH_TOKEN_TTL_SECONDS (30 j par défaut) borne réellement la session — pas
+// d'expiration infinie sur un appareil partagé (§1.2, public mineur). "Renouvelée
+// silencieusement à chaque connexion active" est assuré par NextAuth lui-même : sous
+// stratégie JWT, `@auth/core` re-signe le cookie avec une échéance `now + maxAge` à
+// CHAQUE `GET /api/auth/session` (le throttle `updateAge` de 24 h ne s'applique qu'à la
+// stratégie "database", jamais au JWT — vérifié dans `@auth/core/lib/actions/session.js`
+// ET par test curl direct : un `auth()` isolé, lui, NE re-signe RIEN — seul un vrai
+// `GET /api/auth/session` déplace l'échéance du cookie). `SessionProvider` (monté par
+// `AuthenticatedArea` dans chaque espace authentifié) appelle cette route une fois à
+// chaque vraie navigation (montage) et à chaque retour de focus d'onglet — jamais sur un
+// minuteur : c'est délibéré, voir `AuthenticatedArea`. Un `refetchInterval` y transformerait
+// ces 30 jours en session de facto infinie tant qu'un onglet reste ouvert, même inactif.
 const ACCESS_TOKEN_TTL_MS = Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 900) * 1000;
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.REFRESH_TOKEN_TTL_SECONDS ?? 2_592_000);
 

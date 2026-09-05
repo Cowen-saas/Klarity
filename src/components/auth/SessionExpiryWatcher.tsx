@@ -12,12 +12,13 @@ import { IconWarning } from "@/components/icons";
  *   (`session.error` : compte anonymisé/supprimé, échec de rotation) ou
  *   carrément absente (cookie expiré, déconnecté ailleurs) — → redirection
  *   **proactive**, sans attendre que l'utilisateur soumette quoi que ce soit.
- *   Repose sur `SessionProvider({ refetchInterval, refetchOnWindowFocus })`
- *   (`AuthenticatedArea`) : dès qu'un refetch périodique ou un retour de focus
- *   constate la disparition, `status` bascule et cet effet redirige — avant que
- *   l'utilisateur perde du temps sur un formulaire. Ne redirige que si la
- *   session était valide à l'instant d'avant (jamais au tout premier rendu :
- *   un visiteur jamais connecté n'a rien à voir avec une session "expirée").
+ *   Repose sur `SessionProvider({ refetchOnWindowFocus })` (`AuthenticatedArea`,
+ *   délibérément **sans** `refetchInterval` — §30) : dès qu'un retour de focus
+ *   sur l'onglet ou une navigation de page constate la disparition, `status`
+ *   bascule et cet effet redirige — avant que l'utilisateur perde du temps sur
+ *   un formulaire. Ne redirige que si la session était valide à l'instant
+ *   d'avant (jamais au tout premier rendu : un visiteur jamais connecté n'a
+ *   rien à voir avec une session "expirée").
  * - **Expiration proche** (le cookie de session, non renouvelable) → bandeau
  *   discret « Ta session expire bientôt » avec un bouton « Rester connecté » qui
  *   force une revalidation. Rare en usage normal (la session roule tant que

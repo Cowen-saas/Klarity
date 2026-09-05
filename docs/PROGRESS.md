@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 4 septembre 2026 (gestion centralisée de l'expiration de session — les 3 rôles, voir §29)_
+_Dernière mise à jour : 5 septembre 2026 (durée réelle du refresh token — bug de session de facto infinie trouvé et corrigé, voir §30)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -2151,4 +2151,65 @@ au tout premier rendu (un visiteur jamais connecté n'a rien à voir avec une se
 - `tsc --noEmit` : 0 erreur. `eslint src/` : 0 erreur, 3 warnings préexistants (au lieu de 4 —
   la directive `eslint-disable` obsolète de `ChatPanel.tsx`, déjà relevée en dette au passage,
   retirée puisque le fichier était de toute façon touché).
+
+## 30. Durée réelle du refresh token — bug de session de facto infinie trouvé et corrigé (5 septembre 2026)
+
+Suivi direct de §29 : l'utilisateur a demandé une durée de refresh token longue mais **réelle**
+(30 j, renouvelée silencieusement à chaque connexion active) plutôt qu'une session sans expiration
+— risquée sur un appareil partagé (§1.2, public mineur). En creusant, le vrai problème n'était pas
+la valeur de la durée (déjà correcte) mais un **effet de bord du mécanisme construit en §29**.
+
+### Valeurs actuelles confirmées avant toute modification
+
+`ACCESS_TOKEN_TTL_SECONDS=900` (15 min) et `REFRESH_TOKEN_TTL_SECONDS=2592000` (exactement 30 j),
+déjà réglées ainsi dans `.env`/`.env.example` et déjà les valeurs par défaut de `src/auth.ts` —
+**aucun changement numérique nécessaire**, la durée demandée était déjà en place.
+
+### Cause réelle trouvée par lecture de code + test direct — pas la durée, le veilleur de §29
+
+`refetchInterval={300}` sur le `SessionProvider` de `AuthenticatedArea` (§29, point 4 —
+« maintenir la session vivante ») interroge `GET /api/auth/session` toutes les 5 min tant qu'un
+onglet reste ouvert. Or, sous stratégie JWT, `@auth/core` **re-signe le cookie de session avec une
+échéance `now + 30 j` à chaque appel de cette route précise**, sans le throttle `updateAge` (24 h)
+qui ne s'applique qu'à la stratégie "database" (vérifié dans le code source installé,
+`node_modules/@auth/core/lib/actions/session.js`, **et** confirmé par un test curl direct : un
+`auth()` isolé — page serveur, route API — ne bouge pas l'échéance du cookie, seul un vrai
+`GET /api/auth/session` le fait, précisément de la durée écoulée depuis le dernier appel). Un onglet
+Klarity oublié ouvert sur un appareil partagé, même totalement inactif, aurait donc vu sa fenêtre de
+30 jours repoussée indéfiniment toutes les 5 min — exactement la session sans expiration que
+l'utilisateur voulait éviter. Corrigé : **`refetchInterval` retiré**, ne reste que
+`refetchOnWindowFocus` (déjà présent) — le renouvellement silencieux reste garanti par de vraies
+preuves d'activité (montage de `SessionProvider` à chaque navigation réelle vers un espace
+authentifié, retour de focus sur l'onglet), jamais par un minuteur aveugle indépendant de toute
+action réelle. `src/auth.ts` et `AuthenticatedArea.tsx` documentent ce mécanisme en détail pour
+qu'il ne soit pas réintroduit par erreur.
+
+### Testé réellement
+
+- **Rolling renewal sur activité réelle** (curl, cookie jar, TTL réel 30 j) : `auth()` seul
+  (`GET /api/eleve/matieres`) ne bouge jamais l'échéance du cookie ; `GET /api/auth/session` la
+  déplace à chaque appel, précisément de `+N s` où `N` = secondes écoulées depuis le dernier appel
+  (`4b` → `5b`, exactement `+5 s` après une pause de 5 s) — le mécanisme "reste connecté tant
+  qu'utilisé" fonctionne bel et bien, sans dépendre d'un minuteur.
+- **Plus de veille en arrière-plan** (navigateur réel, `read_network_requests`) : connexion élève de
+  test → `/eleve` → **20 s d'inactivité totale, aucune interaction** → **une seule** requête
+  `/api/auth/session` sur toute la fenêtre (le montage initial de `SessionProvider`), zéro requête
+  supplémentaire — confirme la disparition du polling aveugle de §29.
+- **Expiration réelle après inactivité complète** (`REFRESH_TOKEN_TTL_SECONDS` abaissé temporairement
+  à 12 s pour accélérer le test, conteneur `app` recréé, testé, puis remis à 2 592 000 et recréé de
+  nouveau — confirmé restauré) : connexion élève → session valide (`200`) → **15 s d'attente sans
+  aucune requête** → `GET /api/eleve/matieres` → **401** `{"code":"SESSION_EXPIREE",
+  "connexion":"/connexion"}` (§29) ; `GET /eleve` → **307** vers `/connexion?from=%2Feleve` — une
+  session réellement inactive au-delà de sa fenêtre expire pour de vrai, et retombe proprement sur
+  le mécanisme de §29 plutôt qu'un blocage brutal.
+- `tsc --noEmit` : 0 erreur. `eslint src/` : 0 erreur, 3 warnings préexistants inchangés.
+- Comptes élève de test (`ELE-DNF-UXS`, et le reliquat `ELE-74R-WQV` de §29) supprimés après coup,
+  vérifié 0 ligne restante.
+
+### Élève — même logique, confirmée
+
+`REFRESH_TOKEN_TTL_SECONDS` est un réglage unique partagé par les 3 providers Credentials
+(`session.maxAge` global dans `src/auth.ts`) — la correction ci-dessus s'applique donc identiquement
+à l'élève : pas de re-saisie du PIN à chaque session sur un même appareil tant qu'il reste utilisé
+au moins une fois dans la fenêtre de 30 j, testé explicitement ci-dessus avec un compte élève.
 
