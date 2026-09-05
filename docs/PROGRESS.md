@@ -136,8 +136,9 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
 - **Dette de méthode CDC documentée** (§5 point 4) : la redaction PyMuPDF ne sait pas refaire le
   flux ; le tableau visuel §4.2.2 reste à 4 lignes alors que l'enum en a 7 — solution de fond =
   reconstruire le CDC depuis une source Markdown → WeasyPrint, le jour où ce sera nécessaire.
-- Graphe Graphify resynchronisé pour §28 / CDC v1.31 (à la demande de l'utilisateur) — 1289 nœuds,
-  santé propre ; **pas encore rejoué pour §29–§32** (`graphify-out/` local, gitignoré).
+- Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
+  2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
+  attente après merge (`graphify-out/` local, gitignoré).
 
 `next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
 le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
@@ -223,11 +224,13 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
 persistant (`graphify-out/`, local et gitignoré). Sert de garde-fou pour repérer les incohérences
 entre maquettes, CDC et code au fil du développement. **État : `graphify --update` rejoué le
-4 septembre pour intégrer §28 et le CDC v1.31 — 1289 nœuds / 1898 arêtes / 130 communautés, santé
-propre (aucune arête orpheline / endpoint manquant / doublon).** Couvre jusqu'à §28 inclus (CDC
-v1.31, `EXPRESSION_ECRITE` / `CORRECTION_ORTHOGRAPHIQUE`, `TypeExerciceCorrection` à 7 valeurs).
-**Pas encore rejoué pour §29–§32** (gestion de l'expiration de session, 7 exemples few-shot,
-connexion « Épreuves ») — `detect_incremental` signale des fichiers en attente ; à relancer.
+5 septembre pour intégrer §29–§32 — 1326 nœuds / 2030 arêtes / 140 communautés, santé propre
+(91 % EXTRACTED, 8 % INFERRED, 0 AMBIGUOUS ; aucune arête orpheline / endpoint manquant /
+doublon), `detect_incremental` = 0 fichier en attente.** Couvre le mécanisme centralisé
+d'expiration de session (§29 : `exigerRole`, `apiFetch`, `AuthenticatedArea`,
+`SessionExpiryWatcher`), le correctif durée réelle du refresh token (§30), les 7 `ExempleCorrection`
+few-shot chargés (§31) et l'écran de connexion « Épreuves » élève-seul (§32), en plus de §28
+(CDC v1.31, `TypeExerciceCorrection` à 7 valeurs).
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
