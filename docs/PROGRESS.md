@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 5 septembre 2026 (connexion depuis "Épreuves" : option Parent retirée, Élève centrée, voir §32)_
+_Dernière mise à jour : 5 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–5 septembre (§28 à §32)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -66,9 +66,9 @@ _Dernière mise à jour : 5 septembre 2026 (connexion depuis "Épreuves" : optio
 
 ## 1. Où en est le projet, dans l'ensemble
 
-Le cadrage produit et technique est consolidé (cahier des charges **v1.30**,
+Le cadrage produit et technique est consolidé (cahier des charges **v1.31**,
 `docs/specs/Klarity_Cahier_des_Charges.pdf`), le schéma de données est finalisé et migré
-(2 migrations), et le socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est
+(3 migrations), et le socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est
 entamée : inscription élève, connexion élève/parent, connexion admin cloisonnée
 (`/admin/connexion`, création CLI uniquement), chargement du programme officiel, chat-tuteur IA
 mode 1 (généraliste, `MockAIProvider`), **banque d'épreuves élève** (§27) et dashboards
@@ -112,6 +112,33 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
+**Travail des 4–5 septembre 2026 (§28 à §32) :**
+- **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
+  l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
+  `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
+  migration `20260904074258_…` (3ᵉ migration). L'enum compte 7 valeurs.
+- **Les 7 `ExempleCorrection` few-shot complets** (§31) : `enonceModele` / `exempleReponseModele` /
+  `notesMethodologiques` remplis pour les 7 types (Dissertation Philo, la dernière pièce, incluse),
+  vérifiés octet par octet en base ; `baremeStructure` inchangé. Le dispositif RAG/few-shot §4.2.2
+  est donc **au complet** — reste bloqué uniquement sur la clé API Anthropic pour être exercé.
+- **Gestion centralisée de l'expiration de session** (§29, les 3 rôles) : `exigerRole()` (401
+  structurée `SESSION_EXPIREE`) sur 11 routes API, `apiFetch()` client qui redirige proprement vers
+  `/connexion` (ou `/admin/connexion`) avec `?from=…&raison=expiree` + retour automatique à la page
+  d'origine, bandeau « Ta session a expiré », veilleur proactif (`SessionExpiryWatcher`).
+- **Durée réelle du refresh token** (§30) : bug de session *de facto* infinie corrigé — le
+  `refetchInterval` du `SessionProvider` (§29) repoussait silencieusement la fenêtre de 30 jours
+  toutes les 5 min tant qu'un onglet restait ouvert. Retiré ; le renouvellement reste calé sur une
+  activité réelle (navigation, retour de focus). `REFRESH_TOKEN_TTL_SECONDS = 2 592 000` (30 j)
+  inchangé, expiration réelle après 30 j d'inactivité vérifiée.
+- **Connexion depuis « Épreuves »** (§32) : la banque d'épreuves étant réservée à l'élève, cet
+  écran de connexion retire complètement l'option Parent (pas seulement grisée) et centre l'unique
+  option « Élève ».
+- **Dette de méthode CDC documentée** (§5 point 4) : la redaction PyMuPDF ne sait pas refaire le
+  flux ; le tableau visuel §4.2.2 reste à 4 lignes alors que l'enum en a 7 — solution de fond =
+  reconstruire le CDC depuis une source Markdown → WeasyPrint, le jour où ce sera nécessaire.
+- Graphe Graphify resynchronisé pour §28 / CDC v1.31 (à la demande de l'utilisateur) — 1289 nœuds,
+  santé propre ; **pas encore rejoué pour §29–§32** (`graphify-out/` local, gitignoré).
+
 `next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
 le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
 réparé le 1er septembre (§ « Outillage »).
@@ -141,8 +168,8 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
 - **Docker Compose** : `app`, `worker`, `postgres`, `redis`, `adminer` (outil de dev en plus du
   minimum requis).
 - **Prisma** : `schema.prisma` finalisé (26 modèles, 22 enums, conforme au §4 du CDC) et migré —
-  2 migrations : `20260819070754_init` puis `20260902113429_add_commentaire_compose_type_exercice`
-  (§23).
+  3 migrations : `20260819070754_init`, `20260902113429_add_commentaire_compose_type_exercice`
+  (§23), puis `20260904074258_add_expression_ecrite_correction_orthographique_type_exercice` (§28).
 - **Auth.js v5**, sessions JWT stateless avec rotation de refresh token (`src/auth.ts`) :
   - Provider `eleve` — code élève + PIN (verrouillage après échecs répétés, `PIN_MAX_ATTEMPTS`).
   - Provider `parent` — code élève + téléphone + OTP (`/api/auth/parent/request-otp`), qui
@@ -152,6 +179,10 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
     (`/admin`, `/parent`, `/eleve`) côté serveur, via `src/lib/auth/session.ts` — la
     vérification d'appartenance à la ressource précise (IDOR) reste à faire par route en
     Phase 1+ (voir §5, item ouvert).
+  - **Expiration de session** (§29–§30) : détection centralisée `exigerRole()` sur les routes
+    API (401 structurée `SESSION_EXPIREE`), redirection propre côté client (`apiFetch`) + retour
+    à la page d'origine, veilleur proactif ; refresh token de 30 jours renouvelé sur activité
+    réelle uniquement (jamais un onglet inactif).
 
 ### Abstractions de services externes — même patron mock → réel (4)
 Le CDC recommande explicitement de respecter les interfaces des services externes dès la
@@ -190,16 +221,13 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 
 ### Graphe de connaissances Graphify
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
-persistant (`graphify-out/`) : **1125 nœuds, 1832 arêtes, 112 communautés**, santé du graphe
-propre (aucune arête orpheline, aucun endpoint manquant, aucun doublon). Sert de garde-fou pour
-repérer les incohérences entre maquettes, CDC et code au fil du développement. **À jour au
-2 septembre 2026** (`graphify --update` rejoué après audit — `detect_incremental` = 0 fichier en
-attente) : couvre la Phase 2 paiement, le travail du 1er septembre (SMS, back-office admin,
-rétention), la bascule R2 réelle, **et** toute la série de changements du 2 septembre — CDC v1.30,
-`COMMENTAIRE_COMPOSE` dans l'enum, seed `ExempleCorrection` (§24), SVT séries C/D/TI (§22). Les
-nœuds « Changelog v1.28 → v1.29 » / « Changelog v1.29 → v1.30 » / « TypeExerciceCorrection enum
-(5 valeurs) » / « seedExemplesCorrection() » sont présents et reliés à la table §2.1, à
-`Matiere.filiereRequise`, à `ProgrammeOfficiel` et à `corrigerCopie()`.
+persistant (`graphify-out/`, local et gitignoré). Sert de garde-fou pour repérer les incohérences
+entre maquettes, CDC et code au fil du développement. **État : `graphify --update` rejoué le
+4 septembre pour intégrer §28 et le CDC v1.31 — 1289 nœuds / 1898 arêtes / 130 communautés, santé
+propre (aucune arête orpheline / endpoint manquant / doublon).** Couvre jusqu'à §28 inclus (CDC
+v1.31, `EXPRESSION_ECRITE` / `CORRECTION_ORTHOGRAPHIQUE`, `TypeExerciceCorrection` à 7 valeurs).
+**Pas encore rejoué pour §29–§32** (gestion de l'expiration de session, 7 exemples few-shot,
+connexion « Épreuves ») — `detect_incremental` signale des fichiers en attente ; à relancer.
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
