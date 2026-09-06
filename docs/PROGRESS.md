@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §35)_
+_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §36)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -112,7 +112,7 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
-**Travail des 4–6 septembre 2026 (§28 à §35) :**
+**Travail des 4–6 septembre 2026 (§28 à §36) :**
 - **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
   l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
   `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
@@ -151,6 +151,10 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
   serveur), écran `/parent/temps-passe` (agrégation par jour / semaine, IDOR `ParentEleveLink`).
   Côté parent, restent grisés : Progression, Notes, Lacunes (catégorie 2 — dépendent d'une vraie
   correction IA).
+- **Format unique du numéro de téléphone** (§36) : composant `PhoneInput` imposant
+  `+237 6XX XX XX XX` (préfixe `+237 6` fixe, espaces automatiques) sur les 2 points de saisie
+  (connexion parent, paiement Mobile Money), + normalisation serveur en forme canonique
+  `+2376XXXXXXXX` (`request-otp`, provider `parent`).
 - Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
   2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
   attente après merge (`graphify-out/` local, gitignoré).
@@ -2527,4 +2531,68 @@ vers cet écran.
   graphiques jour/semaine cohérents, `?eleve=<id non lié>` → retombe sur l'enfant lié.
 - Toutes les données de test (élève, parent, `SessionActivite`, `ParentEleveLink`, OTP) supprimées
   après coup — base revenue à 3 élèves / 1 parent / 0 `sessions_activite` / 2 liens.
+
+## 36. Format imposé du numéro de téléphone — `+237 6XX XX XX XX` (6 septembre 2026)
+
+Demande utilisateur : partout où un numéro est saisi, imposer le format
+`+237 6XX XX XX XX` — le préfixe `+237 6` **fixe et ineffaçable**, la saisie ne
+commençant qu'au chiffre suivant le `6`, et les espaces posés automatiquement au
+fil de la frappe (`XX XX XX XX`).
+
+### `src/components/ui/PhoneInput.tsx` (nouveau)
+
+Champ contrôlé unique. Le préfixe `+237 6` est un `<span>` **hors du champ** —
+impossible à sélectionner ou effacer ; il est collé au premier chiffre pour
+former le groupe `6XX`. L'utilisateur ne tape que les **8 chiffres** suivants,
+regroupés `XX XX XX XX` (formatage à lookahead — jamais d'espace en fin).
+Collage géré (extraction des chiffres, retrait d'un `237` / `6` de tête).
+Valeur remontée : toujours la **forme canonique** `+2376XXXXXXXX` (sans
+espaces). `inputMode="numeric"`, `autoComplete="tel-national"`, hint de format,
+`aria-describedby`.
+
+### `src/lib/format.ts` — helpers partagés
+
+`chiffresLocauxTelephone`, `formaterChiffresLocaux`, `versTelephoneCanonique`,
+`estTelephoneCamerounaisComplet`, `normaliserTelephoneCamerounais` (saisie libre
+→ `+2376XXXXXXXX` ou `null`). `masquerTelephone` inchangé.
+
+### Points de saisie migrés
+
+- **`ParentLoginForm.tsx`** (connexion parent) — le champ téléphone devient un
+  `PhoneInput` ; validation client sur `estTelephoneCamerounaisComplet`.
+- **`PaiementForm.tsx`** (Mobile Money, §2.6) — remplace le `+237` + input
+  chiffres par un `PhoneInput` ; l'ancienne regex `^6\d{8}$` cède la place au
+  helper partagé.
+
+### Normalisation serveur (cohérence + défense en profondeur)
+
+Un numéro tapé avec ou sans espaces ne doit jamais créer deux comptes / deux
+entrées OTP. La forme canonique `+2376XXXXXXXX` est déjà celle produite par
+`/api/paiement/initier` et celle des lignes `Parent.telephone` existantes.
+Ajout de la normalisation manquante :
+
+- **`/api/auth/parent/request-otp`** — `normaliserTelephoneCamerounais` avant
+  rate-limit + `envoyerOtp` (400 si numéro non camerounais).
+- **`src/auth.ts`, provider `parent`** — normalisation avant la recherche
+  `OtpVerification` et l'upsert `Parent` : `request-otp` et `authorize`
+  cherchent désormais exactement la même valeur.
+
+### Vérifié bout en bout (navigateur réel)
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur** (3 warnings préexistants).
+- Helpers : table de cas (`77123456`, `677123456`, `+237 6 77 12 34 56`,
+  `237677123456`, incomplet, trop long, `abc`) → tous conformes.
+- **`PhoneInput` sur `/connexion` (onglet Parent)** : préfixe `+237 6` affiché
+  fixe ; frappe `98765432` → `+237 698 76 54 32` (espaces automatiques) ; 9ᵉ
+  chiffre ignoré (plafond 8) ; `Backspace` retire un chiffre et regroupe ;
+  `Ctrl+A` + `Suppr` efface les chiffres **mais pas le préfixe**.
+- **Connexion parent complète** (numéro tapé au format + code élève + OTP mock)
+  → session `PARENT`, `Parent.telephone` = `+237698765432` (13 car., sans
+  espaces), `OtpVerification.telephone` idem, `ParentEleveLink` créé.
+- **`PhoneInput` sur `/abonnement/paiement`** (parent payeur) : rendu correct
+  dans la colonne du formulaire, hint « Mode simulation » conservé ; paiement
+  Orange Money `+237 677 11 22 33` → `Paiement.payeurTelephone` = `+237677112233`,
+  statut `REUSSI`.
+- Données de test (élève, parent, abonnement, paiement, lien, OTP) supprimées —
+  base revenue à 3 élèves / 1 parent / 5 paiements / 2 liens.
 

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { PinInput } from "@/components/ui/PinInput";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { IconUser, IconLock } from "@/components/icons";
-import { masquerTelephone } from "@/lib/format";
+import { masquerTelephone, estTelephoneCamerounaisComplet } from "@/lib/format";
 import { cibleRetour } from "@/lib/api-client";
 
 const DELAI_RENVOI_SECONDES = 60;
@@ -39,8 +40,8 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
 
   async function demanderCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!telephone.trim() || !codeEleve.trim()) {
-      setErreur("Renseigne ton numéro de téléphone et le code élève.");
+    if (!estTelephoneCamerounaisComplet(telephone) || !codeEleve.trim()) {
+      setErreur("Renseigne ton numéro complet (+237 6XX XX XX XX) et le code élève.");
       return;
     }
     setErreur(null);
@@ -49,7 +50,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
       const res = await fetch("/api/auth/parent/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ telephone: telephone.trim() }),
+        body: JSON.stringify({ telephone }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -78,7 +79,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
     try {
       const resultat = await signIn("parent", {
         codeEleve: codeEleve.trim().toUpperCase(),
-        telephone: telephone.trim(),
+        telephone,
         otp,
         redirect: false,
       });
@@ -163,18 +164,12 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
       <p className="mt-2 text-base text-texte-muted">Suis la progression de ton enfant en temps réel.</p>
 
       <div className="mt-6">
-        <label htmlFor="telephone" className="mb-2 block text-sm font-semibold text-texte">
-          Numéro de téléphone
-        </label>
-        <input
+        <PhoneInput
           id="telephone"
-          type="tel"
-          autoFocus
-          autoComplete="tel"
+          label="Numéro de téléphone"
           value={telephone}
-          onChange={(e) => setTelephone(e.target.value)}
-          placeholder="+237 6XX XX XX XX"
-          className="w-full rounded-xl border-2 border-border bg-surface px-4 py-3 text-base text-texte outline-none transition-colors focus:border-primary"
+          onChange={setTelephone}
+          autoFocus
         />
       </div>
 

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconLock } from "@/components/icons";
 import { PinInput } from "@/components/ui/PinInput";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { estTelephoneCamerounaisComplet } from "@/lib/format";
 
 interface PaiementFormProps {
   eleveId: string;
@@ -43,8 +45,8 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
       setError("Choisis un opérateur.");
       return false;
     }
-    if (!/^6\d{8}$/.test(telephone.replace(/\D/g, ""))) {
-      setError("Numéro Mobile Money invalide (9 chiffres, commence par 6).");
+    if (!estTelephoneCamerounaisComplet(telephone)) {
+      setError("Numéro Mobile Money incomplet (+237 6XX XX XX XX).");
       return false;
     }
     setError(null);
@@ -60,7 +62,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
         body: JSON.stringify({
           eleveId,
           operateur,
-          telephone: telephone.replace(/\D/g, ""),
+          telephone,
           ...(pinConfirmation ? { pin: pinConfirmation } : {}),
         }),
       });
@@ -164,20 +166,13 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
               </div>
             </fieldset>
 
-            <label htmlFor="telephone" className="mt-5 mb-2 block text-sm font-semibold text-texte">
-              Numéro de téléphone
-            </label>
-            <div className="flex items-center gap-2 rounded-xl border-2 border-border px-4 py-3 focus-within:border-primary">
-              <span className="text-sm text-texte-muted">+237</span>
-              <input
+            <div className="mt-5">
+              <PhoneInput
                 id="telephone"
-                type="tel"
-                inputMode="numeric"
-                autoFocus
+                label="Numéro de téléphone"
                 value={telephone}
-                onChange={(e) => setTelephone(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                placeholder="6XX XXX XXX"
-                className="w-full text-base text-texte outline-none"
+                onChange={setTelephone}
+                autoFocus
               />
             </div>
             {DEV_HINT_VISIBLE && (

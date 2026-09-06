@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { envoyerOtp } from "@/lib/auth/otp";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { normaliserTelephoneCamerounais } from "@/lib/format";
 
 /**
  * Envoi de l'OTP SMS pour la connexion parent (§2.2, §2.7). Rate limiting IP +
@@ -9,9 +10,13 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * par `SmsProvider` (`src/lib/sms`, via `envoyerOtp`) : `SMS_MODE=mock` logue le
  * message, `SMS_MODE=live` enverra un vrai SMS dès souscription du fournisseur
  * (§3).
+ *
+ * Le numéro est **normalisé** en forme canonique `+2376XXXXXXXX` avant tout
+ * usage — même valeur que celle recherchée par `authorize` (`src/auth.ts`) et
+ * que `Parent.telephone`, quels que soient les espaces / préfixes tapés.
  */
 const bodySchema = z.object({
-  telephone: z.string().min(8),
+  telephone: z.string().min(1),
 });
 
 const LIMIT = 5;
@@ -22,7 +27,11 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Numéro de téléphone invalide." }, { status: 400 });
   }
-  const { telephone } = parsed.data;
+
+  const telephone = normaliserTelephoneCamerounais(parsed.data.telephone);
+  if (!telephone) {
+    return NextResponse.json({ error: "Numéro de téléphone camerounais invalide (+237 6XX XX XX XX)." }, { status: 400 });
+  }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const [okTelephone, okIp] = await Promise.all([

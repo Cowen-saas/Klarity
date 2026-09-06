@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPin, PIN_MAX_ATTEMPTS, PIN_LOCKOUT_MINUTES } from "@/lib/auth/pin";
 import { verifyOtp } from "@/lib/auth/otp";
 import { verifyTotp } from "@/lib/auth/totp";
+import { normaliserTelephoneCamerounais } from "@/lib/format";
 import type { ActeurRole } from "@/types/next-auth";
 
 /**
@@ -148,9 +149,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const codeEleve = credentials?.codeEleve as string | undefined;
-        const telephone = credentials?.telephone as string | undefined;
+        const telephoneSaisi = credentials?.telephone as string | undefined;
         const otp = credentials?.otp as string | undefined;
-        if (!codeEleve || !telephone || !otp) return null;
+        if (!codeEleve || !telephoneSaisi || !otp) return null;
+
+        // Forme canonique `+2376XXXXXXXX` — identique à celle stockée par
+        // `request-otp` et `Parent.telephone`, quels que soient les espaces tapés.
+        const telephone = normaliserTelephoneCamerounais(telephoneSaisi);
+        if (!telephone) return null;
 
         const eleve = await prisma.eleve.findUnique({ where: { codeEleve } });
         if (!eleve) return null;
