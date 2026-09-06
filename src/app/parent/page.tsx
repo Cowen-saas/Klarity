@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -183,16 +184,28 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: "Progression générale", valeur: progressionGenerale !== null ? `${progressionGenerale}%` : "—" },
-          { label: "Épreuves réalisées", valeur: corrections.length > 0 ? String(corrections.length) : "—" },
-          { label: "Temps cette semaine", valeur: tempsCetteSemaine > 0 ? formatDuree(tempsCetteSemaine) : "—" },
-          { label: "Moyenne générale", valeur: moyenneGenerale !== null ? `${moyenneGenerale.toFixed(1).replace(".", ",")}/20` : "—" },
-        ].map((tuile) => (
-          <div key={tuile.label} className="rounded-2xl bg-surface p-5 shadow-sm">
-            <p className="text-xs text-texte-muted">{tuile.label}</p>
-            <p className="mt-2 text-xl font-bold text-texte">{tuile.valeur}</p>
-          </div>
-        ))}
+          { label: "Progression générale", valeur: progressionGenerale !== null ? `${progressionGenerale}%` : "—", href: undefined },
+          { label: "Épreuves réalisées", valeur: corrections.length > 0 ? String(corrections.length) : "—", href: undefined },
+          {
+            label: "Temps cette semaine",
+            valeur: tempsCetteSemaine > 0 ? formatDuree(tempsCetteSemaine) : "—",
+            href: `/parent/temps-passe?eleve=${eleve.id}`,
+          },
+          { label: "Moyenne générale", valeur: moyenneGenerale !== null ? `${moyenneGenerale.toFixed(1).replace(".", ",")}/20` : "—", href: undefined },
+        ].map((tuile) =>
+          tuile.href ? (
+            <Link key={tuile.label} href={tuile.href} className="rounded-2xl bg-surface p-5 shadow-sm transition-colors hover:bg-fond">
+              <p className="text-xs text-texte-muted">{tuile.label}</p>
+              <p className="mt-2 text-xl font-bold text-texte">{tuile.valeur}</p>
+              <p className="mt-1 text-xs font-semibold text-primary">Voir le détail →</p>
+            </Link>
+          ) : (
+            <div key={tuile.label} className="rounded-2xl bg-surface p-5 shadow-sm">
+              <p className="text-xs text-texte-muted">{tuile.label}</p>
+              <p className="mt-2 text-xl font-bold text-texte">{tuile.valeur}</p>
+            </div>
+          ),
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">

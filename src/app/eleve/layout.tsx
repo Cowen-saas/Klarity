@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { EleveShell } from "@/components/eleve/EleveShell";
+import { ActivityTracker } from "@/components/eleve/ActivityTracker";
 import { AuthenticatedArea } from "@/components/auth/AuthenticatedArea";
 
 export default async function EleveLayout({ children }: LayoutProps<"/eleve">) {
@@ -13,6 +14,7 @@ export default async function EleveLayout({ children }: LayoutProps<"/eleve">) {
 
   return (
     <AuthenticatedArea session={session}>
+      <ActivityTracker />
       <EleveShell>{children}</EleveShell>
     </AuthenticatedArea>
   );

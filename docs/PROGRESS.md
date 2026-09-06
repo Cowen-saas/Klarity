@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §34)_
+_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §35)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -112,7 +112,7 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
-**Travail des 4–6 septembre 2026 (§28 à §34) :**
+**Travail des 4–6 septembre 2026 (§28 à §35) :**
 - **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
   l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
   `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
@@ -144,6 +144,13 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
   « Données de test » tant que `PAYMENT_MODE != live`. Tous branchés sur les vraies données déjà en
   base, badges « Bientôt » retirés dans `AdminShell`. **Seul reste grisé : Paramètres** (attend une
   décision produit sur le périmètre configurable).
+- **« Temps passé » débloqué côté parent** (§35) — le seul item de catégorie 5 qui demandait un
+  nouveau composant, pas qu'un écran de lecture. Nouveau `ActivityTracker` client (accumulation
+  calée sur une *vraie* interaction, jamais un minuteur aveugle — cf. mémoire §29/§30),
+  `POST /api/eleve/activite` (borne par envoi + plafond quotidien 8 h, tous deux re-vérifiés
+  serveur), écran `/parent/temps-passe` (agrégation par jour / semaine, IDOR `ParentEleveLink`).
+  Côté parent, restent grisés : Progression, Notes, Lacunes (catégorie 2 — dépendent d'une vraie
+  correction IA).
 - Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
   2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
   attente après merge (`graphify-out/` local, gitignoré).
@@ -2458,4 +2465,66 @@ tous les paiements → » ajoutés sur les sections CA et journal des paiements.
   « 2 transactions (filtré) », panneau détail (`?paiement=…`) affichant le webhook `CREDITE` lié ;
   Revenus → MRR 15 000, CA 15 000, churn 0 %, `BarChart` Aoû/Sep, Premium 100 % ; sidebar sans
   badge sur Paiements/Revenus, seul Paramètres grisé.
+
+## 35. « Temps passé » côté parent — mesure du temps réel + écran d'agrégation (6 septembre 2026)
+
+Dernier item « catégorie 5 » de l'audit §33, et le seul qui demandait un **nouveau mécanisme**
+(mesure du temps), pas juste un écran de lecture. Choix acté avec l'utilisateur : agrégation
+**par jour + par semaine uniquement**, pas de volet « par matière » (la table `SessionActivite`
+n'a pas de champ matière et le brief fondateur ne lie « par matière » qu'à la
+progression/lacunes, pas au temps passé — pas de migration).
+
+### `ActivityTracker` (`src/components/eleve/ActivityTracker.tsx`, monté dans le layout élève)
+
+Mesure le temps réellement passé, **jamais un minuteur aveugle** (cf. mémoire projet §29/§30) :
+
+- Le temps ne s'accumule que si le compteur a vu une *vraie* interaction (`pointerdown`, `keydown`,
+  `scroll`, `wheel`, `touchstart`, ou retour de focus volontaire sur l'onglet) dans les 60 dernières
+  secondes **et** que `document.visibilityState === "visible"`. Un onglet oublié ouvert cesse de
+  compter au bout d'une minute ; un onglet en arrière-plan ne compte pas du tout.
+- Accumulation **à pas fixe** (5 s par tick actif, jamais l'écart réel entre deux ticks) — un timer
+  en retard (machine sortie de veille, onglet throttlé) ne peut donc pas gonfler le temps.
+- Envoi par `navigator.sendBeacon` (résiste à la fermeture d'onglet) au passage en arrière-plan,
+  à `pagehide`, au démontage, et un envoi de sécurité toutes les 60 s ; repli `fetch` `keepalive`.
+
+### `POST /api/eleve/activite`
+
+`exigerRole("ELEVE")`, écrit une `SessionActivite` (`canal=WEB`, `dateDebut` reconstruit =
+`dateFin − dureeSecondes`) **pour l'élève connecté uniquement** (pas de paramètre d'id → pas
+d'IDOR possible), et bump `Eleve.derniereActiviteLe`. Le payload venant du client est **non
+fiable** → deux garde-fous serveur : borne de 15 min par envoi (`SEGMENT_MAX_SECONDES`) et
+**plafond quotidien de 8 h** par élève (`PLAFOND_QUOTIDIEN_SECONDES`, le dernier segment de la
+journée est tronqué pour ne jamais dépasser).
+
+### `/parent/temps-passe`
+
+Server Component, gate PARENT en triple défense. **IDOR** : `?eleve=` re-validé contre les
+`ParentEleveLink` du parent à chaque requête (un id non lié retombe sur l'enfant lié, aucune
+donnée d'un autre enfant n'est exposée). Tuiles (cette semaine + delta vs semaine précédente,
+7 j, 30 j, moyenne/jour actif) + deux `BarChart` (par jour sur 14 j, par semaine sur 8 sem.) +
+la note de confidentialité (« jamais l'activité minute par minute »). `ParentShell` : `disabled`
+retiré sur « Temps passé » ; tuile « Temps cette semaine » de la vue d'ensemble rendue cliquable
+vers cet écran.
+
+### Vérifié bout en bout (navigateur réel)
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur** (3 warnings préexistants).
+- Routes non authentifiées → `/parent/temps-passe` **307 vers `/connexion`** ; `POST /api/eleve/activite`
+  sans session → **401**.
+- **`ActivityTracker` exercé sur `/eleve`** avec un élève de test créé via l'inscription publique.
+  Comme la fenêtre Chrome pilotée est `hidden`, `visibilityState` a été forcé `visible` depuis la
+  console pour exercer le *vrai* chemin d'accumulation du composant monté (code non modifié) :
+  - activité simulée continue ~227 s → **220 s enregistrés** (jamais > temps écoulé — pas d'inflation) ;
+  - après arrêt de l'interaction (onglet resté visible), **plus aucune seconde accumulée** pendant
+    110 s+ — le compteur s'arrête bien à l'inactivité ;
+  - `dateFin − dateDebut` = `dureeSecondes` exactement sur chaque ligne.
+- **Garde-fous serveur** (payloads forgés depuis la session élève) : `1500` → stocké **900**
+  (borne segment) ; 34 envois de 900 s → total plafonné **exactement à 28 800 s** (dernier segment
+  tronqué à 855), puis `{ ok:true, ignore:"plafond quotidien atteint" }` ; `-5` / `3.7` / `99999`
+  → **400**.
+- **`/parent/temps-passe`** avec un parent de test lié via le vrai flux OTP : agrégations
+  conformes à la base (7 j = 4 h 07, 30 j = 6 h 56, 10 jours actifs, moyenne 42 min/jour actif),
+  graphiques jour/semaine cohérents, `?eleve=<id non lié>` → retombe sur l'enfant lié.
+- Toutes les données de test (élève, parent, `SessionActivite`, `ParentEleveLink`, OTP) supprimées
+  après coup — base revenue à 3 élèves / 1 parent / 0 `sessions_activite` / 2 liens.
 

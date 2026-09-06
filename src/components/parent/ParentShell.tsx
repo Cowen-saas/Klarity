@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/parent/progression", label: "Progression", icon: IconChart, disabled: true },
   { href: "/parent/notes", label: "Notes", icon: IconPencil, disabled: true },
   { href: "/parent/lacunes", label: "Lacunes", icon: IconBulb, disabled: true },
-  { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock, disabled: true },
+  { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock },
   { href: "/parent/notifications", label: "Notifications", icon: IconBell },
   { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },
   { href: "/parent/parametres", label: "Paramètres", icon: IconSettings },
