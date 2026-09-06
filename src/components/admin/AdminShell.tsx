@@ -46,7 +46,7 @@ function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
     { href: "/admin/securite", label: "Sécurité", icon: IconShield },
     { href: "/admin/paiements", label: "Paiements", icon: IconCreditCard },
     { href: "/admin/revenus", label: "Revenus", icon: IconCoins },
-    { href: "/admin/parametres", label: "Paramètres", icon: IconSettings, disabled: true },
+    { href: "/admin/parametres", label: "Paramètres", icon: IconSettings },
   ];
 }
 

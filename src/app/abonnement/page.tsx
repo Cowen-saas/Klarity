@@ -4,12 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { obtenirTarifPremium } from "@/lib/payment/tarification";
 import { IconCheckCircle, IconLock } from "@/components/icons";
 
-const LABEL_PERIODE: Record<string, string> = {
-  NOEL: "🎁 Offre de Noël — Décembre à Février",
-  PAQUES: "🐣 Offre de Pâques — Avril à Juin",
-  NORMALE: "",
-};
-
 const CLASSE_LABELS: Record<string, string> = {
   TROISIEME: "3e",
   PREMIERE: "1ère",
@@ -107,8 +101,8 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
     : null;
   const payeParLabel =
     dernierPaiementReussi?.payeurRole === "PARENT" ? "un parent" : dernierPaiementReussi?.payeurRole === "ELEVE" ? "l'élève" : null;
-  const tarif = obtenirTarifPremium(new Date());
-  const pourcentageReduction = Math.round((tarif.reduction / tarif.prixNormal) * 100);
+  const tarif = await obtenirTarifPremium(new Date());
+  const pourcentageReduction = tarif.reduction > 0 ? Math.round((tarif.reduction / tarif.prixNormal) * 100) : 0;
 
   const hrefGratuit = !authentifie
     ? "/abonnement/eleve-ou-parent"
@@ -154,9 +148,9 @@ export default async function AbonnementPage({ searchParams }: PageProps<"/abonn
           </div>
         ) : (
           <div className="text-center">
-            {tarif.periode !== "NORMALE" && (
+            {tarif.enPromo && tarif.nomPeriode && (
               <span className="inline-block rounded-full bg-danger-light px-4 py-1.5 text-xs font-bold text-danger">
-                {LABEL_PERIODE[tarif.periode]}
+                🎁 {tarif.nomPeriode}
               </span>
             )}
             <h1 className="mt-4 text-2xl font-bold text-texte sm:text-3xl">Choisissez votre formule</h1>

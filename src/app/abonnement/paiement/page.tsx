@@ -35,7 +35,7 @@ export default async function PaiementPage({ searchParams }: PageProps<"/abonnem
     redirect(`/abonnement?compte=1&eleve=${eleveId}`);
   }
 
-  const tarif = obtenirTarifPremium(new Date());
+  const tarif = await obtenirTarifPremium(new Date());
 
   return (
     <div className="mx-auto max-w-4xl">

@@ -264,6 +264,7 @@ model Admin {
   exemplesCorrectionAjoutes  ExempleCorrection[]
   programmesOfficielsAjoutes ProgrammeOfficiel[]
   correctionsOverridees      CorrectionDetail[]
+  periodesTarifairesAjoutees PeriodeTarifaire[]
 
   @@map("admins")
 }
@@ -686,6 +687,30 @@ model WebhookLog {
   createdAt DateTime @default(now())
 
   @@map("webhook_logs")
+}
+
+// Fenêtres tarifaires promotionnelles (§2.4.1) — remplacent les dates/prix
+// autrefois écrits en dur dans src/lib/payment/tarification.ts. Gérées par
+// l'admin (§2.3, /admin/parametres). Aucune fenêtre active couvrant la date du
+// jour ⇒ repli sur le tarif normal (PRIX_NORMAL_PREMIUM). Le prix appliqué reste
+// figé dans Abonnement.prixApplique au moment du paiement, jamais recalculé.
+model PeriodeTarifaire {
+  id String @id @default(cuid())
+
+  nom          String // ex. "Promo Noël 2026"
+  dateDebut    DateTime
+  dateFin      DateTime
+  prixApplique Decimal  @db.Decimal(10, 2)
+  actif        Boolean  @default(true)
+
+  ajouteParAdminId String
+  ajouteParAdmin   Admin  @relation(fields: [ajouteParAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([actif, dateDebut, dateFin])
+  @@map("periodes_tarifaires")
 }
 
 // ============================================================================

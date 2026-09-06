@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §36)_
+_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §37)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -68,7 +68,7 @@ _Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5)
 
 Le cadrage produit et technique est consolidé (cahier des charges **v1.31**,
 `docs/specs/Klarity_Cahier_des_Charges.pdf`), le schéma de données est finalisé et migré
-(3 migrations), et le socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est
+(4 migrations), et le socle d'infrastructure (Phase 0, §10 du CDC) est en place. Phase 1 est
 entamée : inscription élève, connexion élève/parent, connexion admin cloisonnée
 (`/admin/connexion`, création CLI uniquement), chargement du programme officiel, chat-tuteur IA
 mode 1 (généraliste, `MockAIProvider`), **banque d'épreuves élève** (§27) et dashboards
@@ -112,7 +112,7 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
-**Travail des 4–6 septembre 2026 (§28 à §36) :**
+**Travail des 4–6 septembre 2026 (§28 à §37) :**
 - **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
   l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
   `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
@@ -155,6 +155,12 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
   `+237 6XX XX XX XX` (préfixe `+237 6` fixe, espaces automatiques) sur les 2 points de saisie
   (connexion parent, paiement Mobile Money), + normalisation serveur en forme canonique
   `+2376XXXXXXXX` (`request-otp`, provider `parent`).
+- **`/admin/parametres` — dernier item admin débloqué** (§37) : fenêtres tarifaires
+  promotionnelles (§2.4.1) sorties du code (`determinerPeriodeTarifaire`, dates/prix en dur) vers
+  une table `PeriodeTarifaire` éditable en base. Nouvelle 4ᵉ migration. `obtenirTarifPremium()`
+  devient async et lit la base (repli 5000 FCFA si aucune fenêtre active). Écran admin CRUD +
+  activer/désactiver. **Plus aucun item grisé dans `AdminShell`.** Deux vraies fenêtres
+  configurées (Noël 2026-2027, Pâques 2027, 3000 FCFA).
 - Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
   2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
   attente après merge (`graphify-out/` local, gitignoré).
@@ -187,9 +193,11 @@ réécriture de code applicatif, à condition de respecter les interfaces `AIPro
 - **Next.js 15.5** scaffoldé (App Router, TypeScript, Tailwind v4, ESLint).
 - **Docker Compose** : `app`, `worker`, `postgres`, `redis`, `adminer` (outil de dev en plus du
   minimum requis).
-- **Prisma** : `schema.prisma` finalisé (26 modèles, 22 enums, conforme au §4 du CDC) et migré —
-  3 migrations : `20260819070754_init`, `20260902113429_add_commentaire_compose_type_exercice`
-  (§23), puis `20260904074258_add_expression_ecrite_correction_orthographique_type_exercice` (§28).
+- **Prisma** : `schema.prisma` (27 modèles, 22 enums — `PeriodeTarifaire` ajouté §37 au-delà des
+  26 du §4 du CDC) et migré — 4 migrations : `20260819070754_init`,
+  `20260902113429_add_commentaire_compose_type_exercice` (§23),
+  `20260904074258_add_expression_ecrite_correction_orthographique_type_exercice` (§28),
+  `20260906102111_add_periode_tarifaire` (§37).
 - **Auth.js v5**, sessions JWT stateless avec rotation de refresh token (`src/auth.ts`) :
   - Provider `eleve` — code élève + PIN (verrouillage après échecs répétés, `PIN_MAX_ATTEMPTS`).
   - Provider `parent` — code élève + téléphone + OTP (`/api/auth/parent/request-otp`), qui
@@ -354,7 +362,9 @@ tout futur ajout de dépendance.
    `TypeExerciceCorrection` en compte **7** : `COMMENTAIRE_COMPOSE` (omis en v1.30, §23),
    `EXPRESSION_ECRITE` et `CORRECTION_ORTHOGRAPHIQUE` (omis en v1.31, §28) n'y figurent pas. Ils
    restent normatifs via l'enum + les entrées de journal + `CLAUDE.md`, mais le tableau est
-   désynchronisé et chaque version suivante aggrave l'écart.
+   désynchronisé et chaque version suivante aggrave l'écart. **Idem pour le modèle de données
+   §4 :** `PeriodeTarifaire` (ajouté §37, 4ᵉ migration) et `SessionActivite.*` n'y sont pas encore
+   reportés — normatifs via `schema.prisma` + le journal.
    **Solution de fond — Option B (écartée jusqu'ici) : reconstruire le CDC depuis une source
    Markdown (ou HTML/CSS) régénérée via WeasyPrint** (le moteur d'origine du document — cf. métadonnée
    `producer: WeasyPrint 69.0`). Une fois la source en place, toute repagination (tableau §4.2.2
@@ -2598,4 +2608,56 @@ Ajout de la normalisation manquante :
   statut `REUSSI`.
 - Données de test (élève, parent, abonnement, paiement, lien, OTP) supprimées —
   base revenue à 3 élèves / 1 parent / 5 paiements / 2 liens.
+
+## 37. `/admin/parametres` — fenêtres tarifaires promo sorties du code (6 septembre 2026)
+
+Dernier item grisé de l'audit des dashboards (§33). Objectif : les dates et prix des promotions
+(§2.4.1), auparavant écrits en dur dans `src/lib/payment/tarification.ts`
+(`MOIS_NOEL`/`MOIS_PAQUES`, `PRIX_PROMO_PREMIUM = 3000`), doivent être modifiables sans toucher au
+code ni redéployer.
+
+### Modèle + migration
+
+Nouveau `PeriodeTarifaire` (`nom`, `dateDebut`, `dateFin`, `prixApplique` Decimal, `actif` bool,
+`ajouteParAdminId`, `createdAt`/`updatedAt`, index `[actif, dateDebut, dateFin]`). **4ᵉ migration**
+`20260906102111_add_periode_tarifaire`.
+
+### `tarification.ts` réécrit
+
+`determinerPeriodeTarifaire` (basé sur `Date#getMonth()`) → `periodeTarifaireActive(date)` +
+`obtenirTarifPremium(date)` **désormais `async`, lisant la base**. Repli sain : aucune fenêtre
+`actif = true` couvrant la date ⇒ `PRIX_NORMAL_PREMIUM` (5000). Chevauchement de fenêtres actives ⇒
+la **moins chère** l'emporte. Les 3 consommateurs (`/abonnement`, `/abonnement/paiement`,
+`/api/paiement/initier`) passés en `await`. Le prix reste figé dans `Abonnement.prixApplique` au
+paiement (webhook), jamais recalculé.
+
+### Écran + API
+
+- `/admin/parametres` : tuile « Tarif appliqué aujourd'hui » + `PeriodeTarifaireManager`
+  (formulaire ajout/édition nom + dates + prix ; liste avec badges Appliquée / Active / Désactivée ;
+  actions Modifier, Activer/Désactiver, Supprimer avec **confirmation inline** — pas de
+  `window.confirm` qui bloquerait l'extension navigateur).
+- `POST /api/admin/parametres/periodes-tarifaires` + `PATCH`/`DELETE .../[id]`, tous
+  `exigerRole("ADMIN")` (triple défense middleware + layout + contrôle en tête). Zod : `nom` 2–120,
+  `prix > 0`, `dateFin > dateDebut`. Bornes calées en **UTC** : `dateDebut` à 00:00:00.000Z,
+  `dateFin` à 23:59:59.999Z du jour choisi (journées entières incluses, affichage stable).
+- `AdminShell` : `disabled` retiré de « Paramètres ». **Plus aucun item admin grisé.**
+
+### Vérifié bout en bout
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur** (3 warnings préexistants).
+- Logique rejouée en conteneur : vide → 5000 ; fenêtre active couvrant aujourd'hui (3000) → 3000
+  (`enPromo` true) ; date hors fenêtre → 5000 ; fenêtre désactivée → 5000 ; deux fenêtres qui se
+  chevauchent → la moins chère (2500).
+- Routes non authentifiées → `/admin/parametres` **307 → `/admin/connexion`** ; `POST` API sans
+  session → **401**.
+- **Click-test navigateur, session ADMIN réelle de l'utilisateur** : création d'une fenêtre de test
+  couvrant aujourd'hui (3500) → apparaît « Appliquée », tuile + `/abonnement` public passent à
+  3500 (« -30 % », 5000 barré) ; modification du prix (→ 4200) → répercutée partout ; désactivation
+  → tuile + `/abonnement` retombent à **5000** ; réactivation avec dates de décembre (hors fenêtre)
+  → badge « Active » mais tuile/`/abonnement` restent à **5000** ; suppression (confirmation inline)
+  → liste vide.
+- Fenêtre de test supprimée ; **deux vraies fenêtres configurées** pour remplacer l'ancien
+  comportement en dur : « Promo Noël 2026-2027 » (1 déc 2026 → 28 fév 2027, 3000 FCFA) et
+  « Promo Pâques 2027 » (1 avr → 30 juin 2027, 3000 FCFA), toutes deux actives.
 

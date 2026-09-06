@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     abonnement = await prisma.abonnement.create({ data: { eleveId } });
   }
 
-  const tarif = obtenirTarifPremium(new Date());
+  const tarif = await obtenirTarifPremium(new Date());
   const telephoneFormate = `+237${telephone}`;
 
   const provider = getPaymentProvider();
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       paiementId: paiement.id,
       montant: tarif.prix,
       devise: DEVISE_DEFAUT,
-      periode: tarif.periode,
+      periode: tarif.nomPeriode,
       indiceDevMock:
         process.env.NODE_ENV !== "production"
           ? "Mode simulation : un numéro se terminant par 0 échoue, tout autre numéro réussit."
