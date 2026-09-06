@@ -183,10 +183,13 @@ export default async function AdminDashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-bold text-texte">Chiffre d&apos;affaires</h2>
-            <p className="font-serif text-2xl font-bold text-primary">{formatFCFA(chiffreAffairesTotal)}</p>
+            <Link href="/admin/revenus" className="shrink-0 text-xs font-semibold text-primary hover:underline">
+              Voir les revenus →
+            </Link>
           </div>
+          <p className="mt-1 font-serif text-2xl font-bold text-primary">{formatFCFA(chiffreAffairesTotal)}</p>
           <div className="mt-4">
             <BarChart data={donneesCA} valueFormatter={formatFCFA} emptyMessage="Aucun paiement confirmé pour l'instant." />
           </div>
@@ -401,7 +404,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       <section className="mt-6 rounded-2xl bg-surface p-6 shadow-sm">
-        <h2 className="text-base font-bold text-texte">Journal des paiements récents</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-base font-bold text-texte">Journal des paiements récents</h2>
+          <Link href="/admin/paiements" className="shrink-0 text-xs font-semibold text-primary hover:underline">
+            Voir tous les paiements →
+          </Link>
+        </div>
         {paiementsRecents.length === 0 ? (
           <p className="mt-4 text-sm text-texte-muted">Aucun paiement pour l&apos;instant.</p>
         ) : (

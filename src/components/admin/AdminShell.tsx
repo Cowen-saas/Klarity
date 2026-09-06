@@ -44,8 +44,8 @@ function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
     { href: "/admin/dates-examens", label: "Dates d'examens", icon: IconCalendar },
     { href: "/admin/usage-ia", label: "Usage IA", icon: IconSparkles },
     { href: "/admin/securite", label: "Sécurité", icon: IconShield },
-    { href: "/admin/paiements", label: "Paiements", icon: IconCreditCard, disabled: true },
-    { href: "/admin/revenus", label: "Revenus", icon: IconCoins, disabled: true },
+    { href: "/admin/paiements", label: "Paiements", icon: IconCreditCard },
+    { href: "/admin/revenus", label: "Revenus", icon: IconCoins },
     { href: "/admin/parametres", label: "Paramètres", icon: IconSettings, disabled: true },
   ];
 }

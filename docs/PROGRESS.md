@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 5 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–5 septembre (§28 à §33)_
+_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §34)_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -112,7 +112,7 @@ audit complet contre le code et la base réels + resynchronisation du graphe Gra
 « Épreuves » débloqué dans la nav élève et sur la landing, avec écran banque d'épreuves filtré par
 classe/série et URL signées R2 pour fiche + corrigé (§27).
 
-**Travail des 4–5 septembre 2026 (§28 à §33) :**
+**Travail des 4–6 septembre 2026 (§28 à §34) :**
 - **CDC v1.30 → v1.31** (§28) : deux types d'exercice propres à la **3ème Français** ajoutés à
   l'enum `TypeExerciceCorrection` — `EXPRESSION_ECRITE` (grille pondérée /10, doublée sur 20) et
   `CORRECTION_ORTHOGRAPHIQUE` (comptage de fautes, mécanisme distinct des barèmes pondérés) ;
@@ -136,12 +136,14 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
 - **Dette de méthode CDC documentée** (§5 point 4) : la redaction PyMuPDF ne sait pas refaire le
   flux ; le tableau visuel §4.2.2 reste à 4 lignes alors que l'enum en a 7 — solution de fond =
   reconstruire le CDC depuis une source Markdown → WeasyPrint, le jour où ce sera nécessaire.
-- **6 écrans admin débloqués** (§33) : audit des 3 dashboards (items grisés « Bientôt ») puis
-  construction des 6 écrans back-office qui ne dépendaient d'aucun accès externe (banque
-  d'épreuves / clé Anthropic / CamerPay / SMS) — juste jamais construits : **Utilisateurs, Élèves,
-  Parents, Exemples corrigés, Sécurité, Usage IA**. Tous branchés sur les vraies données déjà en
-  base, badges « Bientôt » retirés dans `AdminShell`. Restent grisés : Paiements, Revenus,
-  Paramètres.
+- **8 écrans admin débloqués** (§33 puis §34) : audit des 3 dashboards (items grisés « Bientôt »)
+  puis construction des écrans back-office qui ne dépendaient d'aucun accès externe (banque
+  d'épreuves / clé Anthropic / CamerPay / SMS) — juste jamais construits. §33 : **Utilisateurs,
+  Élèves, Parents, Exemples corrigés, Sécurité, Usage IA**. §34 : **Paiements** (journal filtrable +
+  webhooks liés par clé d'idempotence) et **Revenus** (MRR, CA, churn), avec un bandeau permanent
+  « Données de test » tant que `PAYMENT_MODE != live`. Tous branchés sur les vraies données déjà en
+  base, badges « Bientôt » retirés dans `AdminShell`. **Seul reste grisé : Paramètres** (attend une
+  décision produit sur le périmètre configurable).
 - Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
   2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
   attente après merge (`graphify-out/` local, gitignoré).
@@ -2392,4 +2394,68 @@ helper `lirePage`).
   « 2 événements (filtré) » OK ; panneau détail Exemples OK ; **round-trip formulaire d'ajout** :
   création d'une ligne de test (`ajouteParAdminId` = compte de l'utilisateur), compteur passé à
   « 8 exemples », puis **ligne de test supprimée en base** — retour à 7 vérifié.
+
+## 34. Déblocage des 2 écrans financiers admin — Paiements + Revenus (6 septembre 2026)
+
+Deuxième vague de l'audit §33 : les 2 écrans « catégorie 5 avec caveat » — ils lisent des données
+déjà en base (issues du parcours de paiement mock, §16), mais les montants ne seront des chiffres
+réels que sous `PAYMENT_MODE=live`.
+
+### `/admin/paiements`
+
+- Table paginée (20/page) du journal `Paiement`, jointure `abonnement.eleve.codeEleve`.
+- **Filtres** (chips `<Link>`, tout côté serveur) : statut (`?statut=`), méthode (`?methode=` —
+  une seule valeur `MOBILE_MONEY` aujourd'hui, la carte ayant été retirée §5), période
+  (`?periode=7j|30j|tout`). Les filtres se combinent et sont préservés par la pagination.
+- **Panneau détail** (`?paiement=<id>`) : champs du paiement + **webhooks CamerPay liés**, retrouvés
+  par `WebhookLog.payloadBrut->>'sessionId' == Paiement.idempotencyKey` (pas de FK directe entre les
+  deux tables — le `sessionId` du payload est la clé d'idempotence).
+- Téléphone payeur masqué (`+237 •••• 73`) ; `referenceCamerPay` / `idempotencyKey` affichés
+  (nécessaires à la réconciliation, non sensibles).
+
+### `/admin/revenus`
+
+- Tuiles : **MRR** = somme des `Abonnement.prixApplique` des abonnements `ACTIF` (prix figé au
+  paiement, jamais recalculé — §2.4.1) ; **CA encaissé** = somme `montant` des `Paiement` `REUSSI` ;
+  CA glissant 30 j ; **taux de churn** = `EXPIRE / (ACTIF + EXPIRE)`.
+- `BarChart` (composant partagé, déjà utilisé sur la vue d'ensemble) pour le CA mensuel sur 8 mois ;
+  répartition Premium / Gratuit ; compteur de renouvellements sous 30 j.
+- Section « Méthode de calcul » explicite en bas de page.
+
+### Bandeau « Données de test »
+
+Nouveau composant `src/components/admin/BandeauModeTest.tsx`, affiché en tête des 2 écrans tant que
+`process.env.PAYMENT_MODE !== "live"` : *« Données de test — Montants non réels. CamerPay tourne en
+`PAYMENT_MODE=mock` : ces transactions sont générées par le simulateur de webhook… »*. Objectif
+explicite : qu'un futur lecteur (Claude ou un collaborateur) ne confonde jamais ces chiffres avec
+du vrai chiffre d'affaires.
+
+### Sécurité
+
+Même patron que la vague 1 : gate ADMIN en triple défense (middleware + `layout.tsx` +
+`if (session.user.role !== "ADMIN") redirect(...)` en tête de page). Pas de restriction par élève
+ici — **l'admin a un accès global légitime aux données financières** (CDC : « Admin manages …
+platform financials ») ; l'helper `chargerPaiementAutorise` d'IDOR ne concerne que le self-service
+élève/parent et refuse explicitement l'admin. Aucune donnée carte n'existe (Mobile Money
+uniquement).
+
+### `AdminShell.tsx`
+
+`disabled: true` retiré sur `Paiements` et `Revenus`. **Seul `Paramètres` reste grisé « Bientôt »**
+(périmètre configurable non encore défini). Vue d'ensemble : liens « Voir les revenus → » / « Voir
+tous les paiements → » ajoutés sur les sections CA et journal des paiements.
+
+### Vérifié
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur** (3 warnings préexistants).
+- Requêtes Prisma rejouées en conteneur : 5 paiements (`REUSSI:3 ECHEC:2`, 15 000 FCFA encaissés),
+  webhook `CREDITE` correctement lié au dernier paiement par `sessionId` ; 3 abonnements `PREMIUM`
+  `ACTIF` → MRR 15 000, churn 0 %, 3 renouvellements sous 30 j. Assertion qu'aucun `select` ne
+  contient `payloadBrut` / hash / secret.
+- Routes non authentifiées → **307 vers `/admin/connexion?from=…`** (query de filtres préservée).
+- **Click-test navigateur, session ADMIN réelle de l'utilisateur** : bandeau « Données de test »
+  visible sur les 2 écrans ; Paiements → 5 lignes, tuiles 5/3/2/15 000, filtre `?statut=ECHEC` →
+  « 2 transactions (filtré) », panneau détail (`?paiement=…`) affichant le webhook `CREDITE` lié ;
+  Revenus → MRR 15 000, CA 15 000, churn 0 %, `BarChart` Aoû/Sep, Premium 100 % ; sidebar sans
+  badge sur Paiements/Revenus, seul Paramètres grisé.
 
