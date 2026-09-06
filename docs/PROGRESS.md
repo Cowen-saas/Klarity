@@ -1,6 +1,6 @@
 # Klarity — État d'avancement
 
-_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §37)_
+_Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5) resynchronisées avec le travail des 4–6 septembre (§28 à §37) ; graphe Graphify rejoué pour §33–§37_
 
 ## 🔴 Bloquant avant mise en production
 
@@ -161,9 +161,11 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
   devient async et lit la base (repli 5000 FCFA si aucune fenêtre active). Écran admin CRUD +
   activer/désactiver. **Plus aucun item grisé dans `AdminShell`.** Deux vraies fenêtres
   configurées (Noël 2026-2027, Pâques 2027, 3000 FCFA).
-- Graphe Graphify resynchronisé pour §29–§32 (à la demande de l'utilisateur) — 1326 nœuds /
-  2030 arêtes / 140 communautés, santé propre (91 % EXTRACTED, 0 AMBIGUOUS), 0 fichier en
-  attente après merge (`graphify-out/` local, gitignoré).
+- Graphe Graphify resynchronisé pour §29–§32 puis §33–§37 (à la demande de l'utilisateur) —
+  dernier passage le 6 septembre : **1448 nœuds / 2294 arêtes / 142 communautés**, santé propre,
+  extraction AST-only sur les 35 fichiers code modifiés (`/admin/parametres` & toute la vague
+  §33–§37 indexés, nœuds `determinerPeriodeTarifaire`/ancien type purgés) ; `docs/PROGRESS.md`
+  laissé en file pour un prochain rebuild complet (`graphify-out/` local, gitignoré).
 
 `next build` ne fonctionne pas (erreur `<Html>` préexistante, cf. bandeau « 🔴 Bloquant » en tête) —
 le développement se fait entièrement via `next dev` sous Docker Compose. `npm run lint` a été
@@ -251,13 +253,19 @@ de l'icône Tuteur IA (jamais l'icône Correction) sur toute surface de chat.
 Le corpus complet du projet (code, specs, maquettes, barèmes) est indexé dans un graphe
 persistant (`graphify-out/`, local et gitignoré). Sert de garde-fou pour repérer les incohérences
 entre maquettes, CDC et code au fil du développement. **État : `graphify --update` rejoué le
-5 septembre pour intégrer §29–§32 — 1326 nœuds / 2030 arêtes / 140 communautés, santé propre
-(91 % EXTRACTED, 8 % INFERRED, 0 AMBIGUOUS ; aucune arête orpheline / endpoint manquant /
-doublon), `detect_incremental` = 0 fichier en attente.** Couvre le mécanisme centralisé
-d'expiration de session (§29 : `exigerRole`, `apiFetch`, `AuthenticatedArea`,
-`SessionExpiryWatcher`), le correctif durée réelle du refresh token (§30), les 7 `ExempleCorrection`
-few-shot chargés (§31) et l'écran de connexion « Épreuves » élève-seul (§32), en plus de §28
-(CDC v1.31, `TypeExerciceCorrection` à 7 valeurs).
+6 septembre pour intégrer §33–§37 — 1448 nœuds / 2294 arêtes / 142 communautés, santé propre
+(0 arête orpheline / endpoint manquant / self-loop / collapsed).** Extraction **AST uniquement**
+sur les 35 fichiers `.ts`/`.tsx` modifiés : les 8 écrans admin débloqués (§33–§34), `/parent/temps-passe`
++ `ActivityTracker` (§35), `PhoneInput` + helpers `src/lib/format.ts` (§36), **`/admin/parametres`
+(`src_app_admin_protected_parametres_page`), `PeriodeTarifaireManager`, les 2 routes
+`periodes-tarifaires`, `periodeTarifaireActive()` + `obtenirTarifPremium()` async (§37)** sont
+maintenant dans le graphe ; les nœuds obsolètes `determinerPeriodeTarifaire()`, l'ancien type
+`PeriodeTarifaire` union et `MOIS_NOEL`/`MOIS_PAQUES`/`PRIX_PROMO_PREMIUM` ont été purgés.
+`docs/PROGRESS.md` a changé mais n'a **pas** été ré-extrait sémantiquement ce tour (le sous-agent
+dépassait la limite de sortie) — ses 199 nœuds concept `docs_progress_*` sont conservés au snapshot
+pré-§33 ; il reste en file pour un prochain `graphify .` complet qui rafraîchira la couche
+narrative des §33–§37. Couvre toujours §28–§32 (expiration de session, refresh token, 7
+`ExempleCorrection`, écran « Épreuves » élève-seul, `TypeExerciceCorrection` à 7 valeurs).
 
 ## 4. Audit fonctionnel de la Phase 0 (25 août 2026)
 
