@@ -2547,8 +2547,10 @@ former le groupe `6XX`. L'utilisateur ne tape que les **8 chiffres** suivants,
 regroupés `XX XX XX XX` (formatage à lookahead — jamais d'espace en fin).
 Collage géré (extraction des chiffres, retrait d'un `237` / `6` de tête).
 Valeur remontée : toujours la **forme canonique** `+2376XXXXXXXX` (sans
-espaces). `inputMode="numeric"`, `autoComplete="tel-national"`, hint de format,
-`aria-describedby`.
+espaces). `inputMode="numeric"`, `autoComplete="tel-national"`. Pas de texte
+« Format : … » sous le champ (retiré à la demande de l'utilisateur — le préfixe
+fixe `+237 6` et le placeholder `XX XX XX XX` suffisent) ; les messages
+d'erreur de saisie ne répètent plus le gabarit non plus.
 
 ### `src/lib/format.ts` — helpers partagés
 
@@ -2585,7 +2587,8 @@ Ajout de la normalisation manquante :
 - **`PhoneInput` sur `/connexion` (onglet Parent)** : préfixe `+237 6` affiché
   fixe ; frappe `98765432` → `+237 698 76 54 32` (espaces automatiques) ; 9ᵉ
   chiffre ignoré (plafond 8) ; `Backspace` retire un chiffre et regroupe ;
-  `Ctrl+A` + `Suppr` efface les chiffres **mais pas le préfixe**.
+  `Ctrl+A` + `Suppr` efface les chiffres **mais pas le préfixe**. Après retrait
+  du hint : plus aucun texte sous le champ, vérifié en navigateur.
 - **Connexion parent complète** (numéro tapé au format + code élève + OTP mock)
   → session `PARENT`, `Parent.telephone` = `+237698765432` (13 car., sans
   espaces), `OtpVerification.telephone` idem, `ParentEleveLink` créé.

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const telephone = normaliserTelephoneCamerounais(parsed.data.telephone);
   if (!telephone) {
-    return NextResponse.json({ error: "Numéro de téléphone camerounais invalide (+237 6XX XX XX XX)." }, { status: 400 });
+    return NextResponse.json({ error: "Numéro de téléphone camerounais invalide." }, { status: 400 });
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

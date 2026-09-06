@@ -35,7 +35,6 @@ const LONGUEUR_AFFICHEE_MAX = TELEPHONE_CHIFFRES_LOCAUX + 3;
 export function PhoneInput({ value, onChange, id, label, autoFocus, erreurId, disabled }: PhoneInputProps) {
   const generatedId = useId();
   const champId = id ?? generatedId;
-  const formatId = `${champId}-format`;
 
   const chiffres = chiffresLocauxTelephone(value);
   const affichage = formaterChiffresLocaux(chiffres);
@@ -78,13 +77,10 @@ export function PhoneInput({ value, onChange, id, label, autoFocus, erreurId, di
           maxLength={LONGUEUR_AFFICHEE_MAX}
           placeholder="XX XX XX XX"
           aria-label={label ?? "Numéro de téléphone"}
-          aria-describedby={[formatId, erreurId].filter(Boolean).join(" ") || undefined}
+          aria-describedby={erreurId || undefined}
           className="w-full min-w-0 bg-transparent text-base font-semibold tracking-wide text-texte outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-texte-muted/60"
         />
       </div>
-      <p id={formatId} className="mt-1.5 text-xs text-texte-muted">
-        Format&nbsp;: {TELEPHONE_PREFIXE_AFFICHE}XX&nbsp;XX&nbsp;XX&nbsp;XX
-      </p>
     </div>
   );
 }

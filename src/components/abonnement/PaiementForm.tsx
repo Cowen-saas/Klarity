@@ -46,7 +46,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
       return false;
     }
     if (!estTelephoneCamerounaisComplet(telephone)) {
-      setError("Numéro Mobile Money incomplet (+237 6XX XX XX XX).");
+      setError("Numéro Mobile Money incomplet.");
       return false;
     }
     setError(null);

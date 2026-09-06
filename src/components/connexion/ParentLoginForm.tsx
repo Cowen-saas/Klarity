@@ -41,7 +41,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
   async function demanderCode(e: React.FormEvent) {
     e.preventDefault();
     if (!estTelephoneCamerounaisComplet(telephone) || !codeEleve.trim()) {
-      setErreur("Renseigne ton numéro complet (+237 6XX XX XX XX) et le code élève.");
+      setErreur("Renseigne ton numéro de téléphone complet et le code élève.");
       return;
     }
     setErreur(null);
