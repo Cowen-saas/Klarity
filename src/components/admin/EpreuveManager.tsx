@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { IconDocument, IconCheckCircle } from "@/components/icons";
@@ -28,6 +28,7 @@ interface EpreuveVue {
   titre: string;
   classe: NiveauClasse;
   filiere: Filiere | null;
+  matiereId: string;
   anneeScolaire: string;
   createdAt: string;
   ficheUrl: string;
@@ -44,6 +45,7 @@ function anneeScolaireParDefaut(): string {
 export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[]; matieres: MatiereVue[] }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const [editionId, setEditionId] = useState<string | null>(null);
   const [classe, setClasse] = useState<NiveauClasse>("TERMINALE");
   const [filiere, setFiliere] = useState<Filiere>("C");
   const [matiereId, setMatiereId] = useState("");
@@ -51,6 +53,8 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
   const [anneeScolaire, setAnneeScolaire] = useState(anneeScolaireParDefaut());
   const [enCours, setEnCours] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "erreur"; texte: string } | null>(null);
+  const [confirmSuppr, setConfirmSuppr] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const filiereRequise = classe !== "TROISIEME";
 
@@ -63,6 +67,37 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
       ),
     [matieres, classe, filiere, filiereRequise]
   );
+
+  const epreuveEnEdition = editionId ? epreuves.find((e) => e.id === editionId) : null;
+
+  function reinitialiser() {
+    setEditionId(null);
+    setClasse("TERMINALE");
+    setFiliere("C");
+    setMatiereId("");
+    setTitre("");
+    setAnneeScolaire(anneeScolaireParDefaut());
+    formRef.current?.reset();
+  }
+
+  function chargerPourModification(e: EpreuveVue) {
+    setEditionId(e.id);
+    setClasse(e.classe);
+    if (e.filiere) setFiliere(e.filiere);
+    setMatiereId(e.matiereId);
+    setTitre(e.titre);
+    setAnneeScolaire(e.anneeScolaire);
+    setMessage(null);
+    setConfirmSuppr(null);
+    formRef.current?.reset();
+  }
+
+  // formRef.current?.reset() efface aussi les <input type="file"> sélectionnés
+  // par erreur avant le chargement — les champs texte/select contrôlés sont
+  // eux réappliqués juste après par les setState ci-dessus.
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [editionId]);
 
   async function soumettre(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -77,21 +112,42 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
     setEnCours(true);
     setMessage(null);
     try {
-      const res = await apiFetch("/api/admin/epreuves", { method: "POST", body: form });
+      const res = await apiFetch(
+        editionId ? `/api/admin/epreuves/${editionId}` : "/api/admin/epreuves",
+        { method: editionId ? "PATCH" : "POST", body: form }
+      );
       const data = await res.json();
       if (!res.ok) {
-        setMessage({ type: "erreur", texte: data.error ?? "Ajout impossible." });
+        setMessage({ type: "erreur", texte: data.error ?? "Enregistrement impossible." });
         return;
       }
-      setMessage({ type: "ok", texte: `Épreuve « ${data.epreuve.titre} » ajoutée.` });
-      setTitre("");
-      setMatiereId("");
-      formRef.current?.reset();
+      const texteOk = editionId ? `« ${data.epreuve.titre} » mise à jour.` : `Épreuve « ${data.epreuve.titre} » ajoutée.`;
+      reinitialiser();
+      setMessage({ type: "ok", texte: texteOk });
       router.refresh();
     } catch {
       setMessage({ type: "erreur", texte: "Impossible de contacter le serveur." });
     } finally {
       setEnCours(false);
+    }
+  }
+
+  async function supprimer(id: string) {
+    setActionId(id);
+    try {
+      const res = await apiFetch(`/api/admin/epreuves/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: "erreur", texte: data.error ?? "Suppression impossible." });
+        return;
+      }
+      if (editionId === id) reinitialiser();
+      setConfirmSuppr(null);
+      router.refresh();
+    } catch {
+      setMessage({ type: "erreur", texte: "Impossible de contacter le serveur." });
+    } finally {
+      setActionId(null);
     }
   }
 
@@ -101,7 +157,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
   return (
     <div className="space-y-6">
       <form ref={formRef} onSubmit={soumettre} className="rounded-2xl bg-surface p-6 shadow-sm">
-        <h2 className="text-base font-bold text-texte">Ajouter une épreuve</h2>
+        <h2 className="text-base font-bold text-texte">{editionId ? "Modifier l'épreuve" : "Ajouter une épreuve"}</h2>
 
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <fieldset className="border-0 p-0">
@@ -210,13 +266,57 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
             <label htmlFor="fichePdf" className="mb-1.5 block text-sm font-semibold text-texte">
               Fiche de l&apos;épreuve (PDF)
             </label>
-            <input id="fichePdf" name="fichePdf" type="file" accept="application/pdf" required className="block w-full text-sm text-texte-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-light file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary" />
+            <input
+              id="fichePdf"
+              name="fichePdf"
+              type="file"
+              accept="application/pdf"
+              required={!editionId}
+              className="block w-full text-sm text-texte-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-light file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
+            />
+            {editionId && (
+              <p className="mt-1.5 text-xs text-texte-muted">
+                Laisser vide pour conserver le fichier actuel
+                {epreuveEnEdition && (
+                  <>
+                    {" "}
+                    (
+                    <a href={epreuveEnEdition.ficheUrl} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline">
+                      voir
+                    </a>
+                    ).
+                  </>
+                )}
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="corrigeReference" className="mb-1.5 block text-sm font-semibold text-texte">
               Corrigé de référence (PDF)
             </label>
-            <input id="corrigeReference" name="corrigeReference" type="file" accept="application/pdf" required className="block w-full text-sm text-texte-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-light file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary" />
+            <input
+              id="corrigeReference"
+              name="corrigeReference"
+              type="file"
+              accept="application/pdf"
+              required={!editionId}
+              className="block w-full text-sm text-texte-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-light file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary"
+            />
+            {editionId && (
+              <p className="mt-1.5 text-xs text-texte-muted">
+                Laisser vide pour conserver le fichier actuel
+                {epreuveEnEdition && (
+                  <>
+                    {" "}
+                    (
+                    <a href={epreuveEnEdition.corrigeUrl} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline">
+                      voir
+                    </a>
+                    ).
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
 
@@ -226,8 +326,20 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
             disabled={enCours || !matiereId}
             className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
           >
-            {enCours ? "Ajout en cours…" : "Ajouter l'épreuve"}
+            {enCours ? "Enregistrement…" : editionId ? "Mettre à jour" : "Ajouter l'épreuve"}
           </button>
+          {editionId && (
+            <button
+              type="button"
+              onClick={() => {
+                reinitialiser();
+                setMessage(null);
+              }}
+              className="text-sm font-semibold text-texte-muted hover:text-texte"
+            >
+              Annuler
+            </button>
+          )}
           {message && (
             <p role="status" className={`flex items-center gap-1.5 text-sm ${message.type === "ok" ? "text-texte-muted" : "text-danger"}`}>
               {message.type === "ok" && <IconCheckCircle className="h-4 w-4 text-success" weight="fill" aria-hidden="true" />}
@@ -249,7 +361,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="text-left text-xs text-texte-muted uppercase">
                   <th className="pb-2 font-semibold">Titre</th>
@@ -258,6 +370,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
                   <th className="pb-2 font-semibold">Année</th>
                   <th className="pb-2 font-semibold">Ajoutée</th>
                   <th className="pb-2 font-semibold">Fichiers</th>
+                  <th className="pb-2 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -281,6 +394,28 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
                       <a href={e.corrigeUrl} target="_blank" rel="noreferrer" className="font-semibold text-primary hover:underline">
                         Corrigé
                       </a>
+                    </td>
+                    <td className="py-2.5">
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+                        <button type="button" onClick={() => chargerPourModification(e)} className="text-primary hover:underline">
+                          Modifier
+                        </button>
+                        {confirmSuppr === e.id ? (
+                          <span className="flex items-center gap-2 text-danger">
+                            Confirmer ?
+                            <button type="button" onClick={() => supprimer(e.id)} disabled={actionId === e.id} className="underline disabled:opacity-50">
+                              Oui
+                            </button>
+                            <button type="button" onClick={() => setConfirmSuppr(null)} className="text-texte-muted underline">
+                              Non
+                            </button>
+                          </span>
+                        ) : (
+                          <button type="button" onClick={() => setConfirmSuppr(e.id)} className="text-danger hover:underline">
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

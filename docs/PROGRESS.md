@@ -2669,3 +2669,68 @@ paiement (webhook), jamais recalculé.
   comportement en dur : « Promo Noël 2026-2027 » (1 déc 2026 → 28 fév 2027, 3000 FCFA) et
   « Promo Pâques 2027 » (1 avr → 30 juin 2027, 3000 FCFA), toutes deux actives.
 
+## 38. `/admin/epreuves` — Modifier / Supprimer une épreuve (9 septembre 2026)
+
+Jusqu'ici l'écran ne savait qu'ajouter une épreuve à la banque ; impossible de corriger un titre, de
+remplacer un fichier erroné ou de retirer une entrée sans passer par la base directement. Ajout des
+deux actions manquantes, avec le même souci que partout ailleurs : jamais de fichier R2 orphelin,
+jamais de suppression qui casserait l'historique d'un élève.
+
+### API — `PATCH`/`DELETE /api/admin/epreuves/[id]`
+
+- `exigerRole("ADMIN")` (même triple défense que le reste : middleware sur `/admin/*`, contrôle de
+  session en tête de page server component, contrôle de rôle dans le handler) + IDOR : l'épreuve
+  visée est toujours relue par `id` avant toute écriture, jamais supposée exister.
+- **`PATCH`** : `multipart/form-data`, tous les champs de métadonnées optionnels (valeur existante
+  conservée si absente) ; `fichePdf`/`corrigeReference` remplaçables **indépendamment l'un de
+  l'autre** — remplacer l'un sans l'autre est le cas nominal, pas une exception. Ordre des
+  opérations : upload du/des nouveau(x) fichier(s) → `prisma.epreuve.update` → suppression du/des
+  ancien(s) objet(s) R2 **seulement après le commit DB réussi**. Ça garantit qu'on ne perd jamais
+  l'ancien fichier si l'upload du remplaçant échoue, et qu'on ne laisse jamais la base pointer vers
+  une clé déjà effacée du bucket.
+- **`DELETE`** : bloque (409, message explicite) si au moins une `TentativeEpreuve`, un
+  `CorrectionDetail` ou une `ConversationChat` référence encore l'épreuve — un élève a déjà composé,
+  été corrigé, ou discuté dessus, et la supprimer casserait son historique (en plus d'être rejetée
+  par la contrainte FK Postgres, `Epreuve.tentatives`/`.correctionsDetail`/`.conversationsChat`
+  n'étant pas en `onDelete: Cascade`). **Recommandation retenue faute d'un champ d'archivage dans le
+  schéma actuel** : bloquer avec un message clair plutôt qu'ajouter un statut « archivée » — la
+  demande ne portait que sur Modifier/Supprimer, une vraie archive (colonne + filtre banque élève)
+  reste un ajout séparé si le besoin se présente. Suppression autorisée ⇒ `prisma.epreuve.delete`
+  d'abord, puis les 2 objets R2 (fiche + corrigé) via `StorageProvider.supprimer()`.
+
+### `EpreuveManager.tsx` — même formulaire pour ajout et édition
+
+Repris le pattern déjà en place dans `PeriodeTarifaireManager` (§37) plutôt qu'en inventer un
+nouveau : bouton « Modifier » par ligne → formulaire du haut pré-rempli (classe, filière, matière,
+titre, année) et rebasculé en mode édition (« Mettre à jour », bouton « Annuler ») ; champs fichier
+non obligatoires en édition avec « Laisser vide pour conserver le fichier actuel (voir) » et lien
+vers le fichier en place. Bouton « Supprimer » par ligne avec **confirmation inline** (« Confirmer ?
+Oui / Non »), identique au pattern fenêtres tarifaires — pas de `window.confirm`.
+
+En cours de route, repéré et corrigé un bug de re-render déjà présent dans `PeriodeTarifaireManager`
+et reproduit sans le vouloir dans la première version de ce composant : `setMessage({ok, …})` suivi
+immédiatement de `reinitialiser()` qui appelait `setMessage(null)` — React batchant les deux, le
+message de succès ne s'affichait jamais. Corrigé ici en sortant `setMessage(null)` de
+`reinitialiser()` et en l'appelant *avant* de poser le message de succès (`PeriodeTarifaireManager`
+lui-même pas touché, hors périmètre de cette tâche).
+
+### Vérifié bout en bout (navigateur, session ADMIN réelle, contre le vrai bucket R2)
+
+- `npx tsc --noEmit` → **0 erreur** ; `npm run lint` → **0 erreur/warning** sur les 3 fichiers
+  touchés.
+- **Création** d'une épreuve de test (Terminale C, Physique) → `psql` confirme la ligne + script
+  Node (`@aws-sdk/client-s3`, `HeadObjectCommand`) confirme les 2 objets **présents** dans le vrai
+  bucket R2 (`STORAGE_MODE=r2` en dev, pas le mock disque).
+- **Modification** : titre changé (vérifié en base) + fiche PDF remplacée sans toucher au corrigé →
+  `corrigeReferenceKey` **inchangée**, `fichePdfKey` **changée**, ancien objet R2
+  (`epreuves/781f246d-….pdf`) **absent** du bucket après coup, nouveau objet **présent**. Confirme
+  le remplacement sélectif (un seul des deux fichiers) et la purge post-commit.
+- **Suppression bloquée** : `TentativeEpreuve` de test insérée pour l'épreuve → clic Supprimer +
+  confirmation → message « Impossible de supprimer : au moins un élève a déjà composé... » affiché,
+  ligne toujours en base, 2 objets R2 toujours présents (vérifié directement, pas seulement à l'œil).
+  Tentative de test retirée → même épreuve supprimable normalement.
+- **Suppression** : ligne disparaît de la liste, `SELECT count(*)` → **0**, les 2 objets R2 → **absents**
+  du bucket (`HeadObjectCommand` 404 sur les deux clés).
+- Toutes les données de test (épreuves, tentative synthétique, script de vérification temporaire)
+  nettoyées après coup — la banque réelle importée (~130 épreuves) n'a pas été touchée.
+
