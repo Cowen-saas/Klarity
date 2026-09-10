@@ -56,15 +56,15 @@ Priorité de lecture si le temps manque : sections 1, 2, 4 et 5 sont critiques d
 
 ---
 
-## 4. Paiement (CamerPay, Mobile Money, carte)
+## 4. Paiement (NotchPay, Mobile Money, carte)
 
 ### Exigences
 
-- [ ] Vérification de signature HMAC sur **chaque** webhook CamerPay — ne jamais traiter un payload webhook non signé ou dont la signature ne correspond pas.
+- [ ] Vérification de signature HMAC sur **chaque** webhook NotchPay — ne jamais traiter un payload webhook non signé ou dont la signature ne correspond pas.
 - [ ] Idempotence du traitement webhook (déjà identifiée côté scalabilité) : vérifier qu'un paiement n'a pas déjà été crédité avant de le traiter une deuxième fois.
 - [ ] Aucune donnée de carte ne transite ni ne se stocke côté serveur Klarity — tout doit rester dans l'iframe ou le redirect du prestataire de paiement, zéro PAN en base, zéro PAN en logs.
 - [ ] Journalisation immuable des transactions (audit trail append-only) — indispensable pour les litiges Mobile Money, fréquents dans la zone CEMAC.
-- [ ] Endpoint webhook accessible uniquement en HTTPS, avec vérification de l'IP source si CamerPay fournit une liste d'IPs autorisées.
+- [ ] Endpoint webhook accessible uniquement en HTTPS, avec vérification de l'IP source si NotchPay fournit une liste d'IPs autorisées.
 
 ---
 
@@ -141,8 +141,8 @@ Le monitoring déjà prévu (Sentry, uptime) doit être étendu pour couvrir sp�
 ┌─────────────────────────────────────────────────────────────────┐
 │  FLUX 4 — Paiement                                                │
 │  Élève/Parent initie paiement                                     │
-│    → Redirect/iframe CamerPay (aucune donnée carte côté Klarity)│
-│    → Webhook CamerPay reçu                                        │
+│    → Redirect/iframe NotchPay (aucune donnée carte côté Klarity)│
+│    → Webhook NotchPay reçu                                        │
 │      → Vérification signature HMAC                               │
 │      → Vérification idempotence (paiement déjà traité ?)         │
 │    → Crédit abonnement                                            │

@@ -126,7 +126,7 @@ export async function POST(request: Request) {
       devise: DEVISE_DEFAUT,
       methode: "MOBILE_MONEY",
       statut: paiementSession.statut,
-      referenceCamerPay: `PENDING-${paiementSession.sessionId}`,
+      referenceTransaction: `PENDING-${paiementSession.sessionId}`,
       idempotencyKey: paiementSession.sessionId,
     },
   });

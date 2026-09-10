@@ -99,10 +99,13 @@ clés fournies par l'utilisateur — voir §20) : upload, URL signée expirante 
 bout en bout contre le vrai bucket, puis via le vrai formulaire admin (§21) et la banque d'épreuves
 élève (§27). La clé **YouTube Data API v3** est branchée et l'API répond, mais le pipeline vidéo
 §2.5 lui-même reste à construire (et son étape de filtrage dépend de la clé Anthropic) — aucun code
-de `src/` ne lit encore `YOUTUBE_API_KEY` (relevé à l'audit §25). Les trois accès externes encore
-en attente — CamerPay live, clé API Anthropic Claude, fournisseur SMS (Orange SMS Cameroun /
-Africa's Talking) — ont chacun leur interface + un mock, et basculeront en réel par un simple
-changement de config (`PAYMENT_MODE` / `AI_MODE` / `SMS_MODE`), sans réécriture du code appelant.
+de `src/` ne lit encore `YOUTUBE_API_KEY` (relevé à l'audit §25). CamerPay (jamais eu d'accès réel)
+a été **remplacé par NotchPay** (§39, §40) : `NotchPayProvider` est désormais réellement codé
+(`PAYMENT_MODE=notchpay`), reste seulement à y brancher les vraies clés sandbox de l'utilisateur
+pour le premier paiement réel. Les deux autres accès externes encore en attente — clé API
+Anthropic Claude, fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur
+interface + un mock, et basculeront en réel par un simple changement de config (`AI_MODE` /
+`SMS_MODE`), sans réécriture du code appelant.
 
 **Travail des 2–3 septembre 2026 (§21 à §27) :** Phase R2 fermée (§21) ; CDC porté en v1.29 puis
 v1.30 — SVT ajoutée à la banque/correction pour les séries C, D, TI (§22), nouveau type d'exercice
@@ -138,10 +141,11 @@ classe/série et URL signées R2 pour fiche + corrigé (§27).
   reconstruire le CDC depuis une source Markdown → WeasyPrint, le jour où ce sera nécessaire.
 - **8 écrans admin débloqués** (§33 puis §34) : audit des 3 dashboards (items grisés « Bientôt »)
   puis construction des écrans back-office qui ne dépendaient d'aucun accès externe (banque
-  d'épreuves / clé Anthropic / CamerPay / SMS) — juste jamais construits. §33 : **Utilisateurs,
+  d'épreuves / clé Anthropic / paiement / SMS) — juste jamais construits. §33 : **Utilisateurs,
   Élèves, Parents, Exemples corrigés, Sécurité, Usage IA**. §34 : **Paiements** (journal filtrable +
   webhooks liés par clé d'idempotence) et **Revenus** (MRR, CA, churn), avec un bandeau permanent
-  « Données de test » tant que `PAYMENT_MODE != live`. Tous branchés sur les vraies données déjà en
+  « Données de test » tant que `paiementsSontReels()` est faux (§40) — c'est-à-dire tant que
+  NotchPay ne tourne pas avec une clé publique `pk_live_…`. Tous branchés sur les vraies données déjà en
   base, badges « Bientôt » retirés dans `AdminShell`. **Seul reste grisé : Paramètres** (attend une
   décision produit sur le périmètre configurable).
 - **« Temps passé » débloqué côté parent** (§35) — le seul item de catégorie 5 qui demandait un
@@ -177,8 +181,9 @@ avec authentification SSH configurée.
 ## 2. Étape 0 (Phase 0 — Socle), telle que définie dans le CDC §10
 
 Le CDC découpe l'implémentation en 8 phases (0 à 7), séquencées pour ne jamais être bloquées
-par les deux accès externes encore en attente (CamerPay live, clé API Anthropic Claude) — ces
-deux dépendances sont développées en mode mock dès la Phase 1 et basculées en mode réel sans
+par les deux accès externes encore en attente (NotchPay en conditions réelles — le code est prêt,
+§40 —, clé API Anthropic Claude) — ces deux dépendances sont développées en mode mock dès la
+Phase 1 et basculées en mode réel sans
 réécriture de code applicatif, à condition de respecter les interfaces `AIProvider` et
 `PaymentProvider` dès la Phase 0.
 
@@ -743,9 +748,11 @@ le réflexe 3001 reste.
    `envoyerRappelRenouvellement` déjà posé) et l'ossature de jobs cron sur le worker existe
    (`src/lib/queue/retention.ts`, §19) — reste à écrire le job lui-même et le gabarit de message.
    Le job de rétention/anonymisation §2.9, lui, est **fait** (§19).
-6. `CamerPaySandboxProvider`/`CamerPayLiveProvider` (§5.3) dès obtention de l'accès CamerPay —
-   l'endpoint `/api/paiement/webhook` et l'interface `PaymentProvider` sont déjà prêts à les
-   recevoir sans retravail (§16).
+6. ~~`CamerPaySandboxProvider`/`CamerPayLiveProvider` (§5.3) dès obtention de l'accès CamerPay~~ —
+   **fait autrement** : CamerPay n'a jamais eu d'accès réel, remplacé par NotchPay (§39). Le vrai
+   `NotchPayProvider` est écrit (§39, renommage complet du code en §40) ; l'endpoint
+   `/api/paiement/webhook` et l'interface `PaymentProvider` l'ont reçu sans retravail, comme prévu.
+   Reste à brancher les vraies clés sandbox de l'utilisateur pour le premier paiement réel.
 
 ## 16. Phase 2 — Paiement Mobile Money en mode mock (31 août 2026)
 
@@ -2804,4 +2811,108 @@ maintenant plutôt que de se limiter à un renommage cosmétique.
   strictement à partir de la doc publique NotchPay ; l'hypothèse la plus incertaine (id de transaction
   d'initiation == `data.id` du webhook, la doc ne le confirme pas noir sur blanc) est commentée dans le
   code et **doit être validée par l'utilisateur au premier vrai paiement sandbox**, clés en main.
+
+## 40. Suite CamerPay → NotchPay — renommage complet du code, CDC v1.32, docs (10 septembre 2026)
+
+Retour utilisateur après §39 : le renommage devait aller plus loin qu'un simple ajout de provider —
+plus aucune trace de « CamerPay » nulle part dans le dépôt (code, docs, CDC), avec le même niveau de
+rigueur que pour COMMENTAIRE_COMPOSE (§23) côté repagination. Contrairement à ce qu'annonçait §39
+(« `referenceCamerPay` conservé tel quel, hors périmètre »), ce renommage a finalement été fait — la
+demande de cette entrée l'a explicitement remis en périmètre.
+
+### Renommage complet du schéma (migration data-preserving)
+
+`Paiement.referenceCamerPay` → `referenceTransaction`, `WebhookLog.provider` perd son défaut
+`"CAMERPAY"` (toujours posé explicitement par `traiterWebhookPaiement()` depuis §39). `prisma migrate
+dev` refuse de générer la migration seul (il ne sait pas inférer un renommage depuis un diff de schéma
+et proposait un DROP + ADD destructeur sur une table contenant déjà 5 lignes réelles) — migration
+`20260910082945_rename_reference_camerpay_to_transaction` écrite à la main
+(`ALTER TABLE … RENAME COLUMN` + `ALTER COLUMN … DROP DEFAULT`), appliquée via `prisma migrate
+deploy`, données vérifiées intactes après coup (`SELECT referenceTransaction FROM paiements` → les 5
+valeurs `MOCK-…`/`PENDING-…` préservées). Tout le code applicatif (`types.ts`, `mock-provider.ts`,
+`notchpay-provider.ts`, `webhook-handler.ts`, `initier/route.ts`, l'écran admin Paiements) mis à jour en
+conséquence, y compris le libellé UI « Référence CamerPay » → « Référence transaction » et « Webhooks
+CamerPay liés » → « Webhooks liés ». **Piège découvert en testant** : `app` et `worker` sont deux
+conteneurs Docker Compose distincts, chacun avec son propre `node_modules` (volumes anonymes séparés,
+`docker-compose.yml`) — `prisma generate` doit tourner **dans les deux**, sinon le worker continue de
+faire fonctionner l'ancien client Prisma généré et échoue avec `Unknown argument referenceTransaction`
+sur le job de webhook mock alors que l'API `app` fonctionne déjà correctement. Non-régression rejouée
+bout en bout après correction : inscription → connexion → paiement → webhook mock → `REUSSI` →
+abonnement `PREMIUM`/`ACTIF` → `webhook_logs.provider = 'MOCK'`, données de test nettoyées.
+
+### CLAUDE.md, docs/reference/, docs/PROGRESS.md
+
+`CLAUDE.md` (payments via CamerPay → NotchPay) et les deux docs de référence
+(`Klarity_Securite_Reference.md` — section paiement + schéma ASCII du flux 4 ; `Klarity_scalability_
+reference.txt` — idempotence webhook) mis à jour par remplacement direct. Dans `docs/PROGRESS.md` :
+les sections **vivantes** (§1, §2, §15 — resynchronisées par convention, cf. l'en-tête du fichier) ont
+été mises à jour pour refléter NotchPay ; les entrées **datées** du journal (§16 « Phase 2 — Paiement
+mode mock », 31 août ; §33/§34, 5-6 septembre) ont été **délibérément laissées telles quelles** — elles
+décrivent fidèlement ce qui était vrai à ces dates-là (CamerPay nommé, jamais accessible), et les
+réécrire changerait rétroactivement l'histoire plutôt que de la documenter. C'est un choix assumé, pas
+un oubli : si l'utilisateur préfère un nettoyage complet y compris de ces entrées historiques, il suffit
+de le demander explicitement.
+
+### CDC (`Klarity_Cahier_des_Charges.pdf`), v1.31 → v1.32
+
+Édité en place par redaction PyMuPDF (même méthode que v1.29-v1.31, cf. mémoire dédiée), **fait
+directement par l'agent principal** après qu'un premier essai de délégation à un sub-agent (fork) a
+tourné ~30 minutes et ~450k tokens sans produire une seule modification sur le fichier réel (confirmé
+par `git status` resté vide) — repris en direct plutôt que de continuer à attendre.
+
+- **Nouvelle page insérée** (page 10, `doc.new_page(pno=9)`, TOC auto-décalée de +1 comme en v1.31) :
+  entrée de journal « v1.31 → v1.32 » détaillant le remplacement (raison : CamerPay jamais accessible en
+  pratique malgré son statut de fournisseur nommé depuis les premières versions ; NotchPay offre un
+  accès sandbox immédiat MTN + Orange), le nouveau `PAYMENT_MODE = mock | notchpay` (plus de
+  sandbox/live séparé — une seule URL d'API NotchPay, distinguée par le préfixe de clé publique), le flux
+  réel en 2 appels (`POST /payments` puis `POST /payments/{transaction}` avec canal `cm.orange`/
+  `cm.mtn`), la vérification webhook (`x-notch-signature`, HMAC-SHA256, « Hash Key »), le renommage
+  `referenceTransaction`, et la limite connue (non testé en sandbox réel). 44 pages au total désormais ;
+  footers 10→44 renumérotés, TOC vérifiée cohérente (cibles croissantes, dans les bornes).
+- **Remplacements de mots** dans les sections vivantes concernées (§1 page de garde, §1.1/§1.2, §2.4,
+  §3, §4.5 — table `Paiement`/`WebhookLog`, §6, §8, §9 diagramme ASCII, §10 roadmap) — `CamerPay` →
+  `NotchPay` en place, sans repagination. Contrairement à §23, aucune table n'a dû être laissée en
+  retard : les seules cellules nécessitant plus d'espace (`referenceTransaction` sur la table §4.5, la
+  ligne Phase 2/Phase 4 de la roadmap §10) tenaient dans la marge verticale déjà présente sous le
+  contenu existant — vérifié ligne par ligne avant application, aucune dette de documentation à signaler
+  cette fois.
+- **§5 réécrite substantiellement** (pas un simple remplacement de mot, comme demandé) : contexte,
+  §5.1 (bloc de code `PAYMENT_MODE`/liste des providers), §5.2 (« déjà construit » plutôt que « à faire »),
+  §5.3 (reformulée en « ce qui reste à valider avec de vraies clés » plutôt qu'un TODO d'obtention
+  d'accès) — le détail mécanique le plus fin (flux HTTP exact, en-têtes, limite non testée) a été mis
+  dans la nouvelle entrée de journal plutôt que dans le corps de §5, qui reste volontairement concis,
+  cohérent avec le style des sections existantes.
+- **Deux pièges de police rencontrés et corrigés** : `apply_redactions()` élague du PDF toute police non
+  utilisée dans le flux de contenu au moment où elle est appelée — extraire une police *après* avoir
+  redacté son unique usage la fait disparaître (`get_fonts()` ne la liste plus) ; contournement : chaque
+  police nécessaire est extraite vers un fichier `.ttf` temporaire *avant* toute redaction sur la page,
+  puis passée directement via `fontfile=` à `insert_text()` (jamais via un alias pré-enregistré, qui
+  subirait le même élagage). Ensuite, certains sous-ensembles de police embarqués ne contiennent que
+  les glyphes réellement utilisés ailleurs sur cette page précise — le sous-ensemble Mono de la page 34
+  n'avait jamais utilisé « ê » ni l'apostrophe typographique, les faisant disparaître silencieusement
+  (pas d'erreur, juste un caractère absent au rendu) tant que le texte de remplacement les utilisait ;
+  détecté par rendu visuel de chaque page touchée (pas seulement extraction de texte), corrigé en
+  vérifiant la couverture de glyphes (`fitz.Font.has_glyph`) avant d'écrire le texte définitif.
+- **Vérifié** : 44 pages (+1 volontaire) ; titre des métadonnées → `v1.32` ; `grep -i camerpay` sur le
+  texte extrait de tout le document → uniquement les 3 pages de journal historiques (v1.1→v1.2,
+  v1.5→v1.6, v1.17→v1.19 — volontairement inchangées, même logique que pour PROGRESS.md ci-dessus) et
+  la nouvelle page 10 elle-même (qui nomme CamerPay pour expliquer le remplacement) ; comparaison
+  texte page par page contre l'original confirme zéro différence de contenu sur toute page non
+  concernée (les « différences » détectées par un premier script de vérification n'étaient qu'un artefact
+  d'ordre d'extraction du chiffre de pied de page, pas un vrai changement — confirmé par rendu visuel) ;
+  footers strictement séquentiels 1→44. Fichier optimisé après coup (`garbage=4, deflate=True` côté
+  PyMuPDF) : 298 Ko, plus léger que l'original 338 Ko malgré la page ajoutée (le premier essai avant
+  optimisation pesait 1,7 Mo à cause de multiples ré-embarquements de la même police).
+
+### Vérification finale — zéro trace de CamerPay hors historique légitime
+
+`grep -rn -i camerpay .` (hors `node_modules`, `.git`) sur tout le dépôt ne renvoie plus que : les
+entrées datées de `docs/PROGRESS.md` (§16, §33, §34, §39 — historique délibérément préservé, cf.
+ci-dessus), la migration Prisma déjà appliquée `20260819070754_init` (immuable, jamais modifiée après
+application — éditer un fichier de migration déjà appliqué casserait l'intégrité de l'historique
+Prisma), le commentaire de la nouvelle migration `20260910082945_…` qui nomme forcément l'ancienne
+colonne pour documenter le renommage, et la page 10 du CDC (nomme CamerPay pour expliquer pourquoi il
+a été remplacé). Le fichier `.env` réel de l'utilisateur (jamais touché, comme toujours) contient encore
+l'ancien commentaire `# --- Payment provider — CamerPay, …` au-dessus de ses variables `NOTCHPAY_*` —
+cosmétique, sans effet fonctionnel, à mettre à jour par l'utilisateur s'il le souhaite.
 

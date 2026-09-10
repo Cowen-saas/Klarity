@@ -3,9 +3,9 @@ import type { PaymentProvider } from "./provider";
 import type { MethodePaiement, OperateurMobileMoney, PaiementSession, Payeur, ResultatPaiement, StatutPaiement } from "./types";
 
 /**
- * Intégration NotchPay réelle (cahier des charges §5.3) — agrégateur Mobile
- * Money remplaçant CamerPay (jamais eu d'accès réel). Implémentée à partir de
- * la doc publique NotchPay (developer.notchpay.co) au 10 septembre 2026 ;
+ * Intégration NotchPay réelle (cahier des charges §5.3) — l'unique agrégateur
+ * Mobile Money du projet (v1.32). Implémentée à partir de la doc publique
+ * NotchPay (developer.notchpay.co) au 10 septembre 2026 ;
  * **non exercée contre un vrai compte sandbox** (pas de clés disponibles côté
  * agent) — à valider par un premier paiement de test réel une fois
  * NOTCHPAY_PUBLIC_KEY/NOTCHPAY_WEBHOOK_SECRET renseignées.
@@ -141,7 +141,7 @@ export class NotchPayProvider implements PaymentProvider {
       // cohérente avec le fonctionnement usuel de ce type d'agrégateur.
       idempotencyKey: data.id,
       statut: mapperStatutNotchPay(data.status),
-      referenceCamerPay: data.id,
+      referenceTransaction: data.id,
       montant: data.amount,
       devise: data.currency,
     };

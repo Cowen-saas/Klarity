@@ -33,7 +33,7 @@ Monitoring d'uptime basique sur les endpoints critiques (auth, paiement, correct
 Ça coûte quelques heures à mettre en place maintenant, et t'évite des jours de debugging à l'aveugle plus tard
 7. Idempotence sur tout ce qui touche à l'argent
 
-Le webhook CamerPay peut être appelé plusieurs fois pour le même événement (retry réseau, etc.) — ta logique de traitement du paiement doit être idempotente (vérifier si ce paiement a déjà été traité avant de créditer l'abonnement une deuxième fois). C'est un bug classique qui coûte cher si on ne l'anticipe pas.
+Le webhook NotchPay peut être appelé plusieurs fois pour le même événement (retry réseau, etc.) — ta logique de traitement du paiement doit être idempotente (vérifier si ce paiement a déjà été traité avant de créditer l'abonnement une deuxième fois). C'est un bug classique qui coûte cher si on ne l'anticipe pas.
 
 8. Contrôle des coûts IA — spécifique à ton modèle économique
 

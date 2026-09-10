@@ -113,7 +113,7 @@ Non-negotiables when implementing any of the three:
   `(epreuveId, eleveId)` — first correction is final, `unique` constraint enforces it). Admins can override the
   score/justification (`noteOverride`) without mutating the AI's original output.
 - `Lacune.niveauMaitrise` is a deterministic ratio calculation (quiz correct/total) — never an LLM call.
-- Payments: Mobile Money only via CamerPay (card payments were deliberately removed — a card form rendered PAN
+- Payments: Mobile Money only via NotchPay (card payments were deliberately removed — a card form rendered PAN
   fields inside Klarity's own UI instead of an isolated PSP frame, which was flagged as a PCI-DSS compliance
   risk; keep it that way). Every webhook write is gated by HMAC signature verification and
   `Paiement.idempotencyKey` uniqueness; `WebhookLog` is an append-only audit trail that also records rejected

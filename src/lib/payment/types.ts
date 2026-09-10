@@ -28,8 +28,8 @@ export interface ResultatPaiement {
   /** Correspond à Paiement.idempotencyKey (§4.5) — garantit un crédit unique. */
   idempotencyKey: string;
   statut: StatutPaiement;
-  /** Nom de champ hérité (colonne `Paiement.referenceCamerPay`) — contient en réalité l'id de transaction du provider actif (mock ou NotchPay), jamais spécifique à CamerPay. */
-  referenceCamerPay: string;
+  /** Id de transaction du provider actif (mock ou NotchPay). Correspond à Paiement.referenceTransaction. */
+  referenceTransaction: string;
   montant: number;
   devise: string;
 }

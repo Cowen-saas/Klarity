@@ -27,9 +27,9 @@ export async function traiterWebhookPaiement(
   signatureRecue: string
 ): Promise<ResultatTraitementWebhook> {
   const provider = getPaymentProvider();
-  // Journalisé explicitement (plutôt que de laisser jouer le défaut "CAMERPAY"
-  // du schéma, faux depuis le passage à NotchPay) — reflète le provider
-  // effectivement actif au moment du traitement.
+  // Journalisé explicitement à chaque écriture (WebhookLog.provider n'a plus de
+  // défaut, v1.32) — reflète le provider effectivement actif au moment du
+  // traitement.
   const nomProvider = (process.env.PAYMENT_MODE ?? "mock").toUpperCase();
 
   if (!provider.verifierSignatureWebhook(payloadBrut, signatureRecue)) {
@@ -84,7 +84,7 @@ export async function traiterWebhookPaiement(
   await prisma.$transaction(async (tx) => {
     await tx.paiement.update({
       where: { id: paiement.id },
-      data: { statut: resultat.statut, referenceCamerPay: resultat.referenceCamerPay },
+      data: { statut: resultat.statut, referenceTransaction: resultat.referenceTransaction },
     });
 
     if (resultat.statut === "REUSSI") {

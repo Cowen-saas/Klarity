@@ -664,10 +664,10 @@ model Paiement {
   montant Decimal @db.Decimal(10, 2)
   devise  String  @default("XAF")
 
-  methode           MethodePaiement @default(MOBILE_MONEY)
-  statut            StatutPaiement  @default(EN_ATTENTE)
-  referenceCamerPay String
-  idempotencyKey    String          @unique // garantit qu'un même webhook ne peut créditer qu'une seule fois
+  methode              MethodePaiement @default(MOBILE_MONEY)
+  statut               StatutPaiement  @default(EN_ATTENTE)
+  referenceTransaction String // id de transaction du provider actif (mock ou NotchPay) — historique de renommage dans prisma/migrations/20260910082945_.../migration.sql
+  idempotencyKey       String          @unique // garantit qu'un même webhook ne peut créditer qu'une seule fois
 
   datePaiement DateTime @default(now())
 
@@ -679,7 +679,7 @@ model Paiement {
 model WebhookLog {
   id String @id @default(cuid())
 
-  provider         String  @default("CAMERPAY")
+  provider         String // toujours posé explicitement par traiterWebhookPaiement() ("MOCK"/"NOTCHPAY") — plus de défaut depuis v1.32
   payloadBrut      Json
   signatureValide  Boolean
   traitementStatut String

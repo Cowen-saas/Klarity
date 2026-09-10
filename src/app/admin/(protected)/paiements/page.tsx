@@ -57,7 +57,7 @@ function formatFCFA(n: number): string {
  * ne sert qu'au self-service élève/parent et refuse explicitement l'admin). La
  * défense repose sur le gate ADMIN (middleware + layout + ce contrôle en tête).
  * Aucune donnée carte n'existe (Mobile Money uniquement, §5) ; le téléphone
- * payeur est masqué, `referenceCamerPay` / `idempotencyKey` restent visibles
+ * payeur est masqué, `referenceTransaction` / `idempotencyKey` restent visibles
  * car nécessaires à la réconciliation.
  */
 export default async function AdminPaiementsPage({
@@ -113,7 +113,7 @@ export default async function AdminPaiementsPage({
       devise: true,
       methode: true,
       statut: true,
-      referenceCamerPay: true,
+      referenceTransaction: true,
       idempotencyKey: true,
       datePaiement: true,
       abonnement: { select: { plan: true, eleve: { select: { codeEleve: true } } } },
@@ -138,7 +138,7 @@ export default async function AdminPaiementsPage({
           devise: true,
           methode: true,
           statut: true,
-          referenceCamerPay: true,
+          referenceTransaction: true,
           idempotencyKey: true,
           datePaiement: true,
           abonnement: {
@@ -240,7 +240,7 @@ export default async function AdminPaiementsPage({
               <Ligne cle="Méthode" valeur="Mobile Money" />
               <Ligne cle="Statut" valeur={STATUT_MAP.get(detail.statut)?.label ?? detail.statut} />
               <Ligne cle="Date" valeur={detail.datePaiement.toLocaleString("fr-FR")} />
-              <Ligne cle="Référence transaction" valeur={detail.referenceCamerPay} mono />
+              <Ligne cle="Référence transaction" valeur={detail.referenceTransaction} mono />
               <Ligne cle="Clé d'idempotence" valeur={detail.idempotencyKey} mono />
             </dl>
 

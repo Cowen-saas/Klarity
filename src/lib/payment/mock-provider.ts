@@ -57,7 +57,7 @@ export class MockPaymentProvider implements PaymentProvider {
       // doit toujours produire la même clé, condition testée en §5.2.
       idempotencyKey: payload.sessionId,
       statut: payload.statut,
-      referenceCamerPay: `MOCK-${payload.sessionId}`,
+      referenceTransaction: `MOCK-${payload.sessionId}`,
       montant: payload.montant,
       devise: payload.devise,
     };
