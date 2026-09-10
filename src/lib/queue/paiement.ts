@@ -5,10 +5,10 @@ import { createRedisConnection } from "@/lib/redis";
  * File dédiée à la simulation du délai de confirmation Mobile Money en mode
  * PAYMENT_MODE=mock (§5.2) — le worker (src/worker/index.ts) consomme cette
  * file après un court délai et rejoue le même chemin de traitement que le
- * futur vrai webhook CamerPay (src/lib/payment/webhook-handler.ts), pour ne
- * jamais avoir à retravailler ce chemin au passage sandbox/live (§5.3).
- * N'existe qu'en mode mock : CamerPaySandboxProvider/LiveProvider appelleront
- * directement l'endpoint HTTP réel, jamais cette file.
+ * vrai webhook NotchPay (src/lib/payment/webhook-handler.ts), pour ne jamais
+ * avoir à retravailler ce chemin selon le provider actif (§5.3). N'existe
+ * qu'en mode mock : NotchPayProvider appelle directement l'endpoint HTTP réel,
+ * jamais cette file.
  */
 export const QUEUE_PAIEMENT_MOCK = "paiement-mock-webhook";
 

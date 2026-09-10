@@ -2734,3 +2734,74 @@ lui-même pas touché, hors périmètre de cette tâche).
 - Toutes les données de test (épreuves, tentative synthétique, script de vérification temporaire)
   nettoyées après coup — la banque réelle importée (~130 épreuves) n'a pas été touchée.
 
+## 39. `NotchPayProvider` — CamerPay remplacé (jamais eu d'accès réel) par un vrai agrégateur (10 septembre 2026)
+
+Demande initiale de l'utilisateur : juste renommer les 4 variables `CAMERPAY_*` de `.env.example` en
+`NOTCHPAY_*`, « cohérentes avec le NotchPayProvider déjà implémenté ». Vérification faite avant
+d'agir (`grep -ri notchpay` sur tout le repo, hors `node_modules`/`.git`) : **aucun `NotchPayProvider`
+n'existait** — seul `MockPaymentProvider` était implémenté, `PAYMENT_MODE=sandbox|live` levait une
+erreur explicite référençant CamerPay. Signalé à l'utilisateur plutôt que d'inventer des noms de
+variables pour un code qui ne les lirait jamais ; il a choisi d'implémenter le vrai provider
+maintenant plutôt que de se limiter à un renommage cosmétique.
+
+### Recherche doc NotchPay (developer.notchpay.co, 10 septembre 2026 — pas de clés sandbox côté agent)
+
+- Pas de distinction sandbox/live côté API : une seule URL (`https://api.notchpay.co`), c'est le
+  préfixe de la clé publique (`pk_test_…`/`pk_live_…`) qui distingue les deux.
+- Clé **publique** (`Authorization` header) suffit pour initier un paiement et déclencher le canal
+  Mobile Money ; clé **secrète** (`X-Grant` header) réservée aux opérations sensibles
+  (compte, transferts, gestion webhooks) — jamais lue par notre intégration, donc **pas** ajoutée à
+  `.env.example` (l'utilisateur avait explicitement demandé les variables *réellement* utilisées).
+- Flux d'initiation en 2 appels : `POST /payments` (montant, devise, téléphone → id de transaction +
+  `authorization_url` de repli) puis `POST /payments/{transaction}` avec `channel`
+  (`cm.orange`/`cm.mtn`) + téléphone, qui déclenche l'invite USSD côté payeur — jamais de confirmation
+  synchrone.
+- Webhook : header `x-notch-signature`, HMAC-SHA256 hex du JSON brut, secret = "Hash Key" (distinct
+  des clés API, dispo dans Dashboard > Settings > API Keys). Statuts observés :
+  `complete`/`failed`/`canceled`/`expired`/`processing`.
+
+### Code
+
+- **`src/lib/payment/notchpay-provider.ts`** (nouveau) : implémente `PaymentProvider` selon la doc
+  ci-dessus. `processing`/statut inconnu → `EN_ATTENTE` (jamais un faux `ECHEC` par défaut).
+- **`types.ts`** : `Payeur.operateur?: "ORANGE"|"MTN"` ajouté — l'interface n'avait jusqu'ici aucun
+  moyen de faire remonter l'opérateur Mobile Money choisi jusqu'au provider, alors que NotchPay en a
+  besoin pour choisir le canal. Champ optionnel (rétro-compatible, `MockPaymentProvider` l'ignore).
+  `ResultatPaiement.referenceCamerPay` **conservé tel quel** (colonne DB du même nom, changer les deux
+  demanderait une migration hors périmètre de cette tâche) — commenté pour que ça ne trompe pas un
+  futur lecteur.
+- **`index.ts`** : `PAYMENT_MODE = mock | notchpay` (fini `sandbox`/`live`, qui n'a plus de sens pour
+  NotchPay). Nouvel export `paiementsSontReels()` : vrai seulement si `notchpay` **et** clé publique
+  `pk_live_…` — remplace le test `modePaiement !== "live"` devenu un bug silencieux (cette valeur
+  n'existe plus, le bandeau « données de test » se serait affiché indéfiniment) dans
+  `/admin/paiements` et `/admin/revenus`.
+- **`webhook-handler.ts`** : nouvelle branche `EN_ATTENTE` (événement intermédiaire type
+  `processing`) — journalisée (`traitementStatut: "EVENEMENT_INTERMEDIAIRE"`) sans toucher
+  `Paiement`/`Abonnement`, pour ne jamais fermer un paiement en cours sur un événement non terminal.
+  `WebhookLog.provider` désormais posé explicitement (`MOCK`/`NOTCHPAY`) à chaque écriture au lieu de
+  laisser jouer le défaut `"CAMERPAY"` du schéma, faux depuis toujours en pratique.
+- **`initier/route.ts`** : `operateur` (déjà validé par le body schema) enfin transmis au provider —
+  jusqu'ici capturé puis silencieusement perdu.
+- **`webhook/route.ts`** : en-tête lu passé de `x-camerpay-signature` à `x-notch-signature`.
+- Passages **CamerPay → NotchPay** dans les commentaires et libellés UI directement concernés
+  (`BandeauModeTest`, écran Paiements : « Référence transaction »/« Webhooks liés » plutôt que
+  « … CamerPay »). Noms de colonnes DB (`referenceCamerPay`, défaut `"CAMERPAY"` de
+  `WebhookLog.provider`) **non renommés** — changement de schéma hors périmètre, signalé à
+  l'utilisateur avec `CLAUDE.md`/le cahier des charges qui mentionnent encore CamerPay explicitement.
+
+### Vérifié
+
+- `tsc --noEmit` et `eslint` **dans le conteneur** (le `node_modules` hôte s'est révélé désynchronisé
+  du schéma Prisma actuel — `periodeTarifaire` absent du client généré côté hôte, `@aws-sdk/*`
+  introuvable — sans rapport avec ce changement ; le conteneur, source de vérité, est propre : 0
+  erreur, 2 warnings préexistants inchangés).
+- **Non-régression du chemin mock, bout en bout, contre le serveur réel** : inscription élève de test
+  → connexion NextAuth (`callback/eleve`) → `POST /api/paiement/initier` (`201`, `operateur` transmis
+  sans erreur) → job BullMQ mock → `paiements.statut` **REUSSI**, `abonnements` passé **PREMIUM/ACTIF**,
+  nouvelle ligne `webhook_logs.provider = 'MOCK'` (confirmant le fix du défaut `CAMERPAY`). Toutes les
+  données de test supprimées ensuite.
+- **`NotchPayProvider` non exercé contre un vrai compte sandbox** — pas de clés côté agent. Implémenté
+  strictement à partir de la doc publique NotchPay ; l'hypothèse la plus incertaine (id de transaction
+  d'initiation == `data.id` du webhook, la doc ne le confirme pas noir sur blanc) est commentée dans le
+  code et **doit être validée par l'utilisateur au premier vrai paiement sandbox**, clés en main.
+

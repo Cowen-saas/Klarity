@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { IconCreditCard } from "@/components/icons";
 import { Pagination, lirePage } from "@/components/admin/Pagination";
 import { BandeauModeTest } from "@/components/admin/BandeauModeTest";
+import { paiementsSontReels } from "@/lib/payment";
 
 export const metadata: Metadata = {
   title: "Paiements — Admin Klarity",
@@ -124,7 +125,7 @@ export default async function AdminPaiementsPage({
   const nbEchoues = comptesStatut.get("ECHEC") ?? 0;
   const totalGlobal = [...comptesStatut.values()].reduce((s, n) => s + n, 0);
 
-  // Détail d'un paiement + webhooks CamerPay correspondants (liés par
+  // Détail d'un paiement + webhooks correspondants (liés par
   // payloadBrut.sessionId == idempotencyKey — pas de FK directe).
   const detail = paiementId
     ? await prisma.paiement.findUnique({
@@ -163,7 +164,7 @@ export default async function AdminPaiementsPage({
         d&apos;idempotence avant d&apos;être crédité.
       </p>
 
-      {modePaiement !== "live" && <BandeauModeTest mode={modePaiement} sujet="Montants" />}
+      {!paiementsSontReels() && <BandeauModeTest mode={modePaiement} sujet="Montants" />}
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <PaiementTile label="Transactions" valeur={totalGlobal.toLocaleString("fr-FR")} />
@@ -239,12 +240,12 @@ export default async function AdminPaiementsPage({
               <Ligne cle="Méthode" valeur="Mobile Money" />
               <Ligne cle="Statut" valeur={STATUT_MAP.get(detail.statut)?.label ?? detail.statut} />
               <Ligne cle="Date" valeur={detail.datePaiement.toLocaleString("fr-FR")} />
-              <Ligne cle="Référence CamerPay" valeur={detail.referenceCamerPay} mono />
+              <Ligne cle="Référence transaction" valeur={detail.referenceCamerPay} mono />
               <Ligne cle="Clé d'idempotence" valeur={detail.idempotencyKey} mono />
             </dl>
 
             <p className="mt-5 text-xs font-bold tracking-wide text-texte-muted uppercase">
-              Webhooks CamerPay liés ({webhooksLies.length})
+              Webhooks liés ({webhooksLies.length})
             </p>
             {webhooksLies.length === 0 ? (
               <p className="mt-2 text-sm text-texte-muted">Aucun webhook enregistré pour cette clé d&apos;idempotence.</p>

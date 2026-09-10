@@ -625,7 +625,7 @@ model MessageChat {
 }
 
 // ============================================================================
-// §4.5 — ABONNEMENT ET PAIEMENT (CamerPay — Mobile Money uniquement)
+// §4.5 — ABONNEMENT ET PAIEMENT (NotchPay — Mobile Money uniquement)
 // ============================================================================
 
 model Abonnement {

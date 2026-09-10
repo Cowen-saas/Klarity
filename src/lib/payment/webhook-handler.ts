@@ -3,15 +3,15 @@ import { getPaymentProvider } from "@/lib/payment";
 
 /**
  * Traitement d'un webhook de paiement (§5.4) — point d'entrée unique partagé
- * par le vrai endpoint HTTP (`/api/paiement/webhook`, celui que CamerPay
- * appellera en sandbox/live) et par le job BullMQ qui simule l'arrivée
- * asynchrone du webhook en mode mock (§5.2 : « pop-up de confirmation branché
- * sur MockPaymentProvider qui simule REUSSI/ECHEC après un court délai »).
- * Partager cette fonction garantit qu'aucun retravail de l'endpoint ne sera
- * nécessaire au passage sandbox/live — seul PaymentProvider change (§5.3).
+ * par le vrai endpoint HTTP (`/api/paiement/webhook`, celui que NotchPay
+ * appellera) et par le job BullMQ qui simule l'arrivée asynchrone du webhook
+ * en mode mock (§5.2 : « pop-up de confirmation branché sur MockPaymentProvider
+ * qui simule REUSSI/ECHEC après un court délai »). Partager cette fonction
+ * garantit qu'aucun retravail de l'endpoint n'est nécessaire au changement de
+ * provider — seul PaymentProvider change (§5.3).
  *
  * Idempotence stricte (§4.5, §5.4, §8) : un même événement rejoué (retry
- * réseau CamerPay, ou le même job mock relancé) ne crédite jamais deux fois —
+ * réseau NotchPay, ou le même job mock relancé) ne crédite jamais deux fois —
  * dès que Paiement.statut a quitté EN_ATTENTE, tout replay est un no-op
  * journalisé, jamais une seconde écriture sur Abonnement.
  */
@@ -19,7 +19,7 @@ import { getPaymentProvider } from "@/lib/payment";
 const DUREE_ABONNEMENT_JOURS = 30;
 
 export type ResultatTraitementWebhook =
-  | { ok: true; traitementStatut: "CREDITE" | "ECHEC_PAIEMENT" | "DEJA_TRAITE" }
+  | { ok: true; traitementStatut: "CREDITE" | "ECHEC_PAIEMENT" | "DEJA_TRAITE" | "EVENEMENT_INTERMEDIAIRE" }
   | { ok: false; traitementStatut: "SIGNATURE_INVALIDE" | "PAIEMENT_INTROUVABLE"; status: 401 | 404 };
 
 export async function traiterWebhookPaiement(
@@ -27,11 +27,15 @@ export async function traiterWebhookPaiement(
   signatureRecue: string
 ): Promise<ResultatTraitementWebhook> {
   const provider = getPaymentProvider();
+  // Journalisé explicitement (plutôt que de laisser jouer le défaut "CAMERPAY"
+  // du schéma, faux depuis le passage à NotchPay) — reflète le provider
+  // effectivement actif au moment du traitement.
+  const nomProvider = (process.env.PAYMENT_MODE ?? "mock").toUpperCase();
 
   if (!provider.verifierSignatureWebhook(payloadBrut, signatureRecue)) {
     await Promise.all([
       prisma.webhookLog.create({
-        data: { payloadBrut: asJson(payloadBrut), signatureValide: false, traitementStatut: "SIGNATURE_INVALIDE" },
+        data: { provider: nomProvider, payloadBrut: asJson(payloadBrut), signatureValide: false, traitementStatut: "SIGNATURE_INVALIDE" },
       }),
       prisma.auditLogSecurite.create({ data: { typeEvenement: "WEBHOOK_INVALID" } }),
     ]);
@@ -48,6 +52,7 @@ export async function traiterWebhookPaiement(
   if (!paiement) {
     await prisma.webhookLog.create({
       data: {
+        provider: nomProvider,
         payloadBrut: asJson(payloadBrut),
         signatureValide: true,
         traitementStatut: "PAIEMENT_INTROUVABLE",
@@ -57,12 +62,23 @@ export async function traiterWebhookPaiement(
   }
 
   if (paiement.statut !== "EN_ATTENTE") {
-    // Replay d'un webhook déjà traité (retry réseau CamerPay, ou job mock
-    // rejoué) — no-op volontaire, aucune seconde écriture sur Abonnement.
+    // Replay d'un webhook déjà traité (retry réseau, ou job mock rejoué) —
+    // no-op volontaire, aucune seconde écriture sur Abonnement.
     await prisma.webhookLog.create({
-      data: { payloadBrut: asJson(payloadBrut), signatureValide: true, traitementStatut: "DEJA_TRAITE" },
+      data: { provider: nomProvider, payloadBrut: asJson(payloadBrut), signatureValide: true, traitementStatut: "DEJA_TRAITE" },
     });
     return { ok: true, traitementStatut: "DEJA_TRAITE" };
+  }
+
+  if (resultat.statut === "EN_ATTENTE") {
+    // Événement intermédiaire (ex. NotchPay "processing") — pas encore un
+    // état terminal : journalisé pour audit, mais ni Paiement ni Abonnement ne
+    // sont modifiés. Le paiement reste EN_ATTENTE jusqu'au prochain webhook
+    // terminal (REUSSI/ECHEC).
+    await prisma.webhookLog.create({
+      data: { provider: nomProvider, payloadBrut: asJson(payloadBrut), signatureValide: true, traitementStatut: "EVENEMENT_INTERMEDIAIRE" },
+    });
+    return { ok: true, traitementStatut: "EVENEMENT_INTERMEDIAIRE" };
   }
 
   await prisma.$transaction(async (tx) => {
@@ -91,6 +107,7 @@ export async function traiterWebhookPaiement(
 
   await prisma.webhookLog.create({
     data: {
+      provider: nomProvider,
       payloadBrut: asJson(payloadBrut),
       signatureValide: true,
       traitementStatut: resultat.statut === "REUSSI" ? "CREDITE" : "ECHEC_PAIEMENT",

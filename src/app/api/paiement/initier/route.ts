@@ -114,6 +114,7 @@ export async function POST(request: Request) {
   const paiementSession = await provider.initierPaiement(tarif.prix, DEVISE_DEFAUT, "MOBILE_MONEY", {
     telephone: telephoneFormate,
     role: payeurRole,
+    operateur,
   });
 
   const paiement = await prisma.paiement.create({
@@ -132,7 +133,7 @@ export async function POST(request: Request) {
 
   // Convention de test en mode mock (§5.2) : un numéro se terminant par 0
   // simule un ECHEC, tout autre numéro simule un REUSSI — permet de tester les
-  // deux chemins de l'écran de vérification (§17) sans dépendance CamerPay.
+  // deux chemins de l'écran de vérification (§17) sans dépendance à NotchPay.
   if ((process.env.PAYMENT_MODE ?? "mock") === "mock") {
     const statutCible = telephone.endsWith("0") ? "ECHEC" : "REUSSI";
     await planifierWebhookMock({

@@ -3,9 +3,10 @@ import type { PaymentProvider } from "./provider";
 import type { MethodePaiement, PaiementSession, Payeur, ResultatPaiement } from "./types";
 
 /**
- * Shape volontairement propre à Klarity (mock) — le format exact du payload
- * CamerPay n'est pas encore connu (§5.3) ; seule l'interface PaymentProvider est
- * fixée à l'avance, pas ce shape interne.
+ * Shape volontairement propre à Klarity (mock), distincte du payload webhook
+ * réel de NotchPay (`{ id, type, data: {...} }` — voir `notchpay-provider.ts`) :
+ * seule l'interface PaymentProvider est partagée entre les deux, pas ce shape
+ * interne.
  */
 interface MockWebhookPayload {
   sessionId: string;
@@ -14,13 +15,13 @@ interface MockWebhookPayload {
   devise: string;
 }
 
-const MOCK_SIGNING_SECRET = process.env.CAMERPAY_WEBHOOK_SECRET || "mock-dev-secret";
+const MOCK_SIGNING_SECRET = process.env.NOTCHPAY_WEBHOOK_SECRET || "mock-dev-secret";
 
 /**
- * Simule un paiement réussi/échoué en local, sans accès CamerPay (§5.2). La
- * vérification de signature HMAC est réellement codée (pas un no-op) mais
- * désactivable via PAYMENT_MOCK_SKIP_SIGNATURE=true pour accélérer les tests
- * manuels locaux — jamais désactivée en sandbox/live (§5.4).
+ * Simule un paiement réussi/échoué en local, sans accès à un vrai agrégateur
+ * Mobile Money (§5.2). La vérification de signature HMAC est réellement codée
+ * (pas un no-op) mais désactivable via PAYMENT_MOCK_SKIP_SIGNATURE=true pour
+ * accélérer les tests manuels locaux — jamais désactivée avec NotchPay (§5.4).
  */
 export class MockPaymentProvider implements PaymentProvider {
   async initierPaiement(
@@ -63,7 +64,7 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 }
 
-/** Utilitaire de test : signe un payload mock comme le ferait CamerPay (§5.4). */
+/** Utilitaire de test : signe un payload mock comme le ferait NotchPay (§5.4). */
 export function signerWebhookMock(payload: unknown): string {
   return signerPayload(payload);
 }

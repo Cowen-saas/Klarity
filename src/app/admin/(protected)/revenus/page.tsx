@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { BarChart } from "@/components/ui/BarChart";
 import { BandeauModeTest } from "@/components/admin/BandeauModeTest";
+import { paiementsSontReels } from "@/lib/payment";
 
 export const metadata: Metadata = {
   title: "Revenus — Admin Klarity",
@@ -20,8 +21,9 @@ function formatFCFA(n: number): string {
  * Tableau de bord financier (§2.3, §2.4). MRR = somme des `prixApplique` figés
  * des abonnements ACTIF (jamais recalculé a posteriori, §2.4.1). CA mensuel =
  * paiements `REUSSI`. Accès global ADMIN légitime — défense par le gate ADMIN
- * (middleware + layout + contrôle en tête). Tant que `PAYMENT_MODE != live`,
- * les montants sont ceux du simulateur : bandeau explicite.
+ * (middleware + layout + contrôle en tête). Tant que `paiementsSontReels()`
+ * est faux (mock, ou NotchPay avec une clé `pk_test_…`), les montants ne sont
+ * pas de vrai chiffre d'affaires : bandeau explicite.
  */
 export default async function AdminRevenusPage() {
   const session = await auth();
@@ -92,7 +94,7 @@ export default async function AdminRevenusPage() {
         Revenu mensuel récurrent, chiffre d&apos;affaires encaissé et rétention des abonnements Premium (§2.4).
       </p>
 
-      {modePaiement !== "live" && <BandeauModeTest mode={modePaiement} sujet="Montants" />}
+      {!paiementsSontReels() && <BandeauModeTest mode={modePaiement} sujet="Montants" />}
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <RevenuTile label="MRR (Premium actifs)" valeur={formatFCFA(mrr)} note={`${abonnementsActifs} abonnement${abonnementsActifs > 1 ? "s" : ""}`} />

@@ -4,8 +4,7 @@ import type { MethodePaiement, PaiementSession, Payeur, ResultatPaiement } from 
  * Interface PaymentProvider (cahier des charges §5.1) — toute la logique métier
  * (création d'abonnement, mise à jour de statut, crédit du compte) s'appuie
  * exclusivement sur cette interface, jamais sur un appel direct au SDK/API
- * CamerPay. Isole 100% du code applicatif d'un changement d'agrégateur ou d'un
- * passage sandbox -> live (§5.3).
+ * NotchPay. Isole 100% du code applicatif d'un changement d'agrégateur (§5.3).
  */
 export interface PaymentProvider {
   initierPaiement(

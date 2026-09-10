@@ -13,7 +13,7 @@ import { archiverPhotosAncienneAnnee } from "@/lib/retention/archivage-photos";
  * separate from `app`, dedicated to BullMQ queues.
  *
  * Files actives :
- *  - `paiement-mock-webhook` (§5.2) — simulation du webhook CamerPay en mode mock.
+ *  - `paiement-mock-webhook` (§5.2) — simulation du webhook NotchPay en mode mock.
  *  - `retention` (§2.9) — 3 jobs cron : détection d'inactivité, anonymisation
  *    automatique, archivage annuel des photos de copies.
  *
@@ -30,8 +30,8 @@ async function main() {
     console.error("[worker] Redis connection error", err);
   });
 
-  // N'a de sens qu'en PAYMENT_MODE=mock — CamerPay en sandbox/live appellera
-  // directement l'endpoint HTTP réel (/api/paiement/webhook), jamais cette file.
+  // N'a de sens qu'en PAYMENT_MODE=mock — NotchPay appellera directement
+  // l'endpoint HTTP réel (/api/paiement/webhook), jamais cette file.
   const paiementMockWorker =
     (process.env.PAYMENT_MODE ?? "mock") === "mock"
       ? new Worker<PaiementMockJobData>(
