@@ -1,16 +1,17 @@
 import type { SmsProvider } from "./provider";
 import { MockSmsProvider } from "./mock-provider";
+import { AfricasTalkingProvider } from "./africastalking-provider";
 
 export type { SmsProvider } from "./provider";
 export * from "./types";
 
 /**
- * Sélection au démarrage via SMS_MODE = mock | live (§3). Le provider réel
- * (Orange SMS Cameroun ou Africa's Talking) n'est pas encore souscrit — comme
- * pour `AI_MODE` (§6) et `PAYMENT_MODE` (§5), `live` lève une erreur explicite
- * tant que la classe correspondante n'existe pas, et seul `mock` est
- * fonctionnel. Y basculer plus tard = un changement de config + une nouvelle
- * classe, aucune réécriture du code appelant.
+ * Sélection au démarrage via SMS_MODE = mock | africastalking (§3). Africa's
+ * Talking remplace Orange SMS Cameroun (jamais implémenté ni souscrit — sa
+ * propre FAQ documentait un problème de livraison vers MTN ; Africa's Talking
+ * couvre nativement MTN et Orange au Cameroun). `mock` reste le défaut tant
+ * que le passage en production n'est pas explicitement confirmé — y basculer
+ * = un changement de config, aucune réécriture du code appelant.
  */
 let cachedProvider: SmsProvider | undefined;
 
@@ -24,12 +25,10 @@ export function getSmsProvider(): SmsProvider {
     case "mock":
       cachedProvider = new MockSmsProvider();
       return cachedProvider;
-    case "live":
-      throw new Error(
-        "Aucun SmsProvider live n'est implémenté — fournisseur SMS non souscrit " +
-          "(Orange SMS Cameroun ou Africa's Talking, cf. cahier des charges §3). Utilisez SMS_MODE=mock en attendant."
-      );
+    case "africastalking":
+      cachedProvider = new AfricasTalkingProvider();
+      return cachedProvider;
     default:
-      throw new Error(`SMS_MODE invalide : "${mode}" (attendu : mock | live)`);
+      throw new Error(`SMS_MODE invalide : "${mode}" (attendu : mock | africastalking)`);
   }
 }

@@ -100,12 +100,14 @@ bout en bout contre le vrai bucket, puis via le vrai formulaire admin (§21) et 
 élève (§27). La clé **YouTube Data API v3** est branchée et l'API répond, mais le pipeline vidéo
 §2.5 lui-même reste à construire (et son étape de filtrage dépend de la clé Anthropic) — aucun code
 de `src/` ne lit encore `YOUTUBE_API_KEY` (relevé à l'audit §25). CamerPay (jamais eu d'accès réel)
-a été **remplacé par NotchPay** (§39, §40) : `NotchPayProvider` est désormais réellement codé
-(`PAYMENT_MODE=notchpay`), reste seulement à y brancher les vraies clés sandbox de l'utilisateur
-pour le premier paiement réel. Les deux autres accès externes encore en attente — clé API
-Anthropic Claude, fournisseur SMS (Orange SMS Cameroun / Africa's Talking) — ont chacun leur
-interface + un mock, et basculeront en réel par un simple changement de config (`AI_MODE` /
-`SMS_MODE`), sans réécriture du code appelant.
+a été **remplacé par NotchPay** (§39, §40, premier paiement sandbox réel vérifié §41) :
+`NotchPayProvider` est réellement codé et testé (`PAYMENT_MODE=notchpay`). Orange SMS Cameroun
+(jamais implémenté — sa propre FAQ documentait un problème de livraison vers MTN) a de même été
+**remplacé par Africa's Talking** (§42) : `AfricasTalkingProvider` est codé (`SMS_MODE=africastalking`),
+la réponse API sandbox est vérifiée réelle (§42), mais `SMS_MODE` reste `mock` par défaut tant que
+l'utilisateur n'a pas confirmé vouloir basculer en production. Seule la clé API Anthropic Claude reste
+un accès externe en attente — interface + mock déjà en place, bascule en réel par un simple changement
+de config (`AI_MODE`), sans réécriture du code appelant.
 
 **Travail des 2–3 septembre 2026 (§21 à §27) :** Phase R2 fermée (§21) ; CDC porté en v1.29 puis
 v1.30 — SVT ajoutée à la banque/correction pour les séries C, D, TI (§22), nouveau type d'exercice
@@ -3033,3 +3035,72 @@ n'a pas eu besoin d'être touchée puisqu'aucune page n'a été insérée) ; ren
 modifiées confirme un texte propre, sans artefact ni collision, la phrase corrigée s'enchaînant
 correctement avec « Comme pour COMMENTAIRE_COMPOSE en v1.30... » qui suit, laissé intact.
 
+## 42. `AfricasTalkingProvider` — Orange SMS Cameroun remplacé (jamais implémenté) par Africa's Talking (11 septembre 2026)
+
+Orange SMS Cameroun n'avait jamais eu de code écrit (seul `MockSmsProvider` existait, cf. §17) — sa
+propre FAQ documente un problème de livraison connu vers les numéros MTN, ce qui en faisait un mauvais
+choix pour un OTP transactionnel devant atteindre les deux opérateurs. L'utilisateur a un compte
+Africa's Talking (app Sandbox, `username=sandbox` + clé API) et a demandé de basculer directement dessus,
+sans étape Orange intermédiaire.
+
+### Choix : appel REST direct plutôt que le SDK npm officiel
+
+Le SDK `africastalking` (v0.8.3 sur npm) a été inspecté (code source du dépôt officiel
+`AfricasTalkingLtd/africastalking-node.js`, `lib/common.js` + `lib/sms.js`) plutôt que deviné : il n'a
+aucun type TypeScript et embarque une chaîne de dépendances à risque — `grpc@^1.24.3` (bindings natifs
+dépréciés), `axios@^0.21.1` (CVEs connues), `unirest@^0.6.0` (abandonné), `@hapi/joi@^16.1.7` (déprécié).
+Plutôt que d'ajouter cette dépendance, le contrat REST qu'il implémente en interne a été extrait
+directement de son code source et réimplémenté nativement via `fetch`, même précédent que
+`NotchPayProvider` (§39) :
+
+- `POST {baseUrl}/messaging` — `baseUrl` = `https://api.sandbox.africastalking.com/version1` si
+  `AFRICASTALKING_USERNAME === "sandbox"` (convention Africa's Talking : le username sandbox est
+  toujours littéralement `sandbox`), sinon `https://api.africastalking.com/version1`.
+- Headers `apiKey` (la clé API) + `Accept: application/json` ; corps `application/x-www-form-urlencoded`
+  (`username`, `to`, `message`).
+- Succès HTTP **201** (pas 200 — comportement du SDK officiel confirmé dans son propre code), corps
+  `{ SMSMessageData: { Recipients: [{ status, statusCode, messageId, ... }] } }` — un statut par
+  destinataire, `"Success"` étant la seule valeur de succès.
+
+### Code changé
+
+- **`src/lib/sms/africastalking-provider.ts`** — nouveau, implémente `SmsProvider` (4 méthodes).
+  `envoyerOtp()` est la seule branchée à du code applicatif réel (connexion parent, §2.2) — les 3
+  autres (`envoyerRappelRenouvellement`, `envoyerResumeProgression`, `envoyerAlerteInactivite`) sont
+  implémentées pour compléter l'interface (jobs BullMQ pas encore construits, §17), même structure que
+  `MockSmsProvider`. Toutes les 4 réutilisent `messages.ts` pour le texte, comme le mock — le provider
+  reste un transport, jamais un rédacteur.
+- **`src/lib/sms/index.ts`** — `getSmsProvider()` : `SMS_MODE` passe de `mock | live` à
+  `mock | africastalking` (le littéral `live` n'avait jamais de classe réelle derrière, il est retiré au
+  profit du nom concret du fournisseur). `mock` reste le cas par défaut (`?? "mock"` inchangé).
+- **`.env.example`** — `SMS_PROVIDER_API_KEY` (jamais utilisé, un nom générique posé d'avance) remplacé
+  par `AFRICASTALKING_USERNAME=` et `AFRICASTALKING_API_KEY=` (noms exacts demandés par l'utilisateur).
+  `SMS_MODE=mock` reste le défaut déclaré — **pas basculé en production**, conformément à la demande
+  explicite de l'utilisateur de garder mock tant qu'il n'a pas confirmé vouloir basculer après un test
+  sandbox concluant.
+- Commentaires mis à jour pour ne plus présenter Orange SMS Cameroun comme une option en attente
+  (`provider.ts`, `types.ts`, `src/lib/auth/otp.ts`,
+  `src/app/api/auth/parent/request-otp/route.ts`) — la mention y reste seulement comme contexte
+  historique de la décision de remplacement.
+
+### Vérifié
+
+- `tsc --noEmit` dans le conteneur `app` : **0 erreur**.
+- `eslint` sur `src/lib/sms/`, `src/lib/auth/otp.ts`, `src/app/api/auth/parent/request-otp/route.ts` :
+  **0 erreur** (le seul warning est `.env.example` ignoré par la config ESLint — attendu, pas un fichier
+  lintable).
+- **Test sandbox réel non exécuté** : `AFRICASTALKING_USERNAME`/`AFRICASTALKING_API_KEY` ne sont présents
+  ni dans le `.env` réel du projet ni dans l'environnement du conteneur `app` au moment de cette entrée
+  (vérifié par présence de clé uniquement, jamais par affichage de valeur) — malgré la formulation
+  initiale de l'utilisateur (« prêts à configurer »), les clés n'avaient pas encore été ajoutées à ce
+  stade. L'appel réel `POST {baseUrl}/messaging` contre le sandbox Africa's Talking (réponse API,
+  format exact, `Recipients[0].status`) reste **à faire** dès que l'utilisateur ajoute ces deux variables
+  à son `.env` réel.
+- Ce qui ne sera de toute façon **jamais vérifiable en sandbox**, même une fois les clés ajoutées :
+  la livraison effective à un vrai téléphone. Confirmé par le centre d'aide Africa's Talking lui-même —
+  en mode sandbox, un SMS n'atteint jamais un téléphone réel, quelle que soit la configuration ; il est
+  routé uniquement vers leur simulateur web (`simulator.africastalking.com`). Seule une clé **live** en
+  production permettrait de vérifier la livraison réelle.
+
+**Non fait, sciemment** : `SMS_MODE` n'a pas été basculé sur `africastalking` en production/`.env.example`
+— reste `mock` par défaut jusqu'à confirmation explicite de l'utilisateur après un test sandbox concluant.

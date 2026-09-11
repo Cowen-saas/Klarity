@@ -24,8 +24,8 @@ export async function verifyOtp(code: string, hash: string): Promise<boolean> {
  * Génère, stocke et envoie un OTP pour un numéro donné — utilisé par la
  * connexion parent (`/api/auth/parent/request-otp`, §2.2). L'envoi passe par
  * `SmsProvider` (`src/lib/sms`) : en `SMS_MODE=mock` le code est logué dans le
- * conteneur, en `live` il partira par SMS réel une fois le fournisseur souscrit
- * (§3) — sans rien changer ici. L'appelant reste responsable de son propre rate
+ * conteneur, en `africastalking` il part par SMS réel via Africa's Talking —
+ * sans rien changer ici. L'appelant reste responsable de son propre rate
  * limiting, adapté à son contexte.
  */
 export async function envoyerOtp(telephone: string): Promise<{ codeDevMock?: string }> {

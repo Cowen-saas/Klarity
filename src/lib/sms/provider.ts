@@ -5,9 +5,10 @@ import type { DonneesRappelRenouvellement, DonneesResumeProgression, ResultatEnv
  * logique d'abstraction que `AIProvider` (§6.2) et `PaymentProvider` (§5.1) :
  * tout le code applicatif (route API, job BullMQ) passe exclusivement par cette
  * interface, jamais par un appel direct à une API SMS. Sélection au démarrage
- * via `SMS_MODE = mock | live` (cf. `src/lib/sms/index.ts`). Le provider réel
- * (Orange SMS Cameroun ou Africa's Talking) arrivera dès souscription — une
- * nouvelle classe + un changement de config, sans réécriture des appelants.
+ * via `SMS_MODE = mock | africastalking` (cf. `src/lib/sms/index.ts`). Le
+ * provider réel est Africa's Talking (`AfricasTalkingProvider`) — Orange SMS
+ * Cameroun, envisagé initialement, n'a jamais été implémenté : sa propre FAQ
+ * documentait un problème de livraison vers les numéros MTN.
  *
  * Trois méthodes pour les trois usages SMS sortants prévus. Seul (a) est
  * réellement câblé aujourd'hui ; (b) et (c) sont posés pour des jobs BullMQ pas

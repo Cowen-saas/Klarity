@@ -1,10 +1,9 @@
 /**
  * Types partagés de l'abstraction SmsProvider (cahier des charges §2.2, §2.2.3,
  * §3, §5.5). Volontairement agnostiques du fournisseur : `MockSmsProvider` et le
- * futur provider réel (Orange SMS Cameroun ou Africa's Talking — non souscrit à
- * ce jour, §3) implémentent tous deux `SmsProvider` à partir de ces seules
- * formes. Rien ici ne doit présumer du format de payload d'une API SMS
- * particulière, encore inconnue.
+ * provider réel `AfricasTalkingProvider` (§3) implémentent tous deux
+ * `SmsProvider` à partir de ces seules formes. Rien ici ne doit présumer du
+ * format de payload d'une API SMS particulière.
  */
 
 /**
