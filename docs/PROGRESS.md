@@ -3007,3 +3007,29 @@ test réel (« id de transaction ») plutôt que le comportement confirmé (« r
 l'utilisateur n'ayant demandé que le code et ce journal ; à signaler s'il souhaite une mise à jour du CDC
 à ce sujet.
 
+### Suite (même jour) — CDC porté en v1.33 sur demande explicite
+
+L'utilisateur a confirmé ne pas avoir besoin du tunnel public pour l'instant (couverture réseau complète
+NotchPay → webhook reportée au déploiement, quand le serveur aura une vraie URL publique) et a demandé
+que le CDC reflète le comportement réel confirmé plutôt que l'hypothèse initiale.
+
+Édité en place par redaction PyMuPDF (même méthode, cf. mémoire dédiée) — cette fois un simple
+remplacement de mot sur une entrée récente (pas une hypothèse ancienne à préserver comme historique),
+donc corrigé directement plutôt que traité par une nouvelle entrée qui laisserait le corps du texte faux.
+Page 1 : version bump `v1.32 — 10 septembre 2026` → `v1.33 — 11 septembre 2026`. Page 10 (l'entrée
+« v1.31 → v1.32 ») : le paragraphe entier redact + réécrit (28 lignes, mêmes positions verticales que
+l'original, aucun décalage nécessaire) pour remplacer « renvoie un id de transaction... POST /payments/
+{transaction} » par « renvoie un objet transaction (champ reference)... POST /payments/{reference} », et la
+phrase d'hypothèse « ...reste à valider au premier paiement réel » par « ...s'est révélée fausse au premier
+vrai paiement (v1.33, entrée suivante) ». Nouvelle entrée courte « v1.32 → v1.33 » ajoutée **sur la même
+page 10** (12 lignes, largement de la place disponible avant le pied de page) — pas besoin d'insérer une
+page ni de renuméroter cette fois, contrairement au bump v1.31→v1.32. Métadonnées → v1.33. Fichier
+réoptimisé (`garbage=4, deflate=True`) : 297 Ko (légèrement plus petit que les 298 Ko de v1.32).
+
+Vérifié : 44 pages inchangées (aucune insertion cette fois) ; comparaison texte page par page contre
+v1.32 confirme que **seules les pages 1 et 10** diffèrent, tout le reste strictement identique ; footers
+toujours séquentiels 1→44 ; TOC toujours saine (91 entrées, aucune cible hors bornes — logique, la TOC
+n'a pas eu besoin d'être touchée puisqu'aucune page n'a été insérée) ; rendu visuel des deux pages
+modifiées confirme un texte propre, sans artefact ni collision, la phrase corrigée s'enchaînant
+correctement avec « Comme pour COMMENTAIRE_COMPOSE en v1.30... » qui suit, laissé intact.
+
