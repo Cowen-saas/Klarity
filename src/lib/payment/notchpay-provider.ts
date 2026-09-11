@@ -4,11 +4,18 @@ import type { MethodePaiement, OperateurMobileMoney, PaiementSession, Payeur, Re
 
 /**
  * Intégration NotchPay réelle (cahier des charges §5.3) — l'unique agrégateur
- * Mobile Money du projet (v1.32). Implémentée à partir de la doc publique
- * NotchPay (developer.notchpay.co) au 10 septembre 2026 ;
- * **non exercée contre un vrai compte sandbox** (pas de clés disponibles côté
- * agent) — à valider par un premier paiement de test réel une fois
- * NOTCHPAY_PUBLIC_KEY/NOTCHPAY_WEBHOOK_SECRET renseignées.
+ * Mobile Money du projet (v1.32 ; corrigé le 11 septembre 2026 après premier
+ * paiement sandbox réel — cf. journal §41. Le CDC v1.32 décrit encore le
+ * comportement supposé avant test réel, pas encore mis à jour). Implémentée
+ * d'abord à partir de la doc publique NotchPay (developer.notchpay.co), puis
+ * **corrigée contre le comportement
+ * réel observé** : `POST /payments` renvoie un objet `transaction` (pas une
+ * chaîne), et cet objet n'a **pas** de champ `id` — seul `reference` (format
+ * `trx.test_…`/`trx.…`) identifie la transaction, contrairement à l'exemple
+ * générique de la doc qui montrait `id` ET `reference`. Le webhook suit la
+ * même convention par cohérence (non confirmé par un webhook réel reçu — pas
+ * de tunnel public exposé volontairement, cf. journal — mais `data.id` est
+ * gardé en repli défensif si NotchPay l'envoie malgré tout pour cet event).
  *
  * Pas de distinction sandbox/live côté code : NotchPay expose une seule URL
  * d'API pour les deux (`https://api.notchpay.co`) — seul le préfixe de la clé
@@ -17,8 +24,8 @@ import type { MethodePaiement, OperateurMobileMoney, PaiementSession, Payeur, Re
  *
  * Flux d'initiation en 2 appels (doc "Accept payments — Mobile Money") :
  *  1. `POST /payments` crée la transaction (montant, devise, téléphone) et
- *     renvoie un id de transaction + une `authorization_url` de repli.
- *  2. `POST /payments/{transaction}` avec `channel` (`cm.orange`/`cm.mtn`) +
+ *     renvoie `transaction.reference` + une `authorization_url` de repli.
+ *  2. `POST /payments/{reference}` avec `channel` (`cm.orange`/`cm.mtn`) +
  *     le téléphone déclenche l'invite USSD/app sur le téléphone du payeur —
  *     le paiement reste asynchrone, confirmé plus tard par webhook (§5.5),
  *     jamais par la réponse de cet appel.
@@ -31,7 +38,10 @@ const CHANNEL_PAR_OPERATEUR: Record<OperateurMobileMoney, string> = {
 };
 
 interface NotchPayInitResponse {
-  transaction: string;
+  transaction: {
+    reference: string;
+    status: string;
+  };
   authorization_url?: string;
 }
 
@@ -39,7 +49,10 @@ interface NotchPayWebhookPayload {
   id: string;
   type: string;
   data: {
-    id: string;
+    /** Champ réellement observé sur la ressource transaction (pas `id`, cf. commentaire de tête de fichier). */
+    reference?: string;
+    /** Gardé en repli défensif — jamais vu en pratique sur cette ressource, mais la doc générique le montre. */
+    id?: string;
     amount: number;
     currency: string;
     status: string;
@@ -103,8 +116,9 @@ export class NotchPayProvider implements PaymentProvider {
       throw new Error(`Échec d'initialisation NotchPay (${initRes.status}) : ${await texteErreur(initRes)}`);
     }
     const initData = (await initRes.json()) as NotchPayInitResponse;
+    const reference = initData.transaction.reference;
 
-    const chargeRes = await fetch(`${NOTCHPAY_BASE_URL}/payments/${initData.transaction}`, {
+    const chargeRes = await fetch(`${NOTCHPAY_BASE_URL}/payments/${reference}`, {
       method: "POST",
       headers: { Authorization: this.publicKey, "Content-Type": "application/json" },
       body: JSON.stringify({ channel: CHANNEL_PAR_OPERATEUR[payeur.operateur], data: { phone: payeur.telephone } }),
@@ -114,7 +128,7 @@ export class NotchPayProvider implements PaymentProvider {
     }
 
     return {
-      sessionId: initData.transaction,
+      sessionId: reference,
       redirectUrl: initData.authorization_url,
       // Le Mobile Money ne confirme jamais de façon synchrone (§5.5) — le
       // statut réel arrive plus tard par webhook, jamais par cette réponse.
@@ -134,14 +148,19 @@ export class NotchPayProvider implements PaymentProvider {
 
   async traiterWebhook(payloadBrut: unknown): Promise<ResultatPaiement> {
     const { data } = payloadBrut as NotchPayWebhookPayload;
+    // `reference` confirmé par un vrai POST /payments + GET /payments/{reference}
+    // (11 septembre 2026, cf. journal) : l'objet transaction n'a pas de champ
+    // `id`. `data.id` reste un repli défensif si jamais présent sur cet event,
+    // pas l'hypothèse principale — la doc générique qui le montrait ne
+    // correspond pas au comportement réel observé sur cette ressource.
+    const reference = data.reference ?? data.id;
+    if (!reference) {
+      throw new Error("Webhook NotchPay sans data.reference ni data.id — payload inattendu, impossible d'associer un paiement.");
+    }
     return {
-      // À vérifier au premier vrai paiement sandbox : la doc NotchPay ne montre
-      // pas explicitement si `data.id` (webhook) == `transaction` (réponse
-      // d'initiation) pour un même paiement — c'est l'hypothèse retenue ici,
-      // cohérente avec le fonctionnement usuel de ce type d'agrégateur.
-      idempotencyKey: data.id,
+      idempotencyKey: reference,
       statut: mapperStatutNotchPay(data.status),
-      referenceTransaction: data.id,
+      referenceTransaction: reference,
       montant: data.amount,
       devise: data.currency,
     };

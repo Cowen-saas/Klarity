@@ -2916,3 +2916,94 @@ a été remplacé). Le fichier `.env` réel de l'utilisateur (jamais touché, co
 l'ancien commentaire `# --- Payment provider — CamerPay, …` au-dessus de ses variables `NOTCHPAY_*` —
 cosmétique, sans effet fonctionnel, à mettre à jour par l'utilisateur s'il le souhaite.
 
+## 41. Premier paiement NotchPay sandbox réel — hypothèse infirmée, bug trouvé et corrigé (11 septembre 2026)
+
+L'utilisateur a configuré ses vraies clés sandbox (`NOTCHPAY_PUBLIC_KEY=pk_test_…`,
+`NOTCHPAY_WEBHOOK_SECRET=hsk_test_…`, jamais affichées ni committées) et demandé un test réel bout en
+bout avec les numéros de test NotchPay (`+237670000000` succès MTN, `+237690000000` succès Orange,
+`+237670000002` échec), en vérifiant explicitement l'hypothèse non confirmée du §39 : l'id de
+transaction retourné à l'initiation correspond-il à `data.id` du webhook ?
+
+### Bug réel trouvé dès le premier appel — `POST /payments` renvoie un objet, pas une chaîne
+
+Premier essai via `/api/paiement/initier` (MTN, `+237670000000`) → **500**, `Payment Not Found` sur le
+2ᵉ appel (`POST /payments/{transaction}`). Cause : `notchpay-provider.ts` traitait `initData.transaction`
+comme une **chaîne** (calée sur l'exemple de la doc publique, `"transaction": "UUID string"`), mais la
+vraie réponse renvoie un **objet** :
+```
+{"transaction":{"amount":5000,...,"reference":"trx.test_q78mhnwvnjR5TW6bIgRJLF9P","status":"pending",...},
+ "authorization_url":"https://pay.notchpay.co/test...."}
+```
+Confirmé en appelant l'API NotchPay directement (`fetch` brut depuis le conteneur `app`, clé lue
+uniquement via `process.env`, jamais affichée) — reproduit ensuite avec `GET /payments/{reference}`, qui
+renvoie le même objet `transaction` sans jamais de champ `id`, seulement `reference` (format
+`trx.test_…`/`trx.…`). **Corrigé** : `initData.transaction.reference` utilisé pour l'URL du 2ᵉ appel et
+comme `sessionId`/`idempotencyKey`.
+
+### Hypothèse `data.id == transaction` — infirmée, pas confirmée
+
+La doc générique NotchPay montre un exemple d'event webhook avec `data.id` **et** `data.reference`
+distincts (`"id": "pay_123456789"`, `"reference": "order_123"`). Le comportement réel observé sur cette
+ressource (Mobile Money via `/payments`) ne correspond pas à cet exemple : **aucun champ `id` n'existe
+sur l'objet transaction**, ni à l'initiation ni à la relecture via `GET /payments/{reference}` — seul
+`reference` identifie la transaction, de bout en bout, de façon stable (vérifié : la référence retournée
+à l'initiation est exactement celle relue ensuite). `traiterWebhook()` corrigé pour lire `data.reference`
+en priorité, avec `data.id` gardé en repli défensif (jamais observé en pratique sur cette ressource, mais
+coûte rien à garder au cas où NotchPay l'ajoute pour d'autres types d'événements). Sans clé API secrète
+NotchPay ni accès à leur documentation interne, impossible de confirmer *pourquoi* la doc générique
+diffère du comportement réel (version différente, ressource différente, doc obsolète) — seul le
+comportement réel fait foi désormais dans le code.
+
+### Webhook non livrable en local — contourné sans exposer le serveur dev à Internet
+
+NotchPay envoie réellement des webhooks en sandbox (pas de mode "polling seul"), mais le serveur dev
+tourne uniquement sur `localhost:3000` dans Docker, sans tunnel public (aucun `ngrok`/`cloudflared` actif
+— vérifié avant de commencer). Plutôt que d'exposer l'environnement de dev à Internet sans en discuter
+d'abord avec l'utilisateur, la vérification a été faite autrement, avec un niveau de rigueur équivalent :
+1. Paiement initié réellement via `/api/paiement/initier` (vraie clé publique, vrai appel réseau NotchPay).
+2. Statut réel relevé par `GET /payments/{reference}` (résolution instantanée en sandbox sur ces numéros
+   de test, pas d'attente USSD réelle nécessaire).
+3. Le payload webhook a été reconstitué avec les **données réelles** renvoyées par NotchPay (montant,
+   devise, statut, référence — rien d'inventé), signé avec un **vrai** HMAC-SHA256 calculé via
+   `NOTCHPAY_WEBHOOK_SECRET` (lu uniquement dans le conteneur, jamais affiché), puis livré à
+   `POST /api/paiement/webhook` en local — validant la vérification de signature et toute la logique
+   métier avec de vraies données, sans jamais rendre le serveur de dev joignable depuis Internet.
+   Limite assumée : ceci ne teste pas le trajet réseau NotchPay → serveur, seulement tout ce qui se passe
+   une fois le webhook arrivé (signature + traitement) — si l'utilisateur veut la couverture complète
+   (tunnel public + webhook réellement poussé par NotchPay), il suffit de le demander.
+
+### Résultats des 4 scénarios testés (données de test supprimées après coup)
+
+- **MTN succès** (`+237670000000`) : `POST /payments` → `POST /payments/{reference}` → statut réel
+  NotchPay `complete` en un seul `GET` (immédiat) → webhook livré → `paiements.statut = REUSSI`,
+  `abonnements.plan = PREMIUM`/`statut = ACTIF`, `webhook_logs.provider = 'NOTCHPAY'`,
+  `traitementStatut = CREDITE`, `signatureValide = true`.
+- **Orange succès** (`+237690000000`, canal `cm.orange`) : même résultat — confirme que le
+  `CHANNEL_PAR_OPERATEUR` (MTN → `cm.mtn`, Orange → `cm.orange`) fonctionne pour les deux opérateurs,
+  pas seulement MTN.
+- **Échec** (`+237670000002`) : statut réel NotchPay `failed` → webhook livré → `paiements.statut =
+  ECHEC`, `traitementStatut = ECHEC_PAIEMENT`, abonnement resté `GRATUIT`/`ACTIF` (jamais crédité).
+- **Idempotence** : même webhook (même `reference`) livré une seconde fois → `traitementStatut =
+  DEJA_TRAITE`, aucune deuxième écriture sur `Abonnement` (rejoue la garantie déjà testée en mode mock,
+  cette fois avec un vrai payload NotchPay).
+- **Signature invalide** : payload avec une signature bidon → **401** `SIGNATURE_INVALIDE`, rien écrit
+  en base — confirme que la vérification HMAC réelle (pas seulement celle du mock) bloque bien un
+  payload non authentifié.
+
+### Code changé
+
+`src/lib/payment/notchpay-provider.ts` : `NotchPayInitResponse.transaction` retypé en objet
+(`{ reference, status }`), `initierPaiement()` utilise `initData.transaction.reference`,
+`traiterWebhook()` lit `data.reference ?? data.id` (avec erreur explicite si aucun des deux n'est
+présent, plutôt que de planter plus loin avec un message confus). Commentaire de tête de fichier mis à
+jour pour refléter le comportement réel plutôt que l'hypothèse initiale du §39.
+
+**Non couvert par ce test** : le trajet réseau réel NotchPay → webhook applicatif (nécessite un tunnel
+public, pas mis en place sans validation préalable de l'utilisateur) ; le comportement des statuts
+intermédiaires (`processing`, timeout `+237670000003`, annulation `+237670000004`, fonds insuffisants
+`+237670000001`) — seuls succès/échec ont été exercés, à la demande explicite de l'utilisateur. Le CDC
+(`Klarity_Cahier_des_Charges.pdf`, encore en v1.32) décrit toujours le comportement supposé avant ce
+test réel (« id de transaction ») plutôt que le comportement confirmé (« reference ») — non corrigé ici,
+l'utilisateur n'ayant demandé que le code et ce journal ; à signaler s'il souhaite une mise à jour du CDC
+à ce sujet.
+
