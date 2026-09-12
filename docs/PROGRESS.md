@@ -3157,3 +3157,80 @@ limite reste celle documentée par Africa's Talking lui-même : aucune sandbox, 
 fournisseur SMS, ne permet de vérifier la livraison à un vrai téléphone — ce sera vérifiable uniquement
 en production. `SMS_MODE` reste `mock` par défaut ; le basculement en production attend toujours la
 confirmation explicite de l'utilisateur.
+
+## 43. Prix Premium normal (hors promo) rendu configurable — `ParametrePlateforme` (12 septembre 2026)
+
+`PRIX_NORMAL_PREMIUM` (5000 FCFA) était le dernier morceau de tarification encore en dur dans
+`src/lib/payment/tarification.ts` (§2.4.1) — utilisé comme repli quand aucune `PeriodeTarifaire` n'est
+active. Rendu éditable depuis `/admin/parametres`, à côté des fenêtres promo déjà configurables (§37).
+
+### Choix d'architecture : `ParametrePlateforme` clé/valeur plutôt qu'intégré à `PeriodeTarifaire`
+
+Deux options envisagées : (a) réutiliser `PeriodeTarifaire` avec une ligne « spéciale » sans dates, ou
+(b) une nouvelle table clé/valeur générique. (a) écarté — une fenêtre tarifaire a intrinsèquement des
+dates de début/fin (`@@index([actif, dateDebut, dateFin])`, requête `periodeTarifaireActive()` basée sur
+un chevauchement de dates) ; un prix qui n'a pas de fenêtre temporelle n'a rien à faire dans ce modèle,
+et y greffer un cas spécial « pas de dates » aurait compliqué la requête de sélection sans bénéfice. (b)
+retenu : nouveau modèle `ParametrePlateforme` (`cle` `@id`, `valeur: String`, `modifieParAdminId`,
+`updatedAt`) — générique et extensible à de futurs réglages plateforme (§2.3) sans nouvelle migration à
+chaque fois, avec `valeur` en `String` pour rester agnostique du type réel du paramètre. Seule clé à ce
+jour : `PRIX_NORMAL_PREMIUM` (`CLE_PRIX_NORMAL_PREMIUM` dans `tarification.ts`). Absence de ligne pour
+cette clé (jamais modifiée par un admin) ⇒ repli sur `PRIX_NORMAL_PREMIUM_DEFAUT` (renommée depuis
+`PRIX_NORMAL_PREMIUM`), jamais une erreur — migration `20260912193710_add_parametre_plateforme`,
+appliquée et `prisma generate` rejoué dans `app` **et** `worker` (node_modules séparés par conteneur).
+
+### Code changé
+
+- **`src/lib/payment/tarification.ts`** — nouvelle fonction `prixNormalPremiumConfigure()` (lit
+  `ParametrePlateforme`, `null` si absente ou valeur corrompue) ; `obtenirTarifPremium()` combine
+  désormais `periodeTarifaireActive()` et `prixNormalPremiumConfigure() ?? PRIX_NORMAL_PREMIUM_DEFAUT` en
+  parallèle (`Promise.all`). Les 4 appelants existants (`/abonnement`, `/abonnement/paiement`,
+  `/api/paiement/initier`, `/admin/parametres`) n'ont rien à changer — tous passent déjà par
+  `obtenirTarifPremium()`.
+- **`POST` remplacé par `PUT /api/admin/parametres/prix-normal`** — upsert simple (pas de notion d'id
+  côté client, un seul paramètre). Triple défense identique à `periodes-tarifaires` : middleware
+  (`/admin/*` → `ADMIN`), `exigerRole("ADMIN")` en tête de handler, vérification `prisma.admin.findUnique`
+  avant écriture. Zod : `prix` positif, max 1 000 000 (même borne que les fenêtres promo). Cohérence non
+  bloquante (point 4 de la demande) : si une `PeriodeTarifaire` est active à l'instant de l'écriture et
+  que le nouveau prix normal lui est **inférieur**, un `avertissement` est renvoyé dans la réponse (la
+  requête réussit quand même — un déclassement volontaire reste possible, juste signalé).
+- **`src/components/admin/PrixNormalManager.tsx`** — nouveau composant client, même patron que
+  `PeriodeTarifaireManager` (état local, `apiFetch`, `router.refresh()`) mais plus simple : un seul champ
+  numérique + bouton. Affiche l'avertissement de cohérence en rouge avec ⚠️, distinct du message de
+  succès. Rappelle la fenêtre promo active en cours (si applicable) pour que l'admin comprenne pourquoi le
+  prix normal affiché ne s'applique pas aujourd'hui.
+- **`src/app/admin/(protected)/parametres/page.tsx`** — nouvelle section « Prix normal (hors promotion) »
+  ajoutée au-dessus de « Fenêtres tarifaires », alimentée par `tarif.prixNormal` (déjà calculé par
+  `obtenirTarifPremium()`, plus besoin d'importer une constante séparée — `PRIX_NORMAL_PREMIUM` retiré des
+  imports). Titre/description de la page mis à jour pour couvrir les deux réglages.
+
+### Vérifié en base et en navigateur (session ADMIN réelle de l'utilisateur, `admin@klarity.com`)
+
+- `tsc --noEmit` et `eslint` sur tous les fichiers touchés : **0 erreur**.
+- Migration appliquée (`prisma migrate status` → à jour) ; `\d parametres_plateforme` confirme la table
+  + la FK vers `admins`.
+- **Modification réelle du prix** (5000 → 5500) via le formulaire : `parametres_plateforme.valeur` mis à
+  jour en base, `modifieParAdminId` pointant vers le vrai compte `admin@klarity.com` connecté (pas un
+  compte de test) ; tuile « Tarif appliqué aujourd'hui » et badge « Tarif normal » de `/admin/parametres`
+  répercutés immédiatement ; **`/abonnement` (aucune fenêtre promo active à la date du jour) affiche bien
+  5 500 FCFA** — confirmé par lecture du texte de page rendue.
+- **Avertissement de cohérence testé réellement** : fenêtre `PeriodeTarifaire` de test créée (active,
+  3000 FCFA, couvrant aujourd'hui), prix normal mis à 2000 (inférieur) → réponse API + UI affichent bien
+  « ⚠️ Attention : ce prix (2 000 FCFA) est inférieur à celui de la fenêtre promo actuellement active
+  « TEST coherence » (3 000 FCFA) — elle ne constitue plus une réduction. » et **la sauvegarde a quand
+  même réussi** (non bloquant, conforme au point 4 de la demande). Fenêtre de test supprimée après coup.
+- **Historique des paiements intact — même vérification que pour les fenêtres promo (§37)** : les 3
+  `Abonnement` `PREMIUM`/`ACTIF` déjà existants en base (payés avant ce changement) sont restés à
+  `prixApplique = 5000.00` tout au long des changements de prix normal (5000 → 5500 → 2000 → 5000) — la
+  table `ParametrePlateforme` n'est lue qu'au moment de l'affichage/paiement, jamais rétro-appliquée à un
+  abonnement déjà figé.
+- Requête `PUT` sans session → **401** (confirmé via `curl`).
+- Prix normal remis à sa valeur d'origine (**5000 FCFA**) après test — aucun changement de fond laissé en
+  base au-delà de la nouvelle table et du code.
+
+### Nettoyage
+
+Compte admin de test créé puis supprimé en cours de route (avant de découvrir qu'une session admin réelle
+de l'utilisateur était déjà active dans le navigateur — utilisée à la place). Fenêtre tarifaire de test
+supprimée. `git status` propre en dehors des fichiers du feature (schéma, migration, route, composant,
+page).

@@ -161,7 +161,7 @@ model Eleve {
 
   classe  NiveauClasse
   filiere Filiere? // A/C/D/TI — nullable, jamais renseigné pour un élève de 3ème (§2.1, §4.1)
-  langue  Langue   @default(FR)
+  langue  Langue       @default(FR)
 
   pinHash               String // jamais le PIN en clair
   pinTentativesEchouees Int       @default(0)
@@ -259,12 +259,13 @@ model Admin {
 
   createdAt DateTime @default(now())
 
-  epreuvesAjoutees           Epreuve[]
-  datesExamenAjoutees        DateExamen[]
-  exemplesCorrectionAjoutes  ExempleCorrection[]
-  programmesOfficielsAjoutes ProgrammeOfficiel[]
-  correctionsOverridees      CorrectionDetail[]
-  periodesTarifairesAjoutees PeriodeTarifaire[]
+  epreuvesAjoutees             Epreuve[]
+  datesExamenAjoutees          DateExamen[]
+  exemplesCorrectionAjoutes    ExempleCorrection[]
+  programmesOfficielsAjoutes   ProgrammeOfficiel[]
+  correctionsOverridees        CorrectionDetail[]
+  periodesTarifairesAjoutees   PeriodeTarifaire[]
+  parametresPlateformeModifies ParametrePlateforme[]
 
   @@map("admins")
 }
@@ -558,7 +559,7 @@ model QuizQuestion {
   lacuneId String?
   lacune   Lacune? @relation(fields: [lacuneId], references: [id]) // mesure la résolution effective d'une lacune
 
-  enonce       String  @db.Text
+  enonce       String   @db.Text
   choixJson    Json
   bonneReponse String
   reponseEleve String?
@@ -711,6 +712,26 @@ model PeriodeTarifaire {
 
   @@index([actif, dateDebut, dateFin])
   @@map("periodes_tarifaires")
+}
+
+// Paramètres plateforme configurables par l'admin (§2.3) — clé/valeur générique
+// plutôt qu'une colonne dédiée par paramètre, pour rester extensible à de
+// futurs réglages sans nouvelle migration à chaque fois. Stocké en chaîne
+// (agnostique du type réel du paramètre) ; parsé/validé côté application. Seule
+// clé à ce jour : "PRIX_NORMAL_PREMIUM" (§2.4.1, src/lib/payment/tarification.ts)
+// — le prix Premium hors fenêtre promo, autrefois figé dans la constante
+// PRIX_NORMAL_PREMIUM_DEFAUT. Absence de ligne pour une clé ⇒ repli sur la
+// valeur par défaut codée côté application, jamais une erreur.
+model ParametrePlateforme {
+  cle    String @id
+  valeur String
+
+  modifieParAdminId String
+  modifieParAdmin   Admin  @relation(fields: [modifieParAdminId], references: [id])
+
+  updatedAt DateTime @updatedAt
+
+  @@map("parametres_plateforme")
 }
 
 // ============================================================================

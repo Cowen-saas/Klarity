@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { obtenirTarifPremium, PRIX_NORMAL_PREMIUM } from "@/lib/payment/tarification";
+import { obtenirTarifPremium } from "@/lib/payment/tarification";
 import { PeriodeTarifaireManager } from "@/components/admin/PeriodeTarifaireManager";
+import { PrixNormalManager } from "@/components/admin/PrixNormalManager";
 
 export const metadata: Metadata = {
   title: "Paramètres — Admin Klarity",
@@ -11,11 +12,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Paramètres de la plateforme (§2.3). Première version limitée à la gestion des
- * **fenêtres tarifaires promotionnelles** (§2.4.1) : les dates et prix promo,
- * autrefois en dur dans `src/lib/payment/tarification.ts`, sont désormais des
- * lignes `PeriodeTarifaire` éditables ici. Une modification prend effet
- * immédiatement (l'écran public `/abonnement` relit la base à chaque rendu).
+ * Paramètres de la plateforme (§2.3) : le **prix Premium normal** (hors promo,
+ * `ParametrePlateforme` clé `PRIX_NORMAL_PREMIUM`) et les **fenêtres tarifaires
+ * promotionnelles** (`PeriodeTarifaire`, §2.4.1). Les deux étaient autrefois en
+ * dur dans `src/lib/payment/tarification.ts` ; les deux sont désormais éditables
+ * ici, avec effet immédiat (l'écran public `/abonnement` relit la base à chaque
+ * rendu).
  */
 export default async function AdminParametresPage() {
   const session = await auth();
@@ -47,8 +49,8 @@ export default async function AdminParametresPage() {
     <main className="max-w-6xl px-6 py-8 sm:px-8">
       <h1 className="text-2xl font-bold text-texte">Paramètres</h1>
       <p className="mt-1 text-sm text-texte-muted">
-        Fenêtres tarifaires promotionnelles (§2.4.1). Toute modification est prise en compte immédiatement sur l&apos;écran
-        public de choix de formule.
+        Prix Premium normal et fenêtres tarifaires promotionnelles (§2.4.1). Toute modification est prise en compte
+        immédiatement sur l&apos;écran public de choix de formule.
       </p>
 
       <section className="mt-6 rounded-2xl bg-surface p-6 shadow-sm">
@@ -65,14 +67,18 @@ export default async function AdminParametresPage() {
             </span>
           ) : (
             <span className="rounded-full bg-fond px-3 py-1 text-xs font-semibold text-texte-muted">
-              Tarif normal ({PRIX_NORMAL_PREMIUM.toLocaleString("fr-FR")} FCFA)
+              Tarif normal ({tarif.prixNormal.toLocaleString("fr-FR")} FCFA)
             </span>
           )}
         </div>
       </section>
 
       <div className="mt-6">
-        <PeriodeTarifaireManager periodes={periodesVue} prixNormal={PRIX_NORMAL_PREMIUM} />
+        <PrixNormalManager prixNormal={tarif.prixNormal} promoActive={tarif.enPromo ? { nom: tarif.nomPeriode, prix: tarif.prix } : null} />
+      </div>
+
+      <div className="mt-6">
+        <PeriodeTarifaireManager periodes={periodesVue} prixNormal={tarif.prixNormal} />
       </div>
     </main>
   );

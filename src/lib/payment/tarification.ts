@@ -8,12 +8,19 @@ import { prisma } from "@/lib/prisma";
  *
  * Les fenêtres promotionnelles (dates + prix réduit) ne sont plus écrites en
  * dur : elles vivent dans la table `PeriodeTarifaire`, gérées par l'admin
- * (`/admin/parametres`). Repli sain : si aucune fenêtre active ne couvre la
- * date, on retombe sur `PRIX_NORMAL_PREMIUM`.
+ * (`/admin/parametres`). Le prix normal (hors promo) suit désormais le même
+ * principe : configurable via `ParametrePlateforme` (clé `PRIX_NORMAL_PREMIUM`),
+ * éditable sur le même écran. Repli sain dans les deux cas : aucune fenêtre
+ * active ⇒ prix normal ; aucune ligne `ParametrePlateforme` pour cette clé
+ * (jamais modifiée par un admin) ⇒ `PRIX_NORMAL_PREMIUM_DEFAUT`.
  */
 
-export const PRIX_NORMAL_PREMIUM = 5000;
+/** Repli si l'admin n'a jamais modifié le prix normal depuis `/admin/parametres`. */
+export const PRIX_NORMAL_PREMIUM_DEFAUT = 5000;
 export const DEVISE_DEFAUT = "XAF";
+
+/** Clé `ParametrePlateforme` portant le prix Premium normal (hors promo). */
+export const CLE_PRIX_NORMAL_PREMIUM = "PRIX_NORMAL_PREMIUM";
 
 export interface FenetreTarifaireActive {
   id: string;
@@ -44,6 +51,22 @@ export async function periodeTarifaireActive(date: Date = new Date()): Promise<F
   };
 }
 
+/**
+ * Prix Premium normal (hors promo), tel que configuré par l'admin. `null` si
+ * jamais modifié — le repli sur `PRIX_NORMAL_PREMIUM_DEFAUT` reste explicite
+ * chez l'appelant plutôt que masqué ici, pour que `/admin/parametres` puisse
+ * distinguer « jamais configuré » de « configuré à une valeur ».
+ */
+export async function prixNormalPremiumConfigure(): Promise<number | null> {
+  const param = await prisma.parametrePlateforme.findUnique({
+    where: { cle: CLE_PRIX_NORMAL_PREMIUM },
+    select: { valeur: true },
+  });
+  if (!param) return null;
+  const valeur = Number(param.valeur);
+  return Number.isFinite(valeur) && valeur > 0 ? valeur : null;
+}
+
 export interface TarifPremium {
   prix: number;
   prixNormal: number;
@@ -54,8 +77,8 @@ export interface TarifPremium {
 }
 
 export async function obtenirTarifPremium(date: Date = new Date()): Promise<TarifPremium> {
-  const fenetre = await periodeTarifaireActive(date);
-  const prixNormal = PRIX_NORMAL_PREMIUM;
+  const [fenetre, prixConfigure] = await Promise.all([periodeTarifaireActive(date), prixNormalPremiumConfigure()]);
+  const prixNormal = prixConfigure ?? PRIX_NORMAL_PREMIUM_DEFAUT;
   const prix = fenetre ? fenetre.prix : prixNormal;
   return {
     prix,
