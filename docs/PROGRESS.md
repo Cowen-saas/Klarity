@@ -12,9 +12,13 @@ _Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5)
   publication"). Les Mentions Légales interdisent explicitement toute collecte de données réelles
   d'Élèves ou ouverture commerciale tant que cette identification n'est pas complète (Article 1).
   **À compléter et faire valider juridiquement avant tout déploiement public.** Le footer de la
-  landing page (`src/components/landing/LandingFooter.tsx`) renvoie pour l'instant directement vers
-  ces `.docx` tels quels (décision actée avec l'utilisateur le 27 août : lien de téléchargement du
-  document source plutôt qu'une page web reformatant un texte encore provisoire).
+  landing page (`src/components/landing/LandingFooter.tsx`) renvoyait directement vers ces `.docx`
+  tels quels (décision actée avec l'utilisateur le 27 août) ; **depuis le 13 septembre 2026 ces liens
+  sont désactivés** — libellés toujours visibles mais grisés et non cliquables, mention « Bientôt
+  disponible » (§44). **À réactiver une fois les documents finalisés et validés par un avocat.**
+  ⚠️ Attention : les fichiers restent servis statiquement depuis `public/legal/` et donc
+  **toujours téléchargeables par URL directe** (`/legal/Klarity_CGU.docx`, …) — désactiver les liens
+  ne les retire pas du site.
 
 - **`next build` échoue — erreur `<Html>` au prérendu de `/404`** (découvert le 1er septembre 2026 en
   lançant `next build` proprement pour la première fois). `next dev` fonctionne, mais un déploiement
@@ -3234,3 +3238,92 @@ Compte admin de test créé puis supprimé en cours de route (avant de découvri
 de l'utilisateur était déjà active dans le navigateur — utilisée à la place). Fenêtre tarifaire de test
 supprimée. `git status` propre en dehors des fichiers du feature (schéma, migration, route, composant,
 page).
+
+## 44. Liens légaux du footer désactivés — état temporaire avant validation par un avocat (13 septembre 2026)
+
+> ⚠️ **ÉTAT TEMPORAIRE — À RÉACTIVER.** Cette section décrit une désactivation volontaire, pas un
+> comportement cible. Les 3 liens légaux du footer de la landing page doivent redevenir cliquables
+> **dès que les documents `docs/legal/*.docx` sont finalisés (champs « [à compléter] » remplis) et
+> validés par un avocat inscrit au Barreau du Cameroun.** Voir « Comment réactiver » en fin de section.
+
+### Pourquoi
+
+Les 3 documents juridiques (`Klarity_Mentions_Legales.docx`, `Klarity_CGU.docx`,
+`Klarity_Politique_Confidentialite.docx`) sont toujours en version 1.0 provisoire : raison sociale,
+forme juridique, siège social, RCCM/NIU et représentant légal ne sont pas renseignés, et chaque
+document stipule lui-même en en-tête qu'il doit être validé avant publication (cf. section « Bloquant
+avant mise en production » en tête de ce document). Le site étant sur le point d'être référencé
+publiquement pour la première fois (dossier NotchPay), exposer ces brouillons comme s'ils étaient les
+conditions contractuelles en vigueur n'était pas acceptable.
+
+Choix retenu (demande explicite de l'utilisateur) : **désactiver sans retirer** — supprimer les entrées
+aurait modifié la mise en page du footer, déjà validée par la maquette `01_landing_page.png`.
+
+### Code changé — `src/components/landing/LandingFooter.tsx` (seul fichier touché)
+
+Le composant référençait les `.docx` à **deux endroits**, tous deux traités :
+
+1. La colonne « Légal » (3 entrées : Mentions légales, Conditions d'utilisation, Politique de
+   confidentialité), générée depuis la constante `LEGAL_LINKS`.
+2. La barre de bas de page (3 entrées plus courtes : Mentions légales, Confidentialité, CGU), écrites
+   en dur.
+
+Dans les deux cas les `<a href={...} download>` sont devenus de simples `<span>` grisés
+(`cursor-not-allowed text-texte-muted/60`), avec un `title="Bientôt disponible"` porté par l'élément
+**conteneur** (`<li>` / la `<div>` de la barre) plutôt que par le libellé lui-même, plus une ligne
+« Bientôt disponible » visible sous la colonne « Légal ».
+
+Détail d'accessibilité qui a nécessité une correction en cours de route : en mettant `title` directement
+sur le `<span>` du libellé, l'arbre d'accessibilité remplaçait le nom accessible par « Bientôt
+disponible » — les trois entrées devenaient indistinguables pour un lecteur d'écran (vérifié
+réellement : `read_page` renvoyait `generic "Bientôt disponible"` ×3). En déplaçant `title` sur le
+conteneur, l'arbre redonne bien `listitem "Bientôt disponible"` → `generic "Mentions légales"`, etc. :
+l'info « indisponible » est conservée sans écraser le libellé.
+
+La constante `LEGAL_LINKS` **garde ses `href`** (inutilisés pour l'instant, servant de `key`) — c'est
+volontaire : elle documente exactement ce qu'il faudra recâbler.
+
+### Vérifié réellement dans le navigateur (local, `http://localhost:3000/`)
+
+- `tsc --noEmit` et `eslint` sur le fichier : **0 erreur**.
+- Arbre d'accessibilité du `<footer>` : **plus aucun élément `link`** pour les 6 entrées légales (toutes
+  en `generic`) ; les 2 liens de contact (`mailto:`, `tel:`) restent bien des `link` — la désactivation
+  n'a pas débordé.
+- **Clics réels** sur « Mentions légales » (barre de bas de page) puis sur « Mentions légales »
+  (colonne Légal) : aucune navigation, aucun téléchargement déclenché, l'URL reste `http://localhost:3000/`.
+- Capture d'écran : mise en page du footer strictement inchangée, libellés visibles en gris clair.
+
+### ⚠️ Limite importante — les fichiers restent accessibles par URL directe
+
+Désactiver les liens **ne retire pas les documents du site** : ils sont servis statiquement depuis
+`public/legal/` et restent téléchargeables par quiconque connaît (ou devine) l'URL — vérifié :
+`curl -L http://localhost:3000/legal/Klarity_CGU.docx` → **HTTP 200, 21 698 octets** (le document
+complet). Tout moteur les ayant déjà indexés y accède également. Si l'objectif est que ces brouillons
+ne soient plus récupérables du tout, il faut en plus les sortir de `public/legal/` (les originaux
+restent dans `docs/legal/`, rien n'est perdu) — **non fait ici**, l'utilisateur n'ayant demandé que la
+désactivation des liens, et un retrait pouvant gêner si le dossier NotchPay exige une URL de document
+légal accessible.
+
+### ⚠️ Vérification « après déploiement Vercel » — impossible à ce stade
+
+L'utilisateur a demandé de vérifier aussi le comportement après le prochain déploiement Vercel. **Ça
+n'a pas pu être fait**, pour deux raisons factuelles :
+
+1. **Aucun projet Vercel n'est configuré dans ce dépôt** — pas de `vercel.json`, pas de `.vercel/`,
+   aucune référence à Vercel nulle part dans le code ou la config.
+2. **`next build` échoue toujours** — rejoué le 13 septembre 2026 : `✓ Compiled successfully in 75s`,
+   types OK, puis `Error: <Html> should not be imported outside of pages/_document` au prérendu de
+   `/404`, `Export encountered an error on /_error: /404`. C'est le bloquant préexistant documenté en
+   tête de ce document (découvert le 1er septembre, sans rapport avec ce changement). Un build Vercel
+   échouerait exactement de la même façon.
+
+La vérification en production reste donc **à faire au premier déploiement réel**, une fois le bloquant
+`next build` levé.
+
+### Comment réactiver (une fois les documents validés par un avocat)
+
+Dans `src/components/landing/LandingFooter.tsx` : retransformer les 6 `<span>` en
+`<a href={...} download className="...hover:text-texte">`, retirer `legalDesactiveClasses`,
+`LEGAL_DESACTIVE_TITRE`, les `title` sur les conteneurs et la ligne « Bientôt disponible ». Le commit
+précédant ce changement contient la version cliquable exacte. Penser aussi à mettre à jour la section
+« Bloquant avant mise en production » en tête de ce document.
