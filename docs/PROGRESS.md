@@ -15,58 +15,25 @@ _Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5)
   landing page (`src/components/landing/LandingFooter.tsx`) renvoyait directement vers ces `.docx`
   tels quels (décision actée avec l'utilisateur le 27 août) ; **depuis le 13 septembre 2026 ces liens
   sont désactivés** — libellés toujours visibles mais grisés et non cliquables, mention « Bientôt
-  disponible » (§44). **À réactiver une fois les documents finalisés et validés par un avocat.**
-  ⚠️ Attention : les fichiers restent servis statiquement depuis `public/legal/` et donc
-  **toujours téléchargeables par URL directe** (`/legal/Klarity_CGU.docx`, …) — désactiver les liens
-  ne les retire pas du site.
+  disponible » (§44). **De plus, depuis le 13 septembre 2026 (même jour, §45) les 3 fichiers `.docx`
+  ont été retirés de `public/legal/`** — ils ne sont donc plus servis du tout (404 vérifié en local
+  sur les 3 URLs), et pas seulement rendus non cliquables ; les originaux restent dans `docs/legal/`.
+  **À réactiver/republier une fois les documents finalisés et validés par un avocat** (remettre les
+  fichiers dans `public/legal/` et les `<a href>` du footer).
 
-- **`next build` échoue — erreur `<Html>` au prérendu de `/404`** (découvert le 1er septembre 2026 en
-  lançant `next build` proprement pour la première fois). `next dev` fonctionne, mais un déploiement
-  production nécessite `next build` — donc **à régler avant la mise en production**. On y revient au
-  moment de préparer le vrai déploiement ; pour l'instant l'investigation est volontairement
-  arrêtée.
-
-  **Déclencheur exact.** Après `✓ Compiled successfully` et `Checking validity of types` (qui
-  passent tous les deux), à la phase « Generating static pages » :
-  ```
-  Error: <Html> should not be imported outside of pages/_document.
-      at x (.next/server/chunks/611.js:6:1351)
-  Error occurred prerendering page "/404".
-  Export encountered an error on /_error: /404, exiting the build.
-  ```
-  `x` est le composant `Html` de `next/dist/compiled/next-server/pages.runtime.prod.js`. Le projet
-  est 100 % App Router (pas de `src/pages/`), donc Next génère lui-même `pages/_app.js`,
-  `pages/_document.js`, `pages/_error.js` (le `_error.js` compilé fait ~80 Ko). À l'export statique,
-  Next prérend `/404` et `/500` à travers ce `_error` et le garde-fou `docComponentsRendered.Html`
-  du `_document` par défaut lève l'exception. Aucune *import trace* n'est affichée : l'erreur est
-  interne à Next, non rattachable à un module du projet.
-
-  **Problème connu de Next.js.** Signature récurrente et documentée (plusieurs tickets GitHub à
-  travers Next 13/14/15) pour les projets App-Router-only, à la génération statique de `/404` et
-  `/_error`. Les déclencheurs habituels rapportés ailleurs ne s'appliquent pas ici (voir ci-dessous).
-
-  **Préexistant, pas une régression.** `next build` échoue à l'identique au commit `722f4bd` (HEAD
-  d'avant la session du 1er septembre, avant les correctifs paiement/abonnement et avant l'avatar).
-  Aucun commit de l'historique ne mentionne un `next build` réussi (tous disent « vérifié via
-  `curl` »), et le workflow Docker Compose ne lance que `npm run dev`. `next build` n'a donc **jamais
-  fonctionné** dans ce repo — le développement s'est fait entièrement contre `next dev`.
-
-  **Pistes déjà écartées (testées le 1er septembre) :**
-  - un fichier de `src/` important `next/document` → aucun (seuls les fichiers de règles de
-    `@next/eslint-plugin-next` citent la chaîne) ;
-  - `src/middleware.ts` → retiré, échec identique ;
-  - la config ESLint cassée → `next build --no-lint`, échec identique ;
-  - l'absence de `not-found.tsx` / `global-error.tsx` → les deux ajoutés (et conservés), échec
-    identique ;
-  - la version de Next → `15.5.23` **et** `15.5.25`, échec identique ;
-  - `next/font/google` injoignable dans le conteneur → Google Fonts répond 200 depuis le conteneur.
-
-  **Pistes non testées, à explorer plus tard :**
-  - `experimental.optimizePackageImports: ['@phosphor-icons/react']` dans `next.config.ts` (le
-    barrel d'icônes est le plus gros import client du projet) ;
-  - bisection : retirer pages/composants un par un jusqu'à ce que `/404` build ;
-  - un `pages/_document.tsx` minimal explicite ;
-  - passage à Next 16.x (bump majeur — dernier stable `16.3.4` au 1er septembre 2026).
+- ~~`next build` échoue — erreur `<Html>` au prérendu de `/404`~~ **RÉSOLU (compris) le 13 septembre
+  2026, §45.** Ce n'était pas un bug Next.js : `next build`, lancé en local via `docker compose
+  exec`/`run` dans le conteneur `app`, héritait de `NODE_ENV=development` (déclaré dans `.env` pour
+  `npm run dev`) — un `NODE_ENV` non-production pendant `next build` fait dérailler l'export statique
+  de `/404`/`/_error` vers la logique Pages Router héritée, d'où l'import `<Html>` invalide. Confirmé
+  par reproduction contrôlée : le même `next build`, dans le même conteneur, avec les mêmes
+  dépendances, réussit intégralement dès que `NODE_ENV=production` est forcé. **Le déploiement Vercel
+  réel (`klarity-sand.vercel.app`) n'a jamais été affecté** — Vercel force `NODE_ENV=production`
+  pendant son propre build, indépendamment du `.env` du dépôt ; vérifié en récupérant la vraie page
+  `/404` en production (contenu réel de `not-found.tsx`, pas une page d'erreur générique). Détail
+  complet, y compris pourquoi les pistes explorées le 1er septembre ne pouvaient pas trouver la
+  cause : §45. **Pour vérifier `next build` en local à l'avenir**, forcer explicitement
+  `NODE_ENV=production npx next build` (ou toute invocation qui ne charge pas le `.env` de dev).
 
 ## 1. Où en est le projet, dans l'ensemble
 
@@ -3327,3 +3294,101 @@ Dans `src/components/landing/LandingFooter.tsx` : retransformer les 6 `<span>` e
 `LEGAL_DESACTIVE_TITRE`, les `title` sur les conteneurs et la ligne « Bientôt disponible ». Le commit
 précédant ce changement contient la version cliquable exacte. Penser aussi à mettre à jour la section
 « Bloquant avant mise en production » en tête de ce document.
+
+## 45. `.docx` légaux retirés de `public/legal/` + cause réelle de l'échec `next build` trouvée (13 septembre 2026)
+
+Suite au §44 (liens légaux désactivés dans le footer), l'utilisateur a demandé deux choses : (1) retirer
+vraiment les 3 documents légaux du site, pas seulement désactiver les liens, et (2) éclaircir une
+contradiction apparente — son déploiement Vercel (`klarity-sand.vercel.app`) a réussi (« Congratulations! »,
+site en ligne), alors que ce journal documentait `next build` comme un bloquant qui échoue systématiquement
+en local avec une erreur `<Html>`.
+
+### Partie 1 — Retrait effectif des `.docx`
+
+Désactiver les liens (§44) ne retirait pas les fichiers eux-mêmes : ils restaient servis statiquement
+depuis `public/legal/`, donc téléchargeables par URL directe. Vérifié avant intervention :
+`curl -L http://localhost:3000/legal/Klarity_CGU.docx` → **HTTP 200, 21 698 octets** (le document complet).
+
+Retiré : `git rm public/legal/Klarity_CGU.docx public/legal/Klarity_Mentions_Legales.docx
+public/legal/Klarity_Politique_Confidentialite.docx`. Les originaux restent intacts dans `docs/legal/`
+(hashes MD5 identiques aux anciens fichiers de `public/legal/`, confirmés avant suppression).
+
+**Incident mineur en cours de route** : après `git rm` des 3 fichiers puis `rmdir public/legal` (dossier
+maintenant vide), le dossier **`public/` lui-même a disparu du disque** (`stat public` →
+`No such file or directory`) — `public/legal/` était le seul contenu jamais suivi par git dans `public/`
+(confirmé via `git ls-tree -r HEAD -- public/`), donc rien d'autre n'a été perdu, mais la cause exacte de
+cette disparition du dossier parent (au-delà de ce qui a été explicitement demandé) n'a pas été élucidée.
+Recréé immédiatement (`mkdir public`, vide) par précaution — Next.js suppose l'existence de ce dossier par
+convention même s'il ne contient rien.
+
+**Vérifié après coup** (conteneur `app`, serveur dev local) :
+- Les 3 URLs `/legal/*.docx` renvoient désormais **HTTP 404** (au lieu de 200) ;
+- La page d'accueil (`/`) et le footer avec liens désactivés continuent de fonctionner normalement ;
+- `docs/legal/*.docx` inchangés (mêmes hashes MD5 qu'avant).
+
+### Partie 2 — Pourquoi Vercel réussit alors que `next build` échoue en local : **`NODE_ENV` qui fuite**
+
+Investigation reprise en profondeur (le blocage du 1er septembre avait été laissé « volontairement
+arrêté »). Reproduit l'échec une nouvelle fois pour confirmer qu'il persistait bien (identique : erreur
+`<Html> should not be imported outside of pages/_document` au prérendu de `/404`).
+
+**Étape 1 — écarter les fausses pistes locales.** Deux hypothèses plausibles ont été testées et
+**infirmées** par des tests contrôlés :
+- *Cache webpack pollué par `next dev`* : `next build` relancé avec un `.next` totalement vidé
+  (aucune trace de `next dev`) → **même erreur, à l'identique**. Écarté.
+- *`next dev` tournant en parallèle pendant le build* (le conteneur `app` exécute `npm run dev` en
+  continu ; `next build` y était lancé via `docker compose exec` dans ce même conteneur) : testé avec le
+  service `app` **arrêté** (`docker compose stop app`, donc aucun `next dev` actif) et un `next build`
+  lancé directement via `docker run` sur les mêmes volumes `node_modules`/`.next` → **même erreur, à
+  l'identique**. Écarté.
+
+  (Effet de bord de ce test : `docker compose run` crée un **nouveau conteneur avec ses propres volumes
+  anonymes**, distincts de ceux du conteneur `app` persistant — un premier essai via `docker compose run`
+  a donc tourné avec un `node_modules` **périmé**, provoquant une erreur de type totalement différente,
+  sans rapport avec `<Html>`, le temps de comprendre qu'il fallait monter explicitement les volumes du
+  conteneur `app` réel — `docker run -v <id-volume-node_modules>:/app/node_modules -v
+  <id-volume-.next>:/app/.next ...` — pour un test valide.)
+
+**Étape 2 — recherche externe.** Une recherche sur cette signature d'erreur precise a fait remonter une
+discussion GitHub `vercel/next.js` documentant exactement ce symptôme pour des builds Next.js 15 en
+Docker : `NODE_ENV` à une valeur non-production pendant `next build` fait dérailler l'export statique de
+`/404`/`/_error` vers un chemin de code hérité du Pages Router, provoquant cet import `<Html>` invalide.
+
+**Étape 3 — vérification locale.** `.env` (chargé par `env_file:` dans `docker-compose.yml` pour les
+services `app`/`worker`, adapté à `npm run dev`) déclare `NODE_ENV=development`. C'est exactement ce
+`NODE_ENV` qui était hérité à chaque tentative précédente de `next build` en local (via `docker compose
+exec`, `docker compose run`, ou un `docker run --env-file .env` manuel). **Test décisif** : relancer
+*exactement* le même `next build`, mêmes volumes, mêmes dépendances, en forçant uniquement
+`NODE_ENV=production` en plus du `.env` → **build réussi de bout en bout**, toutes les pages générées
+(46 routes), aucune erreur `<Html>`.
+
+**Conclusion.** Ce n'était jamais un bug de Next.js ni une régression du projet — c'était `NODE_ENV=development`
+(nécessaire et correct pour `npm run dev`) qui fuitait dans les invocations locales de `next build`, une
+commande qui n'a jamais servi qu'à la vérification manuelle (le workflow Docker Compose ne lance que
+`npm run dev`/`npm run worker:dev`). **Vercel n'a jamais rencontré ce problème** : leur pipeline de build
+force `NODE_ENV=production` pendant l'étape de build, indépendamment de tout `.env` du dépôt — d'où un
+déploiement systématiquement réussi malgré l'échec local.
+
+**Le site en ligne a été vérifié réellement, pas supposé sain par déduction :**
+- `curl https://klarity-sand.vercel.app/` → **200**, page d'accueil réelle (`x-nextjs-prerender: 1`,
+  contenu HTML de la landing page) ;
+- `curl https://klarity-sand.vercel.app/<chemin-inexistant>` → **404**, avec le **vrai contenu de
+  `not-found.tsx`** (`<title>Page introuvable — Klarity</title>`, `x-matched-path: /404`,
+  `x-next-error-status: 404`) — la preuve directe que le build Vercel a réellement généré et servi la
+  page 404 personnalisée du projet, pas une page d'erreur générique de secours.
+
+**Aucun risque caché identifié sur le site en production** au sujet de ce point précis : le comportement
+observé sur Vercel est celui attendu, le déploiement réel n'est affecté par aucune version dégradée de
+`/404`/`/_error`.
+
+**Pour l'avenir** : toute vérification locale de `next build` doit forcer `NODE_ENV=production`
+explicitement (`NODE_ENV=production npx next build`), plutôt que de le lancer dans un contexte qui charge
+le `.env` de développement. Ce n'est **pas** un changement de code — c'est une note de procédure pour
+quiconque relance ce diagnostic.
+
+### Nettoyage
+
+Conteneur `app` (arrêté pendant le test §Partie 2) redémarré et re-vérifié sain (page d'accueil 200,
+liens légaux toujours désactivés et fichiers toujours en 404). Cache `.next` du conteneur `app` réoccupé
+par la sortie du build de production testé manuellement — sans conséquence, `next dev` régénère ce dont
+il a besoin au démarrage (vérifié : page d'accueil répond normalement après redémarrage).
