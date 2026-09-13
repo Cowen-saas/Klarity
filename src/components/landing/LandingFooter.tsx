@@ -1,27 +1,19 @@
+import Link from "next/link";
 import { IconGraduationCap } from "@/components/icons";
 
 /**
- * Les 3 documents juridiques (docs/legal/*.docx, copiés dans public/legal/) sont
- * encore des brouillons v1.0 non validés par un avocat (mentions "[à compléter]"
- * pour la raison sociale, le RCCM, etc.).
- *
- * **État temporaire (13 septembre 2026)** : le site étant sur le point d'être
- * référencé publiquement pour la première fois (dossier NotchPay), les liens ont
- * été **désactivés** — les libellés restent visibles pour ne pas casser la mise
- * en page, mais ne sont plus cliquables et portent la mention « Bientôt
- * disponible ». À **réactiver** (remettre les `<a href>` — l'historique git de ce
- * fichier contient la version cliquable) une fois les documents finalisés et
- * validés par un avocat. Voir `docs/PROGRESS.md` §44.
+ * Les 3 documents juridiques (docs/legal/*.docx) sont finalisés et validés
+ * (13 septembre 2026, §46 de docs/PROGRESS.md) — leur contenu est publié sous
+ * forme de pages web dédiées (`/mentions-legales`, `/cgu`, `/confidentialite`,
+ * cf. `src/content/legal/`), pas en téléchargement direct du `.docx` source :
+ * les fichiers originaux restent uniquement dans `docs/legal/` comme
+ * référence/archive, jamais copiés dans `public/`.
  */
 const LEGAL_LINKS = [
-  { label: "Mentions légales", href: "/legal/Klarity_Mentions_Legales.docx" },
-  { label: "Conditions d'utilisation", href: "/legal/Klarity_CGU.docx" },
-  { label: "Politique de confidentialité", href: "/legal/Klarity_Politique_Confidentialite.docx" },
+  { label: "Mentions légales", href: "/mentions-legales" },
+  { label: "Conditions d'utilisation", href: "/cgu" },
+  { label: "Politique de confidentialité", href: "/confidentialite" },
 ];
-
-/** Libellé légal visible mais non cliquable — cf. commentaire ci-dessus. */
-const LEGAL_DESACTIVE_TITRE = "Bientôt disponible";
-const legalDesactiveClasses = "cursor-not-allowed text-texte-muted/60";
 
 export function LandingFooter() {
   return (
@@ -45,12 +37,13 @@ export function LandingFooter() {
               <p className="text-sm font-bold text-texte">Légal</p>
               <ul className="mt-3 space-y-2">
                 {LEGAL_LINKS.map((link) => (
-                  <li key={link.href} title={LEGAL_DESACTIVE_TITRE}>
-                    <span className={`text-sm ${legalDesactiveClasses}`}>{link.label}</span>
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-sm text-texte-muted hover:text-texte">
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-xs text-texte-muted/60">{LEGAL_DESACTIVE_TITRE}</p>
             </div>
             <div>
               <p className="text-sm font-bold text-texte">Contact</p>
@@ -73,12 +66,18 @@ export function LandingFooter() {
 
       <div className="border-t border-primary/10">
         <div className="mx-auto flex max-w-6xl flex-col-reverse items-center justify-between gap-3 px-6 py-5 text-xs text-texte-muted sm:flex-row sm:px-8">
-          <div className="flex items-center gap-2" title={LEGAL_DESACTIVE_TITRE}>
-            <span className={legalDesactiveClasses}>Mentions légales</span>
+          <div className="flex items-center gap-2">
+            <Link href="/mentions-legales" className="hover:text-texte">
+              Mentions légales
+            </Link>
             <span aria-hidden="true">|</span>
-            <span className={legalDesactiveClasses}>Confidentialité</span>
+            <Link href="/confidentialite" className="hover:text-texte">
+              Confidentialité
+            </Link>
             <span aria-hidden="true">|</span>
-            <span className={legalDesactiveClasses}>CGU</span>
+            <Link href="/cgu" className="hover:text-texte">
+              CGU
+            </Link>
           </div>
           <p>© 2026 Klarity. Tous droits réservés.</p>
         </div>

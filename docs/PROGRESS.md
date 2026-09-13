@@ -4,22 +4,15 @@ _Dernière mise à jour : 6 septembre 2026 — sections vivantes (§1, §3, §5)
 
 ## 🔴 Bloquant avant mise en production
 
-- **Documents légaux non finalisés** — `docs/legal/Klarity_CGU.docx`,
-  `Klarity_Mentions_Legales.docx` et `Klarity_Politique_Confidentialite.docx` sont en **version
-  1.0**, contiennent des champs non remplis (raison sociale, forme juridique, siège social,
-  RCCM/NIU, représentant légal...) et **n'ont pas été validés par un avocat inscrit au Barreau du
-  Cameroun** — chaque document le stipule lui-même en en-tête ("Document à faire valider... avant
-  publication"). Les Mentions Légales interdisent explicitement toute collecte de données réelles
-  d'Élèves ou ouverture commerciale tant que cette identification n'est pas complète (Article 1).
-  **À compléter et faire valider juridiquement avant tout déploiement public.** Le footer de la
-  landing page (`src/components/landing/LandingFooter.tsx`) renvoyait directement vers ces `.docx`
-  tels quels (décision actée avec l'utilisateur le 27 août) ; **depuis le 13 septembre 2026 ces liens
-  sont désactivés** — libellés toujours visibles mais grisés et non cliquables, mention « Bientôt
-  disponible » (§44). **De plus, depuis le 13 septembre 2026 (même jour, §45) les 3 fichiers `.docx`
-  ont été retirés de `public/legal/`** — ils ne sont donc plus servis du tout (404 vérifié en local
-  sur les 3 URLs), et pas seulement rendus non cliquables ; les originaux restent dans `docs/legal/`.
-  **À réactiver/republier une fois les documents finalisés et validés par un avocat** (remettre les
-  fichiers dans `public/legal/` et les `<a href>` du footer).
+- ~~Documents légaux non finalisés~~ **RÉSOLU le 13 septembre 2026, §46.** Les 3 documents
+  (`docs/legal/Klarity_CGU.docx`, `Klarity_Mentions_Legales.docx`,
+  `Klarity_Politique_Confidentialite.docx`) sont passés en **version 1.2**, finalisés et validés —
+  confirmé explicitement par l'utilisateur, deux artefacts de brouillon résiduels nettoyés avec son
+  accord (§46). Publiés sous forme de pages web dédiées (`/mentions-legales`, `/cgu`,
+  `/confidentialite`), le footer pointe vers ces pages (liens réactivés, plus de mention « Bientôt
+  disponible », §44/§45 obsolètes sur ce point). Les `.docx` sources restent dans `docs/legal/`
+  comme référence/archive uniquement — jamais copiés dans `public/`, donc jamais servis en
+  téléchargement direct (cohérent avec la décision de sécurité du §45).
 
 - ~~`next build` échoue — erreur `<Html>` au prérendu de `/404`~~ **RÉSOLU (compris) le 13 septembre
   2026, §45.** Ce n'était pas un bug Next.js : `next build`, lancé en local via `docker compose
@@ -3392,3 +3385,106 @@ Conteneur `app` (arrêté pendant le test §Partie 2) redémarré et re-vérifi�
 liens légaux toujours désactivés et fichiers toujours en 404). Cache `.next` du conteneur `app` réoccupé
 par la sortie du build de production testé manuellement — sans conséquence, `next dev` régénère ce dont
 il a besoin au démarrage (vérifié : page d'accueil répond normalement après redémarrage).
+
+## 46. Documents légaux finalisés et validés — publication en pages web dédiées, footer réactivé (13 septembre 2026)
+
+L'utilisateur a confirmé que les 3 documents juridiques (`docs/legal/*.docx`) sont désormais finalisés
+et validés, passés en version 1.2, prêts à être publiés. Demande : réactiver les liens du footer
+(§44/§45 devenaient obsolètes), mais rediriger vers des pages web lisibles plutôt que vers un
+téléchargement direct du `.docx`, en conservant les originaux dans `docs/legal/` comme archive
+uniquement (jamais republiés dans `public/`).
+
+### Anomalie trouvée avant publication, et accord explicite de l'utilisateur pour la corriger
+
+En extrayant le texte réel des 3 `.docx` (voir méthode ci-dessous) pour construire les pages, deux
+artefacts de brouillon subsistaient malgré le statut « finalisé et validé » annoncé :
+1. La phrase « Document à faire valider par un avocat inscrit au Barreau du Cameroun avant
+   publication », présente littéralement dans les 3 documents (bloc de titre).
+2. Dans les Mentions Légales (Article 3.1), un placeholder non résolu : « [Nom de l'hébergeur et
+   adresse de son siège social à compléter dès sélection définitive du prestataire d'hébergement de
+   production.] ».
+
+Publier ce texte tel quel aurait affiché, sur des pages présentées comme en vigueur, une mention
+explicite de non-validation et un placeholder de brouillon — contradictoire et potentiellement
+trompeur. Plutôt que de trancher unilatéralement (une modification de substance juridique n'est pas
+une décision technique), la question a été posée explicitement à l'utilisateur, qui a choisi de faire
+nettoyer ces deux artefacts précis, **sans toucher au reste du contenu juridique** — en particulier les
+autres mentions de type « fait l'objet d'un examen juridique préalable à toute publication » (Politique
+de Confidentialité, Articles 5.1 et 8) ou « recommandé avant la mise en production » (CGU Article 18,
+Confidentialité Article 1) sont des engagements/notes substantiels du rédacteur, pas des artefacts
+mécaniques, et ont donc été **laissés intacts**, conformément au périmètre validé par l'utilisateur.
+
+Édité directement dans les `.docx` sources (via `python-docx`, en modifiant les paragraphes/runs
+concernés puis en sauvegardant), pas seulement dans le texte extrait pour le web — pour que l'archive
+`docs/legal/` elle-même reflète la version réellement finalisée, sans laisser les deux fichiers
+diverger. Vérifié après coup : les deux chaînes ("avocat inscrit au Barreau", "[Nom de l") sont bien
+absentes des 3 documents, nombre de paragraphes/tableaux cohérent (une ligne de moins par document,
+correspondant exactement à la suppression du paragraphe "avocat").
+
+### Méthode d'extraction et de conversion en pages web
+
+Les `.docx` sont des archives ZIP contenant du XML (`word/document.xml`). Plutôt que de retaper
+manuellement des milliers de mots (source d'erreurs de transcription sur un contenu juridique), le
+contenu a été extrait programmatiquement via `python-docx` (`uv run --with python-docx`), en parcourant
+`document.element.body` dans l'ordre réel du document pour capturer titres (styles `Heading1`/`Heading2`),
+paragraphes, listes à puces (style `ListParagraph`, regroupées), tableaux multi-colonnes, et un type de
+bloc supplémentaire découvert en cours d'extraction : des tableaux à **cellule unique** utilisés dans la
+Politique de Confidentialité comme encart d'avertissement (un run en gras servant de titre, suivi du
+corps en texte normal) — traités comme un bloc `callout` distinct plutôt que comme un tableau à une
+seule ligne, pour un rendu visuel cohérent avec leur intention (encadré orange avec icône ⚠️, pas un
+tableau vide de sens à une cellule).
+
+Le résultat est émis en TypeScript typé (`src/content/legal/types.ts` : `LegalBlock` = `h1`/`h2`/`p`/
+`list`/`table`/`callout`, `LegalMeta` pour le bloc de titre) — un fichier par document
+(`mentions-legales.ts`, `cgu.ts`, `confidentialite.ts`), généré une fois par script puis figé dans le
+dépôt (pas de génération à la volée au build : le contenu juridique ne doit pas dépendre d'une étape de
+build fragile). `src/components/legal/LegalDocument.tsx` est le seul composant de rendu, partagé par les
+3 pages plutôt que dupliqué, cohérent avec le design system Klarity (police Sora par défaut, titre de
+page en `font-serif`/IBM Plex Serif comme les autres affichages de mise en avant du site, couleurs
+`--color-primary`/`--color-texte-muted`/`--color-accent` déjà établies dans `globals.css`).
+
+### Code changé
+
+- **`src/content/legal/{types,mentions-legales,cgu,confidentialite}.ts`** — nouveau, contenu structuré
+  extrait des `.docx` finalisés (37 blocs Mentions Légales, 134 CGU, 71 Confidentialité).
+- **`src/components/legal/LegalDocument.tsx`** — nouveau, rendu générique (titre/sous-titre/version,
+  h1/h2 d'article, paragraphes, listes à puces, tableaux avec en-tête, encarts d'avertissement).
+- **`src/app/mentions-legales/page.tsx`, `src/app/cgu/page.tsx`, `src/app/confidentialite/page.tsx`** —
+  nouvelles pages publiques, chacune `LandingHeader` + `LegalDocument` + `LandingFooter` (même
+  composition que la landing page, §page.tsx racine) — navigation cohérente avec le reste du site
+  depuis ces pages (retour à l'accueil via le logo, accès Connexion/Créer un compte, autres liens
+  légaux via le footer).
+- **`src/components/landing/LandingFooter.tsx`** — retour aux vrais `<Link>` Next.js (navigation
+  interne, pas de `download`) vers `/mentions-legales`, `/cgu`, `/confidentialite`, dans les deux
+  emplacements du footer (colonne « Légal » et barre de bas de page). État désactivé (`span` grisés,
+  « Bientôt disponible ») entièrement retiré.
+- `docs/legal/*.docx` : les deux artefacts nettoyés (voir ci-dessus), aucune autre modification de
+  fond.
+
+### CDC (`Klarity_Cahier_des_Charges.pdf`) — vérifié, aucune mise à jour nécessaire
+
+Recherché dans les 44 pages toute mention de « Mentions légales », « CGU », « Confidentialité » ou
+« avocat » : le CDC référence bien le contenu de ces documents comme source de règles déjà en vigueur
+(ex. « La Politique de Confidentialité (Article 9) définit déjà... », §2.9) mais ne décrit nulle part
+leur statut de publication (brouillon/finalisé) ni ne mentionne l'ancien lien de téléchargement direct
+— rien dans le CDC n'était rendu faux par ce changement. Pas de nouvelle version du CDC nécessaire pour
+ce point.
+
+### Vérifié réellement dans le navigateur (local)
+
+- `tsc --noEmit` et `eslint` sur tous les fichiers touchés : **0 erreur**.
+- **Les 3 liens du footer sont bien cliquables** (arbre d'accessibilité : rôle `link`, plus `generic`/
+  `span` désactivé) — vérifié sur la page d'accueil et sur les pages légales elles-mêmes (navigation
+  croisée entre les 3 pages via leur propre footer, sans repasser par l'accueil).
+- **Contenu vérifié complet et correct sur les 3 pages** : texte extrait comparé à la lecture du texte
+  de page rendue (`get_page_text`) — Mentions Légales (11 articles + tableau des 6 services tiers),
+  CGU (19 articles + tableau des 2 plans tarifaires), Politique de Confidentialité (15 articles + 6
+  tableaux + 2 encarts d'avertissement) — aucune trace des deux artefacts nettoyés, mise en page des
+  tableaux et encarts confirmée visuellement (capture d'écran).
+- **`.docx` toujours inaccessibles publiquement** : les 3 URLs `/legal/*.docx` renvoient **404** (aucun
+  changement par rapport à l'état sécurisé du §45) ; les 3 nouvelles pages renvoient **200**.
+
+### Nettoyage
+
+Fichiers intermédiaires d'extraction (`*.json`, scripts Python temporaires) supprimés, rien laissé hors
+de `docs/legal/` (originaux corrigés) et `src/content/legal/` (sortie finale figée dans le dépôt).
