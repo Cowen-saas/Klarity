@@ -3488,3 +3488,47 @@ ce point.
 
 Fichiers intermédiaires d'extraction (`*.json`, scripts Python temporaires) supprimés, rien laissé hors
 de `docs/legal/` (originaux corrigés) et `src/content/legal/` (sortie finale figée dans le dépôt).
+
+## 47. Politique de Confidentialité — Article 8 (Transferts internationaux de données) supprimé (13 septembre 2026)
+
+Demande explicite de l'utilisateur : supprimer complètement l'Article 8 (« TRANSFERTS INTERNATIONAUX
+DE DONNÉES ») de `docs/legal/Klarity_Politique_Confidentialite.docx` — le titre, ses 2 paragraphes et
+son encart d'avertissement (« Obligation légale prioritaire »).
+
+### Choix : suppression sans renumérotation des articles suivants
+
+Retiré dans le `.docx` source (via `python-docx`) l'intégralité du contenu entre le titre « ARTICLE 8 »
+et le titre « ARTICLE 9 » (5 éléments : titre, paragraphe, tableau-encart 1x1, paragraphe, saut de
+paragraphe final). Les articles suivants (9 à 15) **n'ont pas été renumérotés** — le document passe
+directement de l'Article 7 à l'Article 9. Choix délibéré, pas un oubli : la Politique contient 3
+références internes croisées vers « l'Article 12 » (Article 1, Article 5.2, Article 13) qui restent
+exactes et n'auraient nécessité aucune correction avec ce choix ; renuméroter aurait au contraire exigé
+de corriger ces 3 renvois plus les 6 titres suivants, pour un bénéfice cosmétique seulement — et casser
+la stabilité de citation d'un article donné est une pratique déconseillée en rédaction juridique (un
+article supprimé conserve généralement son numéro « vacant » plutôt que de décaler tous les suivants).
+Si l'utilisateur préfère une renumérotation complète, c'est une action distincte à demander
+explicitement.
+
+Vérifié qu'aucune autre mention de l'Article 8 de la Confidentialité n'existe ailleurs : la seule autre
+occurrence de la chaîne « Article 8 » dans le corpus légal est **« Article 8 des CGU »** (Politique de
+Confidentialité, Article 6.3), qui désigne l'Article 8 d'un **document différent** (CGU — Intelligence
+Artificielle : Fonctionnement et Limites) et n'a donc aucun rapport avec l'article supprimé ici ; laissé
+intact. Le CDC (`Klarity_Cahier_des_Charges.pdf`) ne mentionne nulle part « transferts internationaux »
+— aucune mise à jour nécessaire.
+
+### Code changé
+
+- `docs/legal/Klarity_Politique_Confidentialite.docx` : Article 8 retiré (édition directe via
+  `python-docx`, même méthode que le nettoyage des artefacts du §46).
+- `src/content/legal/confidentialite.ts` régénéré depuis le `.docx` mis à jour : 71 → **67 blocs**
+  (perte exacte des 4 blocs de l'ancien Article 8 : `h1`, `p`, `callout`, `p`). `mentions-legales.ts`
+  et `cgu.ts` régénérés à l'identique en parallèle (aucun changement, les `.docx` correspondants n'ont
+  pas été touchés) — vérifié par comparaison du nombre de blocs (37 et 134, inchangés).
+
+### Vérifié
+
+- `tsc --noEmit` et `eslint` sur `confidentialite.ts` : **0 erreur**.
+- Page `/confidentialite` rechargée en local : le texte affiché passe directement de « ARTICLE 7 —
+  DESTINATAIRES ET SOUS-TRAITANTS » à « ARTICLE 9 — DURÉE DE CONSERVATION », aucune trace de l'ancien
+  Article 8 ni de son encart « Obligation légale prioritaire » — confirmé par lecture complète du texte
+  de la page rendue, pas seulement du code source.
