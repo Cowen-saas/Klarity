@@ -1,0 +1,25 @@
+# Klarity
+
+> Klarity est une plateforme éducative propulsée par l'IA, destinée aux élèves camerounais de
+> 3ème, Première et Terminale, pour se préparer aux examens nationaux (BEPC, Probatoire, BAC).
+
+## Public cible
+
+Élèves de 3ème, Première et Terminale au Cameroun (filières A, C, D, TI), ainsi que leurs parents.
+Contenu en français.
+
+## Fonctionnalités principales
+
+- Tuteur IA : chat pédagogique disponible sur toutes les matières du programme officiel.
+- Banque d'épreuves : sujets d'examens passés, téléchargeables par matière et par niveau.
+- Correction automatique : l'élève photographie sa copie manuscrite, l'IA la corrige, attribue
+  une note et identifie les points forts et les lacunes.
+- Quiz personnalisés : générés quotidiennement à partir des lacunes détectées lors des
+  corrections.
+- Recommandations vidéo : vidéos pédagogiques suggérées par lacune identifiée.
+- Suivi parental : tableau de bord en lecture seule pour les parents, avec le consentement de
+  l'élève.
+
+## Liens
+
+- Site : https://klarity-sand.vercel.app/

@@ -3575,3 +3575,71 @@ contrairement à l'itération 1) et 714 octets au lieu de 4 Ko.
   disparaît) ; asset SVG servi 200 avec le contenu exact ; **capture d'écran de l'icône rendue comparée
   directement à une capture zoomée du badge réel de la navbar sur `/`** — identiques (même vert, mêmes
   coins arrondis, même glyphe, mêmes proportions).
+
+## 49. Découvrabilité : sitemap, robots.txt et llms.txt (13 septembre 2026)
+
+Demande explicite de l'utilisateur : ajouter un sitemap pour aider Google à indexer les pages
+publiques, un `llms.txt` décrivant Klarity pour les agents IA/LLMs, et vérifier la cohérence d'un
+`robots.txt`. Aucun des trois n'existait auparavant.
+
+### Sitemap et robots.txt — génération native Next.js, pas de fichiers statiques
+
+`src/app/sitemap.ts` (`MetadataRoute.Sitemap`) et `src/app/robots.ts` (`MetadataRoute.Robots`) plutôt
+que des fichiers `public/sitemap.xml` / `public/robots.txt` manuels — demande explicite de
+l'utilisateur pour le sitemap (rester à jour automatiquement si de nouvelles pages publiques sont
+ajoutées), étendu au robots.txt par cohérence (les deux partagent la même liste de préfixes
+authentifiés à exclure, un seul fichier statique aurait pu diverger du second).
+
+Sitemap limité aux 7 pages publiques listées explicitement par l'utilisateur : `/`, `/inscription`,
+`/abonnement`, `/connexion`, `/mentions-legales`, `/cgu`, `/confidentialite`. Volontairement exclues
+les sous-routes du tunnel d'abonnement (`/abonnement/eleve-ou-parent`, `/abonnement/paiement`) — ce
+sont des étapes d'un parcours, pas des pages de destination pertinentes pour l'indexation — ainsi que,
+bien sûr, tout ce sous `/eleve`, `/parent`, `/admin` (gate de rôle appliqué par `middleware.ts`,
+`docs/reference/Klarity_Securite_Reference.md`) et `/api`.
+
+`robots.ts` autorise `/` et interdit explicitement `/admin`, `/eleve`, `/parent`, `/api` — les mêmes
+préfixes que `middleware.ts` gate côté serveur. Volontairement **pas** de mention spécifique de
+`/admin/connexion` (point d'entrée admin non lié depuis l'UI, voir `middleware.ts`) : un `robots.txt`
+est un fichier public en clair, y lister ce chemin précis l'aurait rendu découvrable — `Disallow:
+/admin` suffit à couvrir tout le sous-arbre sans révéler l'existence de cette route particulière.
+
+`src/lib/site-url.ts` (nouveau) centralise l'URL absolue du site, partagée par les deux fichiers pour
+éviter toute divergence : `NEXT_PUBLIC_SITE_URL` (override optionnel) sinon
+`VERCEL_PROJECT_PRODUCTION_URL` (injecté automatiquement par Vercel, stable contrairement à
+`VERCEL_URL` qui varie par déploiement de preview — donc aucune variable à configurer manuellement en
+production) sinon un repli en dur sur `https://klarity-sand.vercel.app` (le domaine de production
+réel, identifié dans les entrées précédentes de ce journal sur l'incident de build Vercel).
+
+### llms.txt — fichier statique
+
+`public/llms.txt` (donc servi tel quel en `/llms.txt`, pas de génération) : nom, description courte,
+public cible (élèves camerounais 3ème/Première/Terminale, filières A/C/D/TI), fonctionnalités
+principales (tuteur IA, banque d'épreuves, correction automatique, quiz personnalisés,
+recommandations vidéo, suivi parental), lien vers la landing page. Contenu factuel et concis — le
+standard `llms.txt` (llmstxt.org) est encore expérimental et non universellement adopté par les
+crawlers IA, pas d'investissement disproportionné.
+
+### Code changé
+
+- `src/lib/site-url.ts` — nouveau.
+- `src/app/sitemap.ts` — nouveau.
+- `src/app/robots.ts` — nouveau.
+- `public/llms.txt` — nouveau.
+
+### Vérifié réellement en local (conteneur `app` Docker Compose, `docker compose exec app ...`)
+
+- `npx tsc --noEmit` et `npx eslint` sur les 3 fichiers TypeScript : **0 erreur**.
+- `curl -s -o /dev/null -w '%{http_code} %{content_type}' http://localhost:3000/sitemap.xml` →
+  **200, `application/xml`**, contenu vérifié : exactement les 7 URLs attendues, chacune préfixée par
+  `https://klarity-sand.vercel.app` (résolu via le repli en dur de `site-url.ts`, confirmé qu'aucune
+  variable `VERCEL_PROJECT_PRODUCTION_URL` n'est présente dans ce conteneur de dev local — comportement
+  attendu).
+- `curl .../robots.txt` → **200, `text/plain`**, contenu vérifié : `Allow: /`, les 4 `Disallow`
+  attendus (`/admin`, `/eleve`, `/parent`, `/api`), ligne `Sitemap:` pointant vers la même URL absolue
+  que ci-dessus.
+- `curl .../llms.txt` → **200, `text/plain; charset=UTF-8`**, contenu affiché intégralement et
+  comparé au fichier source — identique.
+
+### Nettoyage
+
+Aucun fichier intermédiaire laissé hors des 4 fichiers de code listés ci-dessus.
