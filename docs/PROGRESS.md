@@ -3532,3 +3532,46 @@ intact. Le CDC (`Klarity_Cahier_des_Charges.pdf`) ne mentionne nulle part « tra
   DESTINATAIRES ET SOUS-TRAITANTS » à « ARTICLE 9 — DURÉE DE CONSERVATION », aucune trace de l'ancien
   Article 8 ni de son encart « Obligation légale prioritaire » — confirmé par lecture complète du texte
   de la page rendue, pas seulement du code source.
+
+## 48. Icône de navigateur (favicon) — d'une image fournie à une reproduction vectorielle exacte du logo (13 septembre 2026)
+
+Chronologiquement entre §45 et §46 (même journée), sur demande de l'utilisateur. Deux itérations
+successives, la seconde remplaçant entièrement la première.
+
+### Itération 1 — image fournie par l'utilisateur (commit `9d8a68d`)
+
+L'utilisateur a fourni une image (chapeau de graduation blanc sur fond vert, cohérente avec
+`IconGraduationCap` déjà utilisée dans le header/footer) à utiliser comme icône de navigateur. Source
+non carrée (1286×1223) recadrée au carré (1223×1223 — le contenu occupait déjà tout le cadre, les coins
+blancs visibles n'étant que les angles arrondis de l'icône elle-même, pas une marge), réduite à 256×256
+et quantifiée à 64 couleurs sans dithering (4 Ko au lieu de 206 Ko en RGB plein, aucune perte visible
+constatée). Placée en `src/app/icon.png` — convention App Router de Next.js, détectée automatiquement
+sans toucher au code ni aux métadonnées de `layout.tsx`. Vérifié : balise `<link rel="icon">` générée
+automatiquement, asset servi 200 avec le bon contenu.
+
+### Itération 2 — remplacement par une reproduction vectorielle exacte du logo réel (commit `6651546`)
+
+L'utilisateur a ensuite demandé de remplacer cette image (une approximation visuelle générée par IA) par
+une reproduction **à l'identique** du vrai logo affiché dans la navbar de la landing page, en utilisant
+les éléments réels du code plutôt qu'une image. Construit à partir des valeurs exactes du design system,
+pas estimées :
+- carré 32×32, coins arrondis à 8px (`rounded-lg`), fond `#0e6b57` — lu directement dans
+  `src/app/globals.css` (`--color-primary`), la même valeur que `LandingHeader.tsx`, `KlarityLogo.tsx`,
+  `LandingFooter.tsx` et `abonnement/layout.tsx` utilisent tous pour ce badge ;
+- glyphe `GraduationCap` de `@phosphor-icons/react`, variante `"fill"` — path SVG copié tel quel depuis
+  `node_modules/@phosphor-icons/react/dist/defs/GraduationCap.es.js` (viewBox 256×256 d'origine), mis à
+  l'échelle à 20px et centré dans le badge de 32px — exactement la même proportion que le composant React
+  (`h-5 w-5` dans un badge `h-8 w-8`).
+
+`src/app/icon.svg` (nouveau) remplace `src/app/icon.png` (supprimé) — même convention Next.js, détectée
+automatiquement. SVG plutôt que PNG : fidélité vectorielle exacte (aucune perte de recadrage/compression
+contrairement à l'itération 1) et 714 octets au lieu de 4 Ko.
+
+### Vérifié
+
+- Itération 1 : `tsc --noEmit` sans erreur ; `<link rel="icon" type="image/png" sizes="256x256">` généré,
+  asset servi 200, comparé pixel à pixel à la source recadrée.
+- Itération 2 : `<link rel="icon" type="image/svg+xml">` généré automatiquement (l'ancien lien PNG
+  disparaît) ; asset SVG servi 200 avec le contenu exact ; **capture d'écran de l'icône rendue comparée
+  directement à une capture zoomée du badge réel de la navbar sur `/`** — identiques (même vert, mêmes
+  coins arrondis, même glyphe, mêmes proportions).
