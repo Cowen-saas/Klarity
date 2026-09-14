@@ -3643,3 +3643,101 @@ crawlers IA, pas d'investissement disproportionné.
 ### Nettoyage
 
 Aucun fichier intermédiaire laissé hors des 4 fichiers de code listés ci-dessus.
+
+## 50. Remplacement d'Africa's Talking par SmsPro comme fournisseur SMS (14 septembre 2026)
+
+Demande explicite de l'utilisateur : SmsPro couvre les 3 opérateurs camerounais (MTN, Orange, Camtel),
+propose un paiement local en Mobile Money, et évite le souci de livraison MTN identifié pour d'autres
+fournisseurs (cf. §Partie précédente sur Africa's Talking). Contrairement au remplacement CamerPay →
+NotchPay (§précédent, code déjà écrit contre du vide), Africa's Talking était réellement implémenté et
+vérifié en sandbox — ce remplacement retire du code fonctionnel, pas un stub.
+
+### Documentation API — trouvée publique, pas seulement dans le compte utilisateur
+
+L'utilisateur a orienté vers « section API & Docs » de son compte `v2.smspro.cm`. Plutôt que deviner un
+contrat REST sans source fiable (risque explicitement évité ici, contrairement à AfricasTalkingProvider
+qui avait le code source du SDK officiel comme référence), le Hub Développeur du compte (`/developer`,
+onglet Documentation) a été consulté en navigateur (session déjà authentifiée de l'utilisateur) : il
+pointe vers `https://v2.smspro.cm/docs/api`, explicitement décrite dans l'UI comme « une page publique,
+partageable avec qui intègre l'API pour vous » — confirmé réellement public en y accédant **sans**
+cookie de session (`GET /api/v1/balance` sans session ni clé API a répondu `401 {"error":"Unauthorized",
+"message":"Token invalide ou révoqué"}`, pas une redirection de login web — l'API et la session web sont
+deux systèmes d'auth distincts, cohérent avec la doc).
+
+Contrat extrait de cette page (pas deviné) :
+- Base URL `https://v2.smspro.cm`, endpoint d'envoi `POST /api/v1/messages`, corps JSON
+  `{ to, message, from }` (`from` = Sender ID déjà déclaré sur le compte).
+- Auth : header `Authorization: Bearer <clé>` (méthode recommandée ; alternative `?api_key=` réservée
+  aux connecteurs tiers sans en-tête personnalisable — non utilisée ici).
+- Succès : HTTP 201, sans attente de livraison (statut réel suivi via `GET /api/v1/messages/:id` ou
+  webhook — hors scope actuel, aucun job ne consomme ces événements).
+- Erreurs : JSON `{ error, message }`, codes 400/401/402/404/422/429 documentés.
+- Note de doc explicite : un Sender ID « OTP » doit être déclaré comme tel (distinct d'un Sender ID
+  « Marketing ») pour un acheminement correct par les opérateurs — d'où `SMSPRO_SENDER_ID_OTP`,
+  optionnel, replié sur `SMSPRO_SENDER_ID` si l'utilisateur n'a pas (encore) enregistré de second
+  Sender ID dédié.
+
+**Lacune identifiée dans la doc elle-même** : aucun exemple de corps de réponse en cas de succès
+(seulement le code HTTP 201) — donc le nom exact du champ identifiant de message est inconnu.
+`SmsProProvider.extraireMessageId` essaie plusieurs noms plausibles (`id`, `messageId`, `message_id`,
+`uuid`) et retombe sur une chaîne vide sinon, sans jamais faire échouer l'envoi pour ça — ce champ n'est
+que de la métadonnée de suivi, jamais utilisé pour décider `ENVOYE`/`ECHEC` (déterminé uniquement par
+le code HTTP, comme pour Africa's Talking). Signalé explicitement à l'utilisateur comme un point que
+seul un envoi réel peut confirmer à 100%.
+
+### Constat opérationnel signalé à l'utilisateur (hors code)
+
+Au moment de consulter le Hub Développeur, le tableau de bord du compte affiche : « Votre demande de
+Sender ID "Klarity" n'est pas encore signée — elle ne peut pas être transmise aux opérateurs tant que ce
+n'est pas fait. » Tant que ce Sender ID n'est ni signé ni transmis, tout envoi réel échouera
+vraisemblablement (`404`, « Sender ID introuvable ou rejeté », selon la doc). Ce n'est pas un défaut du
+code — c'est une étape administrative côté compte SmsPro, à finaliser par l'utilisateur avant tout test
+d'envoi réel.
+
+### Code changé
+
+- `src/lib/sms/smspro-provider.ts` — nouveau, remplace `africastalking-provider.ts` (supprimé).
+- `src/lib/sms/index.ts` : `SMS_MODE = mock | smspro` (au lieu de `africastalking`), sélectionne
+  `SmsProProvider`.
+- `src/lib/sms/provider.ts`, `src/lib/sms/types.ts`, `src/lib/auth/otp.ts`,
+  `src/app/api/auth/parent/request-otp/route.ts` : commentaires mis à jour (mentions Africa's Talking
+  remplacées, historique conservé en une phrase renvoyant à cette entrée).
+- `.env.example` : `AFRICASTALKING_USERNAME`/`AFRICASTALKING_API_KEY` retirées ; ajout de
+  `SMSPRO_API_KEY`, `SMSPRO_SENDER_ID`, `SMSPRO_SENDER_ID_OTP` (noms exacts communiqués à l'utilisateur
+  pour configurer son `.env` réel). `SMS_MODE` reste `mock` par défaut — **pas** basculé en `smspro`,
+  conformément à la demande explicite de l'utilisateur (attend sa confirmation après un test concluant).
+
+### CDC (`Klarity_Cahier_des_Charges.pdf`) et docs de référence — vérifiés, aucune mise à jour nécessaire
+
+Recherché « talking », « orange sms », « smspro », « fournisseur sms » dans les 44 pages du CDC et dans
+`docs/reference/*.txt` : aucune des deux n'a jamais nommé de fournisseur SMS précis (le CDC ne parle que
+d'« un fournisseur SMS » en général, §5.5.2) — rien n'est rendu faux par ce remplacement, comme pour le
+remplacement Orange SMS Cameroun → Africa's Talking déjà fait sans bump CDC.
+
+### Vérifié réellement, sans dépenser de crédit SMS réel
+
+- `npx tsc --noEmit` et `npx eslint` sur tous les fichiers touchés : **0 erreur**.
+- **Garde-fou de configuration** : `SmsProProvider` instancié sans `SMSPRO_API_KEY` dans l'environnement
+  → lève immédiatement `Configuration SmsPro incomplète : SMSPRO_API_KEY manquante`, sans requête réseau.
+- **Format de requête et gestion d'erreur, contre la vraie API SmsPro** : `SmsProProvider` instancié
+  avec une fausse clé (`smspro_fake_test_key_12345`) et un faux Sender ID, `envoyerOtp()` appelé pour de
+  vrai contre `https://v2.smspro.cm/api/v1/messages` — rejeté par l'API réelle en `401` (auth vérifiée
+  avant tout envoi, donc **zéro crédit consommé**), erreur capturée exactement comme prévu :
+  `SmsEnvoiError: Échec d'envoi SmsPro (OTP, HTTP 401) : Token invalide ou révoqué` — confirme que le
+  corps JSON (`{to, message, from}`), l'en-tête `Authorization: Bearer`, l'URL d'endpoint, et le parsing
+  du corps d'erreur `{error, message}` sont tous corrects contre le vrai serveur.
+
+### Ce qui nécessiterait un envoi réel pour être confirmé à 100% (signalé à l'utilisateur)
+
+1. Le nom exact du champ identifiant de message dans la réponse `201` de succès (non documenté,
+   `extraireMessageId` gère plusieurs noms plausibles en repli).
+2. La livraison effective à un vrai téléphone (le `201` documenté confirme seulement l'acceptation pour
+   envoi, pas la livraison) — d'autant plus incertaine tant que le Sender ID « Klarity » n'est pas signé
+   côté compte SmsPro (voir constat opérationnel ci-dessus).
+3. Le comportement réel de `SMSPRO_SENDER_ID_OTP` vs `SMSPRO_SENDER_ID` une fois un second Sender ID
+   « OTP » effectivement déclaré (l'utilisateur n'en a aujourd'hui qu'un seul, générique).
+
+### Nettoyage
+
+Script de vérification ad hoc (`scratch-test-smspro.ts`, à la racine, jamais suivi par git) supprimé
+après usage.

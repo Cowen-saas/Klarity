@@ -8,7 +8,7 @@ import { normaliserTelephoneCamerounais } from "@/lib/format";
  * Envoi de l'OTP SMS pour la connexion parent (§2.2, §2.7). Rate limiting IP +
  * téléphone, les deux (réf. sécurité §2, cahier des charges §7). L'envoi passe
  * par `SmsProvider` (`src/lib/sms`, via `envoyerOtp`) : `SMS_MODE=mock` logue le
- * message, `SMS_MODE=africastalking` envoie un vrai SMS via Africa's Talking (§3).
+ * message, `SMS_MODE=smspro` envoie un vrai SMS via SmsPro (§3).
  *
  * Le numéro est **normalisé** en forme canonique `+2376XXXXXXXX` avant tout
  * usage — même valeur que celle recherchée par `authorize` (`src/auth.ts`) et
