@@ -4,9 +4,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { IconDocument, IconCheckCircle } from "@/components/icons";
+import { typesExerciceValides } from "@/lib/epreuves/type-exercice";
 
 type NiveauClasse = "TROISIEME" | "PREMIERE" | "TERMINALE";
 type Filiere = "A" | "C" | "D" | "TI";
+type TypeExerciceCorrection =
+  | "DISSERTATION_PHILO"
+  | "DISSERTATION_LITTERAIRE"
+  | "CONTRACTION_TEXTE"
+  | "DISCUSSION"
+  | "COMMENTAIRE_COMPOSE"
+  | "EXPRESSION_ECRITE"
+  | "CORRECTION_ORTHOGRAPHIQUE";
+
+const TYPE_EXERCICE_LABELS: Record<TypeExerciceCorrection, string> = {
+  DISSERTATION_PHILO: "Dissertation philosophique",
+  DISSERTATION_LITTERAIRE: "Dissertation littéraire",
+  CONTRACTION_TEXTE: "Contraction de texte",
+  DISCUSSION: "Discussion",
+  COMMENTAIRE_COMPOSE: "Commentaire composé",
+  EXPRESSION_ECRITE: "Expression écrite",
+  CORRECTION_ORTHOGRAPHIQUE: "Correction orthographique",
+};
 
 const CLASSE_LABELS: Record<NiveauClasse, string> = {
   TROISIEME: "3ᵉ",
@@ -28,6 +47,7 @@ interface EpreuveVue {
   titre: string;
   classe: NiveauClasse;
   filiere: Filiere | null;
+  typeExercice: TypeExerciceCorrection | null;
   matiereId: string;
   anneeScolaire: string;
   createdAt: string;
@@ -49,6 +69,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
   const [classe, setClasse] = useState<NiveauClasse>("TERMINALE");
   const [filiere, setFiliere] = useState<Filiere>("C");
   const [matiereId, setMatiereId] = useState("");
+  const [typeExercice, setTypeExercice] = useState<TypeExerciceCorrection | "">("");
   const [titre, setTitre] = useState("");
   const [anneeScolaire, setAnneeScolaire] = useState(anneeScolaireParDefaut());
   const [enCours, setEnCours] = useState(false);
@@ -70,11 +91,27 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
 
   const epreuveEnEdition = editionId ? epreuves.find((e) => e.id === editionId) : null;
 
+  const nomMatiereSelectionnee = matieresDispo.find((m) => m.id === matiereId)?.nom ?? "";
+  const typesValides = useMemo(
+    () => (nomMatiereSelectionnee ? typesExerciceValides(nomMatiereSelectionnee, classe) : null),
+    [nomMatiereSelectionnee, classe]
+  );
+
+  // Le sous-ensemble valide dépend de la matière ET de la classe (ex. Français
+  // 3ème vs 1ère) — toute sélection devenue incohérente après un changement de
+  // l'un ou l'autre est effacée plutôt que soumise silencieusement en l'état.
+  useEffect(() => {
+    if (typeExercice && (!typesValides || !typesValides.includes(typeExercice))) {
+      setTypeExercice("");
+    }
+  }, [typesValides, typeExercice]);
+
   function reinitialiser() {
     setEditionId(null);
     setClasse("TERMINALE");
     setFiliere("C");
     setMatiereId("");
+    setTypeExercice("");
     setTitre("");
     setAnneeScolaire(anneeScolaireParDefaut());
     formRef.current?.reset();
@@ -85,6 +122,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
     setClasse(e.classe);
     if (e.filiere) setFiliere(e.filiere);
     setMatiereId(e.matiereId);
+    setTypeExercice(e.typeExercice ?? "");
     setTitre(e.titre);
     setAnneeScolaire(e.anneeScolaire);
     setMessage(null);
@@ -106,6 +144,8 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
     if (filiereRequise) form.set("filiere", filiere);
     else form.delete("filiere");
     form.set("matiereId", matiereId);
+    if (typesValides) form.set("typeExercice", typeExercice);
+    else form.delete("typeExercice");
     form.set("titre", titre.trim());
     form.set("anneeScolaire", anneeScolaire.trim());
 
@@ -229,6 +269,33 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
           </select>
         </div>
 
+        {typesValides && (
+          <div className="mt-5">
+            <label htmlFor="typeExercice" className="mb-1.5 block text-sm font-semibold text-texte">
+              Type d&apos;exercice
+            </label>
+            <select
+              id="typeExercice"
+              value={typeExercice}
+              onChange={(e) => setTypeExercice(e.target.value as TypeExerciceCorrection)}
+              required
+              className={champInput}
+            >
+              <option value="" disabled>
+                Choisir un type d&apos;exercice
+              </option>
+              {typesValides.map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_EXERCICE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-texte-muted">
+              Détermine le barème appliqué par l&apos;IA en correction — {nomMatiereSelectionnee} uniquement.
+            </p>
+          </div>
+        )}
+
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="titre" className="mb-1.5 block text-sm font-semibold text-texte">
@@ -323,7 +390,7 @@ export function EpreuveManager({ epreuves, matieres }: { epreuves: EpreuveVue[];
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={enCours || !matiereId}
+            disabled={enCours || !matiereId || Boolean(typesValides && !typeExercice)}
             className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
           >
             {enCours ? "Enregistrement…" : editionId ? "Mettre à jour" : "Ajouter l'épreuve"}

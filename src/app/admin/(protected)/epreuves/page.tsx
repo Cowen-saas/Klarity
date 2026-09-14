@@ -30,6 +30,7 @@ export default async function AdminEpreuvesPage() {
         titre: true,
         classe: true,
         filiere: true,
+        typeExercice: true,
         matiereId: true,
         anneeScolaire: true,
         createdAt: true,

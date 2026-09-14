@@ -3,6 +3,7 @@ import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
+import { typesExerciceValides } from "@/lib/epreuves/type-exercice";
 
 /**
  * Modification / suppression d'une épreuve de la banque (§2.3, §4.2, §4.3).
@@ -18,6 +19,17 @@ const metaSchema = z.object({
   filiere: z.enum(["A", "C", "D", "TI"]).optional(),
   titre: z.string().trim().min(3).max(200).optional(),
   anneeScolaire: z.string().regex(/^\d{4}-\d{4}$/, "Année scolaire attendue au format AAAA-AAAA.").optional(),
+  typeExercice: z
+    .enum([
+      "DISSERTATION_PHILO",
+      "DISSERTATION_LITTERAIRE",
+      "CONTRACTION_TEXTE",
+      "DISCUSSION",
+      "COMMENTAIRE_COMPOSE",
+      "EXPRESSION_ECRITE",
+      "CORRECTION_ORTHOGRAPHIQUE",
+    ])
+    .optional(),
 });
 
 function validerFichierOptionnel(
@@ -53,6 +65,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     filiere: form.get("filiere") || undefined,
     titre: form.get("titre") || undefined,
     anneeScolaire: form.get("anneeScolaire") || undefined,
+    typeExercice: form.get("typeExercice") || undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides." }, { status: 400 });
@@ -78,12 +91,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!corrige.ok) return NextResponse.json({ error: corrige.error }, { status: 400 });
 
   const matiereId = parsed.data.matiereId ?? existante.matiereId;
-  if (parsed.data.matiereId) {
-    const matiere = await prisma.matiere.findUnique({ where: { id: matiereId } });
-    if (!matiere || !matiere.banqueDisponible) {
-      return NextResponse.json({ error: "Matière inconnue ou sans banque d'épreuves." }, { status: 400 });
-    }
+  // Toujours relue (même si matiereId est inchangé) : la classe peut, elle,
+  // avoir changé sur la même matière (ex. Français 3ème → 1ère), ce qui modifie
+  // le sous-ensemble de typeExercice valide (cf. type-exercice.ts).
+  const matiere = await prisma.matiere.findUnique({ where: { id: matiereId } });
+  if (!matiere || !matiere.banqueDisponible) {
+    return NextResponse.json({ error: "Matière inconnue ou sans banque d'épreuves." }, { status: 400 });
   }
+
+  const valeursValides = typesExerciceValides(matiere.nom, classeEffective);
+  if (valeursValides && (!parsed.data.typeExercice || !valeursValides.includes(parsed.data.typeExercice))) {
+    return NextResponse.json(
+      { error: `Type d'exercice requis pour ${matiere.nom} (${valeursValides.join(", ")}).` },
+      { status: 400 }
+    );
+  }
+  const typeExerciceEffectif = valeursValides ? (parsed.data.typeExercice ?? null) : null;
 
   const storage = getStorageProvider();
 
@@ -122,6 +145,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       matiereId,
       classe: classeEffective,
       filiere: filiereEffective,
+      typeExercice: typeExerciceEffectif,
       titre: parsed.data.titre ?? existante.titre,
       anneeScolaire: parsed.data.anneeScolaire ?? existante.anneeScolaire,
       ...(nouvelleFicheKey ? { fichePdfKey: nouvelleFicheKey } : {}),

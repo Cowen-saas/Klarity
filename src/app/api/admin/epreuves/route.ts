@@ -3,6 +3,7 @@ import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage";
+import { typesExerciceValides } from "@/lib/epreuves/type-exercice";
 
 /**
  * Ajout d'une épreuve à la banque (§2.3, §4.2, §4.3). Réservé ADMIN (contrôle
@@ -22,6 +23,17 @@ const metaSchema = z
     filiere: z.enum(["A", "C", "D", "TI"]).optional(),
     titre: z.string().trim().min(3).max(200),
     anneeScolaire: z.string().regex(/^\d{4}-\d{4}$/, "Année scolaire attendue au format AAAA-AAAA."),
+    typeExercice: z
+      .enum([
+        "DISSERTATION_PHILO",
+        "DISSERTATION_LITTERAIRE",
+        "CONTRACTION_TEXTE",
+        "DISCUSSION",
+        "COMMENTAIRE_COMPOSE",
+        "EXPRESSION_ECRITE",
+        "CORRECTION_ORTHOGRAPHIQUE",
+      ])
+      .optional(),
   })
   .refine((d) => (d.classe === "TROISIEME" ? d.filiere === undefined : d.filiere !== undefined), {
     message: "La filière est requise pour Première/Terminale, absente en 3ème.",
@@ -53,6 +65,7 @@ export async function POST(request: Request) {
     filiere: form.get("filiere") || undefined,
     titre: form.get("titre"),
     anneeScolaire: form.get("anneeScolaire"),
+    typeExercice: form.get("typeExercice") || undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides." }, { status: 400 });
@@ -67,6 +80,19 @@ export async function POST(request: Request) {
   if (!matiere || !matiere.banqueDisponible) {
     return NextResponse.json({ error: "Matière inconnue ou sans banque d'épreuves." }, { status: 400 });
   }
+
+  // typeExercice : requis et restreint à un sous-ensemble valide pour Français/
+  // Philosophie (déterminant le barème appliqué en correction, cf. schema.prisma) ;
+  // toujours forcé à NULL ailleurs, sans jamais faire confiance à la valeur du
+  // client — la matière/classe effective (serveur) fait foi, pas la sélection UI.
+  const valeursValides = typesExerciceValides(matiere.nom, parsed.data.classe);
+  if (valeursValides && (!parsed.data.typeExercice || !valeursValides.includes(parsed.data.typeExercice))) {
+    return NextResponse.json(
+      { error: `Type d'exercice requis pour ${matiere.nom} (${valeursValides.join(", ")}).` },
+      { status: 400 }
+    );
+  }
+  const typeExerciceEffectif = valeursValides ? (parsed.data.typeExercice ?? null) : null;
 
   const storage = getStorageProvider();
   const [ficheUp, corrigeUp] = await Promise.all([
@@ -91,6 +117,7 @@ export async function POST(request: Request) {
       filiere: parsed.data.filiere ?? null,
       titre: parsed.data.titre,
       anneeScolaire: parsed.data.anneeScolaire,
+      typeExercice: typeExerciceEffectif,
       fichePdfKey: ficheUp.key,
       corrigeReferenceKey: corrigeUp.key,
       ajouteParAdminId: session.user.id,

@@ -3784,3 +3784,71 @@ données de test locales :
    tables (vide, mais avec la bonne forme — pas un import de données).
 
 Aucun fichier du dépôt modifié dans cette entrée — audit en lecture seule uniquement.
+
+## 52. Chantier IA réelle — plan en 7 passes, et champ `Epreuve.typeExercice` (14 septembre 2026)
+
+L'utilisateur a configuré sa vraie clé `ANTHROPIC_API_KEY` et demandé de débloquer tout ce qui dépendait
+de l'IA réelle : `ClaudeAIProvider`, pipeline de correction complet, lacunes, quiz quotidien, chat mode 2,
+écrans parent (progression/notes/lacunes/export PDF), vérification `UsageIA` réelle, audit IDOR. Vu
+l'ampleur, découpage proposé et validé par l'utilisateur en 7 passes indépendantes, chacune testée et
+commitée séparément :
+
+1. `ClaudeAIProvider` (Haiku chat/quiz, Sonnet vision correction) + bascule `AI_MODE=live`.
+2. Pipeline de correction complet (upload multi-pages, résultat, job worker async, `CorrectionDetail`/
+   `Lacune`, règle une seule correction par tentative).
+3. Écran « Mes lacunes » élève.
+4. Quiz quotidien + job BullMQ.
+5. Chat mode 2 (contextualisé à une épreuve).
+6. Écrans parent (Progression avec vraies données, Notes, Lacunes — ces deux derniers sans maquette
+   dédiée) + export PDF du rapport mensuel.
+7. Audit final IDOR + vérification `UsageIA` de bout en bout.
+
+### Décision de conception validée par l'utilisateur : `Epreuve.typeExercice` (champ dédié, pas de déduction IA)
+
+Proposition initiale (laisser Sonnet déduire le type d'exercice depuis l'énoncé, en injectant tous les
+`ExempleCorrection` de la matière comme few-shot) **rejetée par l'utilisateur** : le type d'exercice
+détermine le barème appliqué donc la note de l'élève — une déduction IA pourrait se tromper
+silencieusement. Décision retenue : champ dédié `Epreuve.typeExercice`, saisi explicitement par l'admin
+à l'ajout de l'épreuve, jamais déduit.
+
+- **`prisma/schema.prisma`** : `Epreuve.typeExercice TypeExerciceCorrection?` (nullable — NULL pour les
+  matières scientifiques, où le pipeline utilisera uniquement `corrigeReferenceKey`). Migration
+  `20260914181109_add_type_exercice_epreuve` (simple `ALTER TABLE ... ADD COLUMN`, aucune donnée
+  existante à migrer — la banque d'épreuves est vide à ce stade).
+- **`src/lib/epreuves/type-exercice.ts`** (nouveau) : `typesExerciceValides(matiereNom, classe)` —
+  source unique de vérité pour le sous-ensemble valide, partagée entre le formulaire client
+  (`EpreuveManager.tsx`) et les deux routes serveur (aucune duplication de la règle). Philosophie →
+  `DISSERTATION_PHILO` uniquement ; Français → `EXPRESSION_ECRITE`/`CORRECTION_ORTHOGRAPHIQUE` en 3ème,
+  les 4 types méthodologiques partagés en 1ère/Terminale ; toute autre matière → `null` (non applicable).
+- **`src/app/api/admin/epreuves/route.ts` et `[id]/route.ts`** : `typeExercice` ajouté au schéma Zod,
+  requis et restreint au sous-ensemble valide pour Français/Philosophie, **toujours forcé à `null`**
+  pour les autres matières — jamais de confiance dans la valeur envoyée par le client, la matière/classe
+  effective côté serveur fait foi. Sur `PATCH`, la matière est désormais toujours relue (pas seulement
+  si `matiereId` change) car la classe seule peut invalider la sélection (ex. Français 3ème → 1ère).
+- **`EpreuveManager.tsx`** : champ `<select>` conditionnel, affiché uniquement pour Français/Philosophie,
+  options filtrées par classe, réinitialisé automatiquement si la sélection matière/classe le rend
+  invalide, requis pour activer le bouton de soumission.
+- **`admin/(protected)/epreuves/page.tsx`** : `typeExercice` ajouté à la sélection Prisma transmise au
+  composant.
+
+### Vérifié réellement (pas seulement `tsc`)
+
+- `tsc --noEmit` et `eslint` sur les 5 fichiers touchés : **0 erreur**.
+- Migration appliquée en base locale (`prisma migrate dev`), colonne `epreuves.typeExercice` confirmée.
+- **Test HTTP de bout en bout contre le vrai serveur** (admin de test jetable créé + connecté via le
+  vrai flux NextAuth `callback/admin` avec TOTP généré par `otplib`, comme `verifyTotp` le vérifie ;
+  admin et épreuves de test supprimés à la fin via les vraies routes `DELETE`) :
+  - Français sans `typeExercice` → **400**, message listant les 4 valeurs attendues.
+  - Français avec un `typeExercice` invalide pour la classe (`EXPRESSION_ECRITE` sur une Terminale,
+    valide seulement en 3ème) → **400**.
+  - Français avec un `typeExercice` valide (`COMMENTAIRE_COMPOSE`) → **201**, valeur relue en base
+    conforme.
+  - Mathématiques avec un `typeExercice` fourni quand même → **201**, mais valeur relue en base = `null`
+    (forcée serveur, confirmé qu'aucune valeur cliente n'est jamais faite confiance pour une matière
+    scientifique).
+
+### Nettoyage
+
+Script de test ad hoc (`scratch-test-type-exercice.ts`, racine, jamais suivi par git) supprimé après
+usage ; les 2 comptes admin jetables créés pendant les essais (dont un resté après un premier essai en
+échec sur un mauvais nom de cookie CSRF) supprimés de la base.

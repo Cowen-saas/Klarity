@@ -306,6 +306,14 @@ model Epreuve {
   classe  NiveauClasse
   filiere Filiere? // A/C/D/TI — null uniquement pour la 3ème (§4.3, v1.14)
 
+  // Saisi explicitement par l'admin au moment de l'ajout, jamais déduit par l'IA :
+  // le type d'exercice détermine le barème appliqué en correction (résolution
+  // ExempleCorrection par matiereId+typeExercice, §4.2.2), donc la note de
+  // l'élève — une erreur de déduction silencieuse serait trop coûteuse. Requis
+  // pour Français/Philosophie, absent (NULL) pour les matières scientifiques où
+  // ça ne s'applique pas (le pipeline utilise alors uniquement corrigeReferenceKey).
+  typeExercice TypeExerciceCorrection?
+
   titre         String
   anneeScolaire String // ex: "2026-2027"
 
