@@ -3741,3 +3741,46 @@ remplacement Orange SMS Cameroun → Africa's Talking déjà fait sans bump CDC.
 
 Script de vérification ad hoc (`scratch-test-smspro.ts`, à la racine, jamais suivi par git) supprimé
 après usage.
+
+## 51. Audit de la base de données Vercel — vide, mal câblée, déploiement jugé temporaire (14 septembre 2026)
+
+Demande de l'utilisateur : vérifier si la base de données du déploiement Vercel (`klarity-sand.vercel.app`)
+a la même structure que la base locale (migrations appliquées) et si elle contient des données, sans
+rien modifier — juste un état des lieux en langage simple.
+
+### Constat, vérifié réellement (lecture seule, rien modifié)
+
+Consulté le tableau de bord Vercel du projet (`cowen-saas/klarity`) en navigateur (session déjà
+authentifiée de l'utilisateur) :
+
+- **`DATABASE_URL`** (la variable que l'app lit réellement — `prisma/schema.prisma:13`,
+  `url = env("DATABASE_URL")`) contient une valeur factice jamais remplacée :
+  `postgres://user:pass@db.example.com:5432/app` — une adresse qui n'existe nulle part. Aucune requête
+  de l'app vers cette adresse ne peut donc jamais aboutir.
+- Une vraie base **existe** pourtant bien : l'intégration Vercel Marketplace « Prisma » est installée sur
+  le projet et a provisionné une base Prisma Postgres réelle (`prisma-postgres-green-mirror`, plan
+  gratuit, statut *Available*). Sa vraie chaîne de connexion a été injectée automatiquement par cette
+  intégration — mais comme une variable `DATABASE_URL` existait déjà (la factice ci-dessus), Vercel l'a
+  nommée avec un préfixe pour éviter l'écrasement : `KLARITY_DATABASE_URL` /
+  `KLARITY_PRISMA_DATABASE_URL` / `KLARITY_POSTGRES_URL` (marquées « Needs Attention » dans le tableau de
+  bord, ce qui correspond exactement à ce non-branchement). L'app ne lit jamais ces trois noms-là.
+- Confirmé via la console SQL intégrée de Vercel/Prisma (lecture seule, aucune écriture) sur cette vraie
+  base : `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';` → **0
+  résultat**. La base est saine et joignable, mais strictement vide — aucune des 6 migrations locales
+  n'y a jamais été appliquée, puisque rien ne pointe dessus.
+
+### Décision de l'utilisateur : ne rien corriger maintenant
+
+Ce déploiement Vercel est explicitement temporaire — son seul rôle actuel est de fournir une adresse web
+publique à montrer à NotchPay (validation de compte marchand), pas de servir de vraie production. Un
+véritable déploiement, avec une base de données correctement câblée dès le départ, sera fait plus tard,
+une fois NotchPay validé et le projet prêt pour un vrai lancement.
+
+**Point à traiter plus tard**, avant tout vrai lancement — deux étapes, sans avoir besoin de copier les
+données de test locales :
+1. Remplacer le contenu de `DATABASE_URL` sur Vercel par la vraie chaîne de connexion actuellement sous
+   `KLARITY_DATABASE_URL`.
+2. Lancer une fois `prisma migrate deploy` contre cette base pour lui donner la bonne structure de
+   tables (vide, mais avec la bonne forme — pas un import de données).
+
+Aucun fichier du dépôt modifié dans cette entrée — audit en lecture seule uniquement.
