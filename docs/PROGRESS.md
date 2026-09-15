@@ -3948,3 +3948,112 @@ routes API quand possible). Fichier de test uploadé sur R2 supprimé. Scripts d
 
 Passe 2 (pipeline de correction complet) peut commencer : écran upload, job worker asynchrone,
 `CorrectionDetail`/`Lacune`, test réel avec une vraie copie (premier vrai appel Sonnet vision facturé).
+
+## 54. Passe 2 — Pipeline de correction complet, testé avec un vrai appel Sonnet vision (15 septembre 2026)
+
+Deuxième passe du chantier IA réelle (§52/§53). Construit de bout en bout ce qui n'existait pas encore
+dans le code : upload de copie, traitement asynchrone (worker), écran de résultat, signalement.
+
+### Écran d'upload + analyse (maquette 07)
+
+`src/components/eleve/UploadCopie.tsx` — les deux panneaux de la maquette (formulaire / analyse en
+cours) sont deux **états successifs** d'un même composant, pas deux panneaux affichés ensemble (la
+maquette les montre côte à côte à des fins de documentation uniquement). Deux entrées de fichier
+séparées (`capture="environment"` pour l'appareil photo direct, sans pour l'import galerie) plutôt
+qu'une seule, pour reproduire fidèlement les deux affordances distinctes du maquette ("Photographier
+ma copie" / "ou importer depuis la galerie") sans dépendre du comportement variable des navigateurs
+mobiles face à l'attribut `capture` seul. Sondage du statut toutes les 2s (même pattern que
+`VerificationPoll.tsx`, écran 17) ; la checklist à 3 lignes ("Lecture des pages" / "Reconnaissance des
+réponses" / "Comparaison au corrigé...") est purement cosmétique — le backend n'expose qu'un statut
+global, pas de sous-étapes réelles, précisé en commentaire dans le code pour que ça ne soit pas pris
+pour une télémétrie fine qui n'existe pas.
+
+### Écran de résultat détaillé (maquette 08) — écart de fidélité signalé explicitement
+
+**La maquette montre un découpage question-par-question** ("Question 4", "Ta réponse : f'(x)=3x+2",
+"Réponse correcte : f'(x)=3x²+2", buckets Réussies/Partielles/Incorrectes) qui **n'existe pas dans le
+modèle de données réel** : `CorrectionDetail` stocke `pointsForts: string[]` et
+`pointsManques: {notion, detail}[]` — une correction à barème global/rédigée, pas un tableau de
+questions à réponse unique numérotées. Ce découpage colle bien à un exercice de maths à sous-questions
+mais pas à une dissertation ou un commentaire composé (aucune "réponse correcte" pour un essai).
+Plutôt que d'ajouter un modèle de données par sous-question (effort disproportionné, et le schéma
+Prisma est traité comme source de vérité, pas un brouillon à redessiner, cf. CLAUDE.md), l'écran a été
+**adapté** : 2 buckets au lieu de 3 (Points forts / Points à travailler, comptés depuis
+`pointsForts.length` / `pointsManques.length`), et chaque point manqué est affiché comme
+notion + explication (pas de paire "ta réponse / réponse correcte" littérale, cette donnée n'existe
+pas). Le reste (badge de note circulaire, "Recommencer l'épreuve", modale "Signaler cette correction")
+reproduit la maquette fidèlement, y compris les 3 motifs exacts de `MotifSignalement`.
+
+### Route d'upload — le déclenchement du traitement n'est **pas** gaté sur `numeroTentative === 1`
+
+Décision technique prise pendant la construction, documentée ici pour transparence : le schéma dit
+"seule la tentative n°1 déclenche un appel Sonnet réel", mais gater littéralement sur ce numéro aurait
+un effet pervers — si la 1ère tentative échoue techniquement (429, erreur réseau), aucune
+`CorrectionDetail` n'est créée, et l'élève ne pourrait alors **plus jamais** être noté sur cette épreuve
+(les tentatives suivantes, numérotées 2+, ne déclencheraient jamais de traitement). Le déclenchement est
+donc basé sur l'**absence** de `CorrectionDetail` existante et d'une tentative déjà en attente/en
+traitement, pas sur le numéro brut — la contrainte `@@unique([epreuveId, eleveId])` sur
+`CorrectionDetail` reste le garde-fou définitif contre toute double correction, donc l'intention réelle
+de la règle (ne jamais payer deux fois pour re-corriger une même copie) est entièrement respectée.
+`numeroTentative` reste incrémenté normalement pour la traçabilité (nombre de tentatives d'entraînement).
+
+### Code changé
+
+- `src/lib/queue/correction.ts`, `src/lib/correction/traiter-tentative.ts` (nouveaux) — file BullMQ +
+  logique de traitement (résolution du barème via `Epreuve.typeExercice` ou `corrigeReferenceKey`,
+  appel `corrigerCopie()`, création `CorrectionDetail`/`Lacune` en transaction, `UsageIA` réelle).
+- `src/worker/index.ts` — worker `correction` câblé, aux côtés de `retention`/`paiement-mock-webhook`.
+- `src/app/api/eleve/epreuves/[id]/tentatives/route.ts`, `.../tentatives/latest/route.ts`,
+  `src/app/api/eleve/corrections/[id]/signaler/route.ts` (nouveaux) — IDOR vérifié sur chacune (épreuve
+  filtrée par classe/filière de l'élève, correction filtrée par `eleveId`, `AuditLogSecurite` sur
+  tentative bloquée comme le reste de l'app).
+- `src/app/eleve/epreuves/[id]/correction/page.tsx` (nouveau) — décide serveur : résultat existant,
+  analyse en cours, ou formulaire vierge ; `?nouvelleTentative=1` force le formulaire (bouton
+  "Recommencer l'épreuve") même si une correction existe déjà.
+- `src/components/eleve/UploadCopie.tsx`, `ResultatCorrection.tsx` (nouveaux).
+- `src/components/eleve/BanqueEpreuves.tsx` — bouton "Envoie ta copie" ajouté par épreuve (icône
+  `IconRobot`, réservée à cet usage précis depuis son introduction, jamais utilisée jusqu'ici).
+- `src/components/icons.tsx` — ajout `IconClose` (modale de signalement).
+
+### Vérifié réellement — pipeline complet, vrai appel Sonnet vision, vraie copie de test
+
+Copie de test synthétique construite pour ce test (pas une vraie copie manuscrite — impossible à
+produire dans cet environnement — mais une vraie image PNG traitée par le vrai pipeline de bout en
+bout) : 3 exercices de maths avec 2 réponses correctes et 1 fausse (hypoténuse d'un triangle 3-4-5
+donnée à tort comme 4 au lieu de 5), plus un vrai PDF de corrigé de référence généré pour l'occasion.
+
+- Admin de test réel (connexion NextAuth + TOTP) → épreuve créée via la vraie route
+  `POST /api/admin/epreuves`. Élève de test réel (inscription + connexion réelles) → copie uploadée via
+  la vraie route `POST /api/eleve/epreuves/[id]/tentatives`.
+- **Incident découvert et corrigé en cours de route** : le job n'était jamais traité — le conteneur
+  `worker` a son propre volume `node_modules`, distinct de celui d'`app` ; `@anthropic-ai/sdk` installé
+  en Passe 1 seulement dans `app` n'existait pas côté `worker`, qui crashait silencieusement en boucle
+  (`Cannot find module '@anthropic-ai/sdk'`, visible dans `docker compose logs worker`). Corrigé par un
+  `npm install` direct dans le conteneur `worker` + redémarrage — la tentative de test, restée en file
+  d'attente Redis pendant l'incident, a été traitée automatiquement dès le worker sain, sans perte.
+- **Résultat réel obtenu** : note **13/20**, `pointsForts` citant précisément les 2 bons exercices,
+  `pointsManques` avec le détail exact de l'erreur sur le 3ème (calcul du théorème de Pythagore
+  correctement expliqué : "c² = 3² + 4² = 9 + 16 = 25, donc c = 5 cm" contre la réponse fautive
+  "c = 4 cm" de la copie) — la grille de notation attendue est correctement respectée, pas juste un
+  texte plausible.
+- **1 `Lacune` créée** ("Exercice 2 - Théorème de Pythagore", `niveauMaitrise=0`).
+- **`UsageIA` réelle** : `{typeUsage: CORRECTION, modele: SONNET, tokensInput: 3823, tokensOutput: 698,
+  coutEstime: 0.021939}` — **coût réel du test : $0.021939**, dans la fourchette annoncée à l'utilisateur
+  avant le test ($0,01–$0,05).
+- **Écran de résultat réel vérifié** : `GET /eleve/epreuves/[id]/correction` avec une vraie session élève
+  → HTTP 200, contenu réel confirmé ("Points forts", "Points à travailler", note "13" présents dans le
+  HTML rendu).
+- `tsc --noEmit` (0 erreur) et `eslint` sur tout `src/` (0 erreur — 2 warnings pré-existants, sans
+  rapport avec cette passe, dans `src/lib/payment/mock-provider.ts`).
+
+### Nettoyage
+
+Toutes les données de test réelles (admin, élève, épreuve, `TentativeEpreuve`, `CorrectionDetail`,
+`Lacune`, `UsageIA`) supprimées après vérification, ainsi que les 2 fichiers PDF/photo réellement
+uploadés sur R2 (`storage.supprimer`). Scripts et fichiers de test ad hoc (racine, jamais suivis par
+git) supprimés.
+
+### Suite
+
+Passe 3 (écran "Mes lacunes", maquette 09) — le nav élève a déjà un point d'entrée prévu et désactivé
+(`/eleve/lacunes`, `EleveShell.tsx`) prêt à activer, maintenant que de vraies `Lacune` peuvent exister.

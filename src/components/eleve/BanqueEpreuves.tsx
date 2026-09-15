@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconDocument, IconDownload, IconSearch } from "@/components/icons";
+import Link from "next/link";
+import { IconDocument, IconDownload, IconSearch, IconRobot } from "@/components/icons";
 
 interface EpreuveVue {
   id: string;
@@ -120,6 +121,13 @@ export function BanqueEpreuves({
                   >
                     Voir le corrigé de référence
                   </a>
+                  <Link
+                    href={`/eleve/epreuves/${e.id}/correction`}
+                    className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+                  >
+                    <IconRobot className="h-4 w-4" aria-hidden="true" />
+                    Envoie ta copie
+                  </Link>
                 </article>
               ))}
             </div>

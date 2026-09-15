@@ -2,11 +2,13 @@ import { Worker } from "bullmq";
 import { createRedisConnection } from "@/lib/redis";
 import { QUEUE_PAIEMENT_MOCK, type PaiementMockJobData } from "@/lib/queue/paiement";
 import { QUEUE_RETENTION, enregistrerSchedulersRetention, type JobRetention } from "@/lib/queue/retention";
+import { QUEUE_CORRECTION, type CorrectionJobData } from "@/lib/queue/correction";
 import { traiterWebhookPaiement } from "@/lib/payment/webhook-handler";
 import { signerWebhookMock } from "@/lib/payment/mock-provider";
 import { detecterInactivite } from "@/lib/retention/detection-inactivite";
 import { anonymiserComptesExpires } from "@/lib/retention/anonymisation-auto";
 import { archiverPhotosAncienneAnnee } from "@/lib/retention/archivage-photos";
+import { traiterTentative } from "@/lib/correction/traiter-tentative";
 
 /**
  * Entrypoint for the `worker` Compose service (§3, §3.1, §8.1) — runs in a process
@@ -16,9 +18,11 @@ import { archiverPhotosAncienneAnnee } from "@/lib/retention/archivage-photos";
  *  - `paiement-mock-webhook` (§5.2) — simulation du webhook NotchPay en mode mock.
  *  - `retention` (§2.9) — 3 jobs cron : détection d'inactivité, anonymisation
  *    automatique, archivage annuel des photos de copies.
+ *  - `correction` (§2.1, §4.3, §6.2, §6.4) — traitement asynchrone d'une
+ *    tentative de copie (appel Sonnet vision), jamais inline dans une route.
  *
- * Les files correction/quiz/notifications restent à câbler aux côtés des
- * fonctionnalités qui les alimentent.
+ * Les files quiz/notifications restent à câbler aux côtés des fonctionnalités
+ * qui les alimentent.
  */
 async function main() {
   const connection = createRedisConnection();
@@ -96,12 +100,25 @@ async function main() {
     console.error(`[worker] échec job rétention ${job?.name}`, err);
   });
 
+  // --- Pipeline de correction IA (§2.1, §4.3, §6.2, §6.4) ---
+  const correctionWorker = new Worker<CorrectionJobData>(
+    QUEUE_CORRECTION,
+    async (job) => {
+      await traiterTentative(job.data.tentativeId);
+    },
+    { connection: createRedisConnection() }
+  );
+
+  correctionWorker.on("failed", (job, err) => {
+    console.error(`[worker] échec correction tentative ${job?.data.tentativeId}`, err);
+  });
+
   await enregistrerSchedulersRetention();
   console.log("[worker] schedulers rétention enregistrés (detection + anonymisation hebdo, archivage annuel)");
 
   const shutdown = async () => {
     console.log("[worker] shutting down");
-    await Promise.allSettled([paiementMockWorker?.close(), retentionWorker.close()]);
+    await Promise.allSettled([paiementMockWorker?.close(), retentionWorker.close(), correctionWorker.close()]);
     await connection.quit();
     process.exit(0);
   };
