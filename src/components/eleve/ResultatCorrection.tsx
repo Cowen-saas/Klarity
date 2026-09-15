@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
-import { IconRobot, IconCheckCircle, IconWarning, IconFlag, IconClose, IconBulb } from "@/components/icons";
+import { IconRobot, IconCheckCircle, IconWarning, IconFlag, IconClose, IconBulb, IconSparkles } from "@/components/icons";
 
 type Motif = "LECTURE_ILLISIBLE" | "BAREME_INCORRECT" | "AUTRE";
 
@@ -71,6 +71,13 @@ export function ResultatCorrection({ epreuveId, titre, matiere, classeLabel, ann
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={`/eleve/epreuves/${epreuveId}/discuter`}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+          >
+            <IconSparkles className="h-4 w-4" aria-hidden="true" />
+            Discuter de cette copie
+          </Link>
           <Link
             href={`/eleve/epreuves/${epreuveId}/correction?nouvelleTentative=1`}
             className="rounded-xl border-2 border-border bg-surface px-4 py-2 text-sm font-semibold text-texte transition-colors hover:border-primary/40"

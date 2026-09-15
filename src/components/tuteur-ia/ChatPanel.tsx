@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
 import { MatiereSwitcher } from "./MatiereSwitcher";
 import { MessageBubble } from "./MessageBubble";
-import { IconSparkles, IconSend } from "@/components/icons";
+import { IconSparkles, IconSend, IconChevronLeft } from "@/components/icons";
 
 interface Matiere {
   id: string;
@@ -17,7 +18,21 @@ interface Message {
   contenu: string;
 }
 
-export function ChatPanel() {
+/**
+ * Contexte optionnel du mode 2 (§2.1, §2.1.1, §4.4) — chat contextualisé à
+ * une épreuve déjà corrigée. `epreuveId` est le seul champ qui distingue
+ * les deux modes côté API (`ConversationChat.epreuveId`, CLAUDE.md) ; ici
+ * côté UI, sa seule présence bascule tout le composant en mode 2 : pas de
+ * sélecteur de matière (verrouillée par l'épreuve), bandeau contextuel
+ * affiché (§2.1.1), lien de retour vers l'écran de résultat.
+ */
+interface ContexteEpreuveProps {
+  epreuveId: string;
+  titre: string;
+  retourHref: string;
+}
+
+export function ChatPanel({ contexteEpreuve }: { contexteEpreuve?: ContexteEpreuveProps }) {
   const [matieres, setMatieres] = useState<Matiere[] | null>(null);
   const [selectedMatiereId, setSelectedMatiereId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -29,6 +44,10 @@ export function ChatPanel() {
   const finDuFilRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (contexteEpreuve) {
+      ouvrirConversationEpreuve(contexteEpreuve.epreuveId);
+      return;
+    }
     let annule = false;
     apiFetch("/api/eleve/matieres")
       .then((res) => res.json())
@@ -50,7 +69,31 @@ export function ChatPanel() {
     return () => {
       annule = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function ouvrirConversationEpreuve(epreuveId: string) {
+    setChargement(true);
+    setErreur(null);
+    try {
+      const res = await apiFetch("/api/eleve/chat/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ epreuveId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErreur(data.error ?? "Impossible d'ouvrir cette conversation.");
+        return;
+      }
+      setConversationId(data.conversation.id);
+      setMessages(data.conversation.messages);
+    } catch {
+      setErreur("Impossible de contacter le serveur.");
+    } finally {
+      setChargement(false);
+    }
+  }
 
   useEffect(() => {
     finDuFilRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,10 +161,27 @@ export function ChatPanel() {
         </div>
       </div>
 
-      {matieres && matieres.length > 0 && (
-        <div className="border-b border-border">
-          <MatiereSwitcher matieres={matieres} selectedId={selectedMatiereId} onSelect={selectionnerMatiere} />
+      {contexteEpreuve ? (
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-primary-light px-4 py-3">
+          <div>
+            <p className="text-[11px] font-bold tracking-wide text-primary uppercase">Discussion à propos de</p>
+            <p className="text-sm font-bold text-texte">{contexteEpreuve.titre}</p>
+          </div>
+          <Link
+            href={contexteEpreuve.retourHref}
+            className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            <IconChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Retour à la correction
+          </Link>
         </div>
+      ) : (
+        matieres &&
+        matieres.length > 0 && (
+          <div className="border-b border-border">
+            <MatiereSwitcher matieres={matieres} selectedId={selectedMatiereId} onSelect={selectionnerMatiere} />
+          </div>
+        )
       )}
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
@@ -134,7 +194,9 @@ export function ChatPanel() {
         {!chargement &&
           messages.map((m) => <MessageBubble key={m.id} role={m.role} contenu={m.contenu} />)}
         {!chargement && messages.length === 0 && conversationId && (
-          <p className="text-sm text-texte-muted">Pose ta première question sur cette matière.</p>
+          <p className="text-sm text-texte-muted">
+            {contexteEpreuve ? "Pose ta première question sur cette copie." : "Pose ta première question sur cette matière."}
+          </p>
         )}
         {envoiEnCours && (
           <div className="flex justify-start">

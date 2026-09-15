@@ -4212,3 +4212,83 @@ comportement normal, pas une régression.
 ### Suite
 
 Passe 5 — Chat mode 2 (contextualisé à une épreuve).
+
+## 57. Passe 5 — Chat mode 2, contextualisé à une épreuve (15 septembre 2026)
+
+Cinquième passe du chantier IA réelle (§52-§56). Jusqu'ici seul le mode 1 (chat général) était construit
+(déjà présent avant ce chantier) — implémente le mode 2 (§2.1, §2.1.1, §4.4), accessible depuis l'écran
+de résultat de correction ("Discuter de cette copie", bouton absent de la maquette 08 — gap déjà
+documenté dans CLAUDE.md, comblé ici).
+
+### `contexteEpreuve` : coût maîtrisé, pas d'appel IA supplémentaire pour le construire
+
+`{ enonce, corrige }` (interface déjà posée en Passe 1) :
+
+- **`corrige`** : texte déjà produit par la correction (`CorrectionDetail.note`/`pointsForts`/
+  `pointsManques`/`feedbackDetaille`, formaté en texte) — zéro coût, la donnée existe déjà.
+- **`enonce`** : **décision de conception assumée** — un résumé léger (titre/matière/classe/année),
+  pas le contenu intégral du PDF de l'épreuve. Le PDF est joignable (même technique que
+  `corrigerCopie()` en Passe 1, `StorageProvider.lire()`), mais contrairement à la correction (calculée
+  une seule fois), `contexteEpreuve` est reconstruit et renvoyé à **chaque message** d'une conversation
+  potentiellement longue — y attacher le PDF intégral le referacturerait à chaque tour, sans plafond
+  naturel. L'énoncé complet reste téléchargeable par l'élève depuis la banque d'épreuves. Piste notée
+  pour plus tard si le besoin s'en fait sentir : cache de prompts Anthropic (`cache_control`), qui
+  rendrait les tours suivants d'une même conversation quasi gratuits — non implémenté ici, complexité
+  jugée disproportionnée pour cette passe.
+
+### `ConversationChat.epreuveId` reste le seul champ distinguant les deux modes
+
+`POST /api/eleve/chat/conversations` accepte désormais `matiereId` **ou** `epreuveId` (jamais les deux
+en même temps côté client — en mode 2, `matiereId` est toujours résolu côté serveur depuis l'épreuve,
+jamais fait confiance au client). Mode 2 **refusé (404)** si aucune `CorrectionDetail` n'existe encore
+pour ce couple (épreuve, élève) — rien à discuter avant qu'une correction existe, cohérent avec le seul
+point d'entrée prévu ("depuis l'écran de résultat").
+
+### Séparation structurelle chat mode 1 / mode 2 (non-négociable CLAUDE.md)
+
+Route dédiée `/eleve/epreuves/[id]/discuter` (pas un paramètre de query sur `/eleve/tuteur-ia`) —
+`ChatPanel.tsx` reste le même composant (mêmes bulles, même input) mais bascule entièrement de logique
+selon la prop `contexteEpreuve` : pas de sélecteur de matière en mode 2 (verrouillée par l'épreuve),
+bandeau contextuel (§2.1.1) avec lien de retour vers l'écran de résultat au lieu du switcher.
+
+### Code changé
+
+- `src/app/api/eleve/chat/conversations/route.ts` — accepte `epreuveId`, IDOR + garde-fou
+  "correction déjà existante" avant toute création de conversation.
+- `src/app/api/eleve/chat/conversations/[id]/messages/route.ts` — `chargerContexteEpreuve()` (nouveau),
+  passé à `aiProvider.chat()` quand `conversation.epreuveId` est renseigné.
+- `src/components/tuteur-ia/ChatPanel.tsx` — prop `contexteEpreuve` optionnelle, bandeau contextuel.
+- `src/app/eleve/epreuves/[id]/discuter/page.tsx` (nouveau) — IDOR + garde-fou "correction existante"
+  côté page aussi (pas seulement côté API).
+- `src/components/eleve/ResultatCorrection.tsx` — bouton "Discuter de cette copie" ajouté (maquette 08
+  ne le montre pas — gap déjà noté dans CLAUDE.md, comblé).
+
+### Vérifié réellement — vrai appel Haiku avec contexte injecté, garde-fous confirmés
+
+Élève de test réel, une vraie `Epreuve` + `CorrectionDetail` de test (note 8/20, lacune "confusion
+fonction affine/linéaire") :
+
+- **Garde-fou** : tentative de mode 2 sur une épreuve **sans** correction → **404** confirmé, aucune
+  conversation créée.
+- **Mode 2 réel** : conversation créée avec `epreuveId` renseigné ; question posée ("Pourquoi ai-je
+  perdu des points ?") → **réponse Haiku réelle qui référence précisément la lacune injectée**
+  (explication complète et correcte fonction affine vs linéaire, directement issue du contexte
+  `CorrectionDetail` transmis — pas une réponse générique). Tokens réels 2038 in / 534 out, coût réel
+  **$0.004708** (`UsageIA` confirmée).
+- **Règle non-négociable vérifiée en base, pas seulement supposée** : nombre de `CorrectionDetail` pour
+  cette épreuve avant/après l'échange de chat = **1, inchangé** — confirme que le chat n'a ni créé ni
+  modifié de correction.
+- Page réelle `/eleve/epreuves/[id]/discuter` : HTTP 200, bandeau et titre présents ; même page sur
+  l'épreuve non corrigée : HTTP 404 (garde-fou aussi côté page, pas seulement côté API).
+- `tsc --noEmit` (0 erreur) et `eslint` sur tout `src/` (0 erreur, 2 warnings pré-existants sans
+  rapport).
+
+### Nettoyage
+
+Toutes les données de test réelles (élève, épreuves, correction, conversation, messages, `UsageIA`)
+supprimées après vérification. Script ad hoc supprimé.
+
+### Suite
+
+Passe 6 — Écrans parent (Progression avec vraies données, Notes, Lacunes) + export PDF du rapport
+mensuel.

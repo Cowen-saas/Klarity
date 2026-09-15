@@ -3,15 +3,54 @@ import { z } from "zod";
 import type { Filiere, NiveauClasse } from "@prisma/client";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { getAIProvider, AIRateLimitError, MODELE_HAIKU, type ChatMessage } from "@/lib/ai";
+import { getAIProvider, AIRateLimitError, MODELE_HAIKU, type ChatMessage, type ContexteEpreuve } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
 
 /**
- * Fil de messages d'une conversation chat-tuteur mode 1 (§2.1, §4.4).
- * Première route de l'app touchant une ressource par ID appartenant à un
- * élève précis — vérification IDOR systématique avant toute lecture/écriture
- * (réf. sécurité §5, cf. CLAUDE.md), jamais côté UI seule.
+ * Fil de messages d'une conversation chat-tuteur, mode 1 ou mode 2 (§2.1,
+ * §4.4) — `conversation.epreuveId` est le seul champ qui distingue les deux
+ * (CLAUDE.md). Première route de l'app touchant une ressource par ID
+ * appartenant à un élève précis — vérification IDOR systématique avant
+ * toute lecture/écriture (réf. sécurité §5, cf. CLAUDE.md), jamais côté UI
+ * seule.
  */
+
+/**
+ * Contexte du mode 2 (§2.1.1) — jamais un appel IA supplémentaire pour le
+ * construire. `corrige` réutilise le texte déjà produit par la correction
+ * (`CorrectionDetail`, gratuit). `enonce` reste volontairement un résumé
+ * léger (titre/matière/classe/année) plutôt que le contenu intégral du PDF
+ * de l'épreuve : l'attacher en pièce jointe serait refacturé à **chaque**
+ * message de la conversation (contrairement à la correction, qui n'est
+ * calculée qu'une fois) — coût à maîtriser (§6.4). L'énoncé complet reste
+ * téléchargeable par l'élève depuis la banque d'épreuves s'il veut le
+ * relire ; à revisiter avec le cache de prompts Anthropic si l'énoncé
+ * intégral s'avère nécessaire un jour.
+ */
+async function chargerContexteEpreuve(epreuveId: string, eleveId: string): Promise<ContexteEpreuve | null> {
+  const [epreuve, correction] = await Promise.all([
+    prisma.epreuve.findUnique({
+      where: { id: epreuveId },
+      select: { titre: true, anneeScolaire: true, classe: true, filiere: true, matiere: { select: { nom: true } } },
+    }),
+    prisma.correctionDetail.findUnique({ where: { epreuveId_eleveId: { epreuveId, eleveId } } }),
+  ]);
+  if (!epreuve || !correction) return null;
+
+  const enonce =
+    `Épreuve : "${epreuve.titre}" — ${epreuve.matiere.nom}, ${epreuve.classe}` +
+    `${epreuve.filiere ? ` série ${epreuve.filiere}` : ""}, année ${epreuve.anneeScolaire}. ` +
+    "(Résumé léger — l'énoncé complet est téléchargeable par l'élève depuis la banque d'épreuves.)";
+
+  const pointsManques = correction.pointsManques as { notion: string; detail: string }[];
+  const corrige =
+    `Note obtenue : ${correction.note ?? "—"}/20.\n` +
+    `Points forts : ${(correction.pointsForts as string[]).join("; ") || "aucun"}.\n` +
+    `Points à travailler : ${pointsManques.map((pm) => `${pm.notion} — ${pm.detail}`).join(" | ") || "aucun"}.\n` +
+    `Retour détaillé : ${correction.feedbackDetaille}`;
+
+  return { enonce, corrige };
+}
 
 function estCaractereDeControle(code: number): boolean {
   return code < 32 && code !== 9 && code !== 10 && code !== 13;
@@ -29,7 +68,7 @@ function sanitizerContenu(input: string): string {
 async function chargerConversationAutorisee(id: string, eleveId: string) {
   const conversation = await prisma.conversationChat.findUnique({
     where: { id },
-    select: { id: true, eleveId: true, matiereId: true },
+    select: { id: true, eleveId: true, matiereId: true, epreuveId: true },
   });
   if (conversation && conversation.eleveId !== eleveId) {
     // Tentative réelle d'accès à la ressource d'un autre élève (pas un simple ID inexistant) —
@@ -102,10 +141,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
   const messages: ChatMessage[] = historique.map((m) => ({ role: m.role, contenu: m.contenu }));
 
+  const contexteEpreuve = conversation.epreuveId
+    ? await chargerContexteEpreuve(conversation.epreuveId, session.user.id)
+    : null;
+
   const aiProvider = getAIProvider();
   let reponse;
   try {
-    reponse = await aiProvider.chat(messages, programme?.contenuStructure ?? null);
+    reponse = await aiProvider.chat(messages, programme?.contenuStructure ?? null, contexteEpreuve ?? undefined);
   } catch (err) {
     if (err instanceof AIRateLimitError) {
       return NextResponse.json(
