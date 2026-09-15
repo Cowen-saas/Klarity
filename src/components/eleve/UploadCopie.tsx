@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
-import { IconCamera, IconWarning, IconRobot } from "@/components/icons";
+import { IconCamera, IconWarning } from "@/components/icons";
 
 type StatutTentative = "EN_ATTENTE" | "EN_TRAITEMENT" | "TERMINE" | "ERREUR";
 
@@ -143,9 +143,10 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
 
   return (
     <div className="mx-auto max-w-md rounded-2xl bg-surface p-6 shadow-sm">
-      <p className="text-xs font-bold tracking-wide text-primary uppercase">{titre}</p>
+      <p className="text-sm font-bold text-primary">
+        {titre} · {matiere}
+      </p>
       <h1 className="mt-1 text-xl font-bold text-texte">Envoie ta copie</h1>
-      <p className="mt-1 text-sm text-texte-muted">{matiere}</p>
 
       <div className="mt-5 rounded-2xl border-2 border-dashed border-border p-6 text-center">
         <IconCamera className="mx-auto h-8 w-8 text-texte-muted" aria-hidden="true" />
@@ -233,10 +234,7 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
 function AnalyseEnCours({ etapeIndex }: { etapeIndex: number }) {
   return (
     <div className="mx-auto max-w-md rounded-2xl bg-surface p-8 text-center shadow-sm">
-      <div className="relative mx-auto h-16 w-16">
-        <div className="absolute inset-0 animate-spin rounded-full border-4 border-primary-light border-t-primary" />
-        <IconRobot className="absolute inset-0 m-auto h-6 w-6 text-primary" aria-hidden="true" />
-      </div>
+      <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-primary-light border-t-primary" aria-hidden="true" />
       <h1 className="mt-5 text-lg font-bold text-texte">Analyse de ta copie...</h1>
       <p className="mt-1 text-sm text-texte-muted">L&apos;IA lit tes réponses et compare avec le corrigé officiel.</p>
 

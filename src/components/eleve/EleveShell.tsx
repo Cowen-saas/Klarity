@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
-import { IconHome, IconSparkles, IconDocument, IconBulb, IconPencil, IconUser, IconCreditCard } from "@/components/icons";
+import { IconHome, IconSparkles, IconDocument, IconBulb, IconPencil, IconUser, IconCreditCard, IconRobot } from "@/components/icons";
 import { KlarityLogo } from "@/components/ui/KlarityLogo";
 import { SignOutButton } from "@/components/ui/SignOutButton";
 
@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/eleve", label: "Accueil", icon: IconHome },
   { href: "/eleve/tuteur-ia", label: "Tuteur IA", icon: IconSparkles },
   { href: "/eleve/epreuves", label: "Épreuves", icon: IconDocument },
+  { href: "/eleve/corrections", label: "Mes copies", icon: IconRobot },
   { href: "/eleve/lacunes", label: "Mes lacunes", icon: IconBulb },
   { href: "/eleve/quiz", label: "Quiz", icon: IconPencil },
   { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },

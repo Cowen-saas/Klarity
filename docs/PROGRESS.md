@@ -4516,3 +4516,75 @@ jamais arrondir une incertitude vers la commodité).
 
 Toutes ces données de test (élèves, admins, épreuves, corrections, lacunes, quiz, conversations) ont
 été supprimées après vérification à chaque passe — aucune trace de test ne subsiste en base.
+
+## 61. Point d'entrée « Mes copies » + fidélité renforcée aux maquettes 07/08 (15 septembre 2026)
+
+Suite à un retour utilisateur : le pipeline de correction (Passe 2) n'était accessible que depuis une
+épreuve précise de la banque, sans nul autre endroit dans l'app pour le retrouver — d'où la difficulté à
+le localiser. Ajoute un point d'entrée centralisé, et corrige plusieurs écarts de fidélité aux maquettes
+07/08 trouvés en comparant précisément (côte à côte, capture réelle du navigateur) l'implémentation de
+la Passe 2 aux deux maquettes desktop.
+
+### Écarts de fidélité corrigés (aucun n'était nécessaire, contrairement au découpage forts/manques)
+
+- **Upload (`UploadCopie.tsx`)** : l'en-tête affichait `titre` puis `matiere` sur deux lignes séparées
+  autour du heading "Envoie ta copie" — la maquette les groupe sur **une seule ligne**
+  ("Baccalauréat blanc · Mathématiques") **avant** le heading. Corrigé. Le rond de chargement de l'état
+  "Analyse en cours" portait une icône `IconRobot` au centre, absente de la maquette (anneau vide) —
+  retirée.
+- **Résultat (`ResultatCorrection.tsx`)** : le libellé "Corrigé par l'IA" s'affichait en label séparé
+  au-dessus du titre ; la maquette le regroupe dans la ligne de sous-titre grise, avec la classe et
+  l'année ("Corrigé par l'IA · Terminale D · 2025"). Corrigé — `IconRobot` conservé mais déplacé en
+  petite puce avant ce texte, pour rester cohérent avec sa réservation à cet écran (cf. `icons.tsx`)
+  sans réintroduire l'écart visuel.
+
+### Écart maintenu et expliqué (déjà discuté et validé en Passe 2, reconfirmé par l'utilisateur ici)
+
+Le découpage question-par-question de la maquette 08 ("Question 4", "Ta réponse" / "Réponse correcte",
+3 tuiles Réussies/Partielles/Incorrectes) reste remplacé par 2 tuiles (Points forts / Points à
+travailler) avec notion + explication — `CorrectionDetail` ne stocke ni numéro de question, ni réponse
+littérale de l'élève, ni classification à 3 niveaux ; ajouter cela demanderait un nouveau modèle de
+données pour un usage limité aux exercices à réponse unique (pas aux dissertations/commentaires). Toute
+la **présentation** autour (badge de note, groupement du titre, tuiles colorées, cartes bordées, boîte
+d'explication 💡, bouton signalement) a en revanche été vérifiée précisément fidèle.
+
+### Nouveau point d'entrée « Mes copies »
+
+- `src/components/eleve/EleveShell.tsx` — nouvel item de nav entre "Épreuves" et "Mes lacunes", icône
+  `IconRobot` (déjà réservée à la correction IA, cohérente avec le reste du design system).
+- `src/app/eleve/corrections/page.tsx` (nouveau) — liste toutes les corrections déjà produites
+  (`CorrectionDetail`, triées par date) et toute tentative encore en traitement
+  (`TentativeEpreuve.statut IN (EN_ATTENTE, EN_TRAITEMENT)`), chacune cliquable vers l'écran de résultat
+  déjà existant (`/eleve/epreuves/[id]/correction`, Passe 2, réutilisé tel quel — pure correction
+  d'interface, aucune nouvelle route ni job worker). État vide explicite avec lien direct vers la banque
+  d'épreuves.
+
+### Vérifié réellement, comparé visuellement aux 2 maquettes desktop
+
+Élève de test réel connecté via un vrai flux navigateur (fetch `callback/eleve` exécuté **dans le
+contexte de la page**, pas une entrée de PIN dans un champ — le navigateur gère alors nativement le
+cookie de session httOnly, contrairement à un `fetch` extérieur). Trois états réels mis en place sur de
+vraies épreuves déjà en banque (aucune n'a été créée pour ce test) :
+
+- **Upload vierge** : capturé, en-tête groupé sur une ligne confirmé, dropzone/bouton conformes.
+- **Analyse en cours** (`TentativeEpreuve` réelle en `EN_TRAITEMENT`) : capture comparée directement à
+  la maquette 07 — anneau vide, texte, checklist 3 lignes (2 coches vertes + 1 étape active ambre) tous
+  conformes.
+- **Résultat détaillé** (`CorrectionDetail` réelle, 3 points forts / 2 points à travailler) : capture
+  comparée à la maquette 08 — badge de note, groupement titre/sous-titre, 3 boutons d'action, tuiles,
+  cartes de détail tous conformes à la structure de la maquette (à l'exception assumée ci-dessus).
+- **Hub « Mes copies »** : capture réelle confirmant la tentative en cours et la correction terminée
+  toutes deux listées et cliquables.
+- `tsc --noEmit` et `eslint` sur tous les fichiers touchés : 0 erreur.
+
+**Limite d'outillage rencontrée, sans rapport avec le code** : la fenêtre du navigateur de cette session
+est contrainte par l'écran physique (1536×864, échelle d'affichage ×2.5), donc `resize_window` ne
+peut pas toujours forcer une largeur CSS desktop (≥768px) de façon fiable — deux captures sur les
+quatre sont sorties en layout mobile (nav du bas) malgré une demande de fenêtre large. Le contenu des
+cartes lui-même est identique quel que soit le layout (seul le chrome de navigation change, non régi
+par les maquettes) ; les deux captures obtenues en layout desktop (analyse en cours, résultat détaillé)
+suffisent à confirmer la fidélité structurelle réelle.
+
+### Nettoyage
+
+Élève de test, tentative et correction de test supprimés après vérification. Scripts ad hoc supprimés.

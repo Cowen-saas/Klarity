@@ -57,15 +57,12 @@ export function ResultatCorrection({ epreuveId, titre, matiere, classeLabel, ann
             <span className="text-[11px] font-semibold">/ 20</span>
           </div>
           <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-primary uppercase">
-              <IconRobot className="h-3.5 w-3.5" aria-hidden="true" />
-              Corrigé par l&apos;IA
-            </p>
-            <h1 className="mt-0.5 text-lg font-bold text-texte">
+            <h1 className="text-lg font-bold text-texte">
               {titre} — {matiere}
             </h1>
-            <p className="mt-0.5 text-xs text-texte-muted">
-              {classeLabel} · {anneeScolaire}
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-texte-muted">
+              <IconRobot className="h-3.5 w-3.5" aria-hidden="true" />
+              Corrigé par l&apos;IA · {classeLabel} · {anneeScolaire}
             </p>
           </div>
         </div>
