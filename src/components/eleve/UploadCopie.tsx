@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
-import { IconCamera, IconWarning } from "@/components/icons";
+import { IconWarning } from "@/components/icons";
 
 type StatutTentative = "EN_ATTENTE" | "EN_TRAITEMENT" | "TERMINE" | "ERREUR";
 
@@ -122,7 +122,7 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
 
   if (tentative && tentative.statut === "ERREUR") {
     return (
-      <div className="mx-auto max-w-md rounded-3xl bg-surface p-10 text-center shadow-sm">
+      <div className="w-full rounded-3xl bg-surface p-10 text-center shadow-sm">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-danger-light text-danger">
           <IconWarning className="h-8 w-8" weight="fill" aria-hidden="true" />
         </div>
@@ -142,28 +142,37 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-2xl bg-surface p-6 shadow-sm">
-      <p className="text-sm font-bold text-primary">
+    <div className="w-full rounded-2xl bg-surface p-8 shadow-sm">
+      <p className="text-base font-bold text-primary">
         {titre} · {matiere}
       </p>
-      <h1 className="mt-1 text-xl font-bold text-texte">Envoie ta copie</h1>
+      <h1 className="mt-1 text-3xl font-bold text-texte">Envoie ta copie</h1>
 
-      <div className="mt-5 rounded-2xl border-2 border-dashed border-border p-6 text-center">
-        <IconCamera className="mx-auto h-8 w-8 text-texte-muted" aria-hidden="true" />
+      <div className="mt-6 flex w-full items-center gap-6 rounded-2xl border-2 border-dashed border-border px-8 py-10">
         <button
           type="button"
           onClick={() => inputCameraRef.current?.click()}
-          className="mt-3 block w-full text-sm font-bold text-texte hover:text-primary"
+          aria-label="Photographier ma copie"
+          className="shrink-0 text-5xl leading-none"
         >
-          Photographier ma copie
+          📷
         </button>
-        <button
-          type="button"
-          onClick={() => inputGalerieRef.current?.click()}
-          className="mt-1 text-xs text-texte-muted underline hover:text-primary"
-        >
-          ou importer depuis la galerie
-        </button>
+        <div className="text-left">
+          <button
+            type="button"
+            onClick={() => inputCameraRef.current?.click()}
+            className="block text-lg font-bold text-texte hover:text-primary"
+          >
+            Photographier ma copie
+          </button>
+          <button
+            type="button"
+            onClick={() => inputGalerieRef.current?.click()}
+            className="mt-1 text-sm text-texte-muted underline hover:text-primary"
+          >
+            ou importer depuis la galerie
+          </button>
+        </div>
         <input
           ref={inputCameraRef}
           type="file"
@@ -190,14 +199,14 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
       </div>
 
       {pages.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-3">
           {pages.map((_, i) => (
             <button
               key={i}
               type="button"
               onClick={() => retirerPage(i)}
               title="Retirer cette page"
-              className="group relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-fond"
+              className="group relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-xl border border-border bg-fond"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={previews[i]} alt={`Page ${i + 1}`} className="h-full w-full object-cover" />
@@ -233,7 +242,7 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
 
 function AnalyseEnCours({ etapeIndex }: { etapeIndex: number }) {
   return (
-    <div className="mx-auto max-w-md rounded-2xl bg-surface p-8 text-center shadow-sm">
+    <div className="w-full rounded-2xl bg-surface p-8 text-center shadow-sm">
       <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-primary-light border-t-primary" aria-hidden="true" />
       <h1 className="mt-5 text-lg font-bold text-texte">Analyse de ta copie...</h1>
       <p className="mt-1 text-sm text-texte-muted">L&apos;IA lit tes réponses et compare avec le corrigé officiel.</p>

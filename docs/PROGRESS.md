@@ -4588,3 +4588,61 @@ suffisent à confirmer la fidélité structurelle réelle.
 ### Nettoyage
 
 Élève de test, tentative et correction de test supprimés après vérification. Scripts ad hoc supprimés.
+
+## 62. Écran « Envoie ta copie » — icône appareil photo et pleine largeur (16 septembre 2026)
+
+Suite directe de la Passe 61 : l'utilisateur a fourni une image de référence montrant un panneau
+d'upload disposé horizontalement (icône à gauche, texte à droite) occupant toute la largeur de
+l'espace dédié, avec une icône d'appareil photo de style illustratif plutôt que l'icône Phosphor
+`IconCamera` alors utilisée.
+
+### Recherche d'icône (skill `ui-ux-pro-max`)
+
+Requête `"camera icon photo upload" --domain icons` : le domaine icônes de la skill n'expose que des
+icônes de la famille Phosphor en style *Outline* — aucune option colorée/plate/illustrative pour
+"appareil photo" n'y existe. L'émoji littéral 📷 est en revanche un motif déjà établi ailleurs dans ce
+même codebase pour ce type de touche illustrative (💡, ⚠️, ✓/✗, 🗓️ apparaissent déjà dans l'UI
+existante). Plutôt que de forcer un rendu Phosphor qui ne correspond pas à la référence, l'émoji 📷 a
+été utilisé — cohérent avec la convention existante, et visuellement fidèle à la référence fournie
+(rendu identique au caractère de la référence, chaque navigateur/OS utilisant son propre glyphe emoji
+natif, ce qui est le comportement attendu pour tout usage d'emoji littéral).
+
+### `src/components/eleve/UploadCopie.tsx`
+
+- Import : `IconCamera` retiré (plus utilisé), seul `IconWarning` reste importé depuis
+  `@/components/icons`.
+- Panneau d'upload : remplacement du bouton central carré `IconCamera` par une disposition
+  horizontale — émoji 📷 (`text-5xl`) à gauche dans une zone `border-2 border-dashed`, bloc de texte
+  ("Photographier ma copie" / "ou importer depuis la galerie") aligné à gauche à droite de l'icône,
+  au lieu de l'ancienne disposition verticale centrée.
+- Largeur : les trois conteneurs racines (formulaire d'upload, état d'erreur, `AnalyseEnCours`)
+  portaient `mx-auto max-w-md` (colonne étroite centrée) — retiré au profit de `w-full`, pour occuper
+  toute la largeur du conteneur parent (`max-w-4xl` déjà fixé par la page englobante — "l'espace
+  dédié" désigne ce conteneur existant, pas la largeur totale du viewport, ce qui aurait été un
+  changement non demandé et incohérent avec le reste de l'app élève).
+- Miniatures de pages déjà envoyées : passées de vignettes carrées `h-16 w-16` à des vignettes
+  `aspect-[3/4] w-28` (format portrait, plus grandes), pour rester cohérentes avec le nouvel espace
+  disponible en pleine largeur.
+
+### Vérifié réellement
+
+- `tsc --noEmit` et `eslint` sur le fichier modifié : 0 erreur.
+- Élève de test réel (`ELE-6Q5-7WG`, Terminale D) créé via l'inscription publique, connecté par un vrai
+  flux navigateur (`fetch` de `callback/eleve` exécuté dans la page, cookie de session httpOnly géré
+  nativement par le navigateur).
+- **État upload vierge** (`/eleve/epreuves/cmtla0rvc000uo917vgterx0f/correction`) : capture confirmée —
+  l'émoji 📷 s'affiche exactement comme dans l'image de référence, à gauche du bloc de texte, dropzone
+  en pleine largeur de la carte, carte elle-même occupant toute la largeur du conteneur `max-w-4xl` de
+  la page.
+- **État "Analyse en cours"** : une vraie ligne `TentativeEpreuve` (`statut: EN_TRAITEMENT`) a été créée
+  pour le même élève de test sur une autre épreuve réelle déjà en banque, afin de capturer cet état sans
+  attendre un vrai traitement asynchrone. Capture confirmée — le panneau `AnalyseEnCours` occupe
+  désormais lui aussi toute la largeur du conteneur, cohérent avec l'exigence explicite de l'utilisateur
+  ("de même pour l'analyse de la copie").
+
+### Nettoyage
+
+Script ad hoc de fixture (`scratch-set-tentative.ts`, jamais commité) supprimé du dépôt. Deux élèves de
+test (`ELE-6Q5-7WG`, `ELE-8WV-8JS` — ce dernier restait d'une vérification antérieure de cette même
+tâche) et leurs lignes dépendantes (`tentatives_epreuve`, `sessions_activite`) supprimés de la base
+réelle après vérification, confirmé par requête SQL (0 ligne restante sur les deux `codeEleve`).
