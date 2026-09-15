@@ -4236,6 +4236,11 @@ documenté dans CLAUDE.md, comblé ici).
   rendrait les tours suivants d'une même conversation quasi gratuits — non implémenté ici, complexité
   jugée disproportionnée pour cette passe.
 
+**Confirmé par l'utilisateur** : approche validée telle quelle (résumé léger + réutilisation gratuite
+du texte de correction). Le cache de prompts Anthropic reste une piste à garder en tête si le coût réel
+du chat mode 2 s'avère significatif en usage réel — pas la peine de l'implémenter maintenant, seulement
+si l'usage réel le justifie.
+
 ### `ConversationChat.epreuveId` reste le seul champ distinguant les deux modes
 
 `POST /api/eleve/chat/conversations` accepte désormais `matiereId` **ou** `epreuveId` (jamais les deux
