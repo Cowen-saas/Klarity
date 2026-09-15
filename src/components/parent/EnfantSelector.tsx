@@ -11,7 +11,7 @@ interface Enfant {
 
 interface EnfantSelectorProps {
   enfants: Enfant[];
-  selectedId: string;
+  selectedId: string | null;
 }
 
 // Purement décoratif — distingue visuellement les enfants dans le sélecteur, cycle si >5.

@@ -3,13 +3,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { EnfantSelector } from "@/components/parent/EnfantSelector";
+import { AlertesIntelligentes } from "@/components/parent/AlertesIntelligentes";
 import { BarChart } from "@/components/ui/BarChart";
-
-const CLASSE_LABELS: Record<string, string> = {
-  TROISIEME: "3e",
-  PREMIERE: "1ère",
-  TERMINALE: "Terminale",
-};
+import { resoudreContexteEleve, CLASSE_LABELS } from "@/lib/parent/contexte-eleve";
+import { calculerAlertes } from "@/lib/parent/alertes";
 
 const NOMS_MOIS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
@@ -30,19 +27,11 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
   }
 
   const parentId = session.user.id;
+  const { eleve: eleveParam } = await searchParams;
+  const idParam = Array.isArray(eleveParam) ? eleveParam[0] : eleveParam;
+  const { liens, eleve, selectedId } = await resoudreContexteEleve(parentId, idParam);
 
-  const [liens, parent] = await Promise.all([
-    prisma.parentEleveLink.findMany({
-      where: { parentId },
-      include: {
-        eleve: { select: { id: true, nom: true, classe: true, filiere: true, derniereActiviteLe: true } },
-      },
-      orderBy: { dateLiaison: "asc" },
-    }),
-    prisma.parent.findUnique({ where: { id: parentId }, select: { dernierEleveConsulteId: true } }),
-  ]);
-
-  if (liens.length === 0) {
+  if (!eleve) {
     return (
       <main className="max-w-3xl px-6 py-10 sm:px-8">
         <h1 className="text-2xl font-bold text-texte">Aucun enfant lié pour l&apos;instant</h1>
@@ -53,22 +42,6 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
       </main>
     );
   }
-
-  const { eleve: eleveParam } = await searchParams;
-  const idParam = Array.isArray(eleveParam) ? eleveParam[0] : eleveParam;
-  const idsLies = new Set(liens.map((l) => l.eleveId));
-
-  // IDOR : ne jamais faire confiance à ?eleve= sans vérifier l'appartenance du lien.
-  let selectedId = idParam && idsLies.has(idParam) ? idParam : null;
-  if (!selectedId) {
-    selectedId =
-      parent?.dernierEleveConsulteId && idsLies.has(parent.dernierEleveConsulteId)
-        ? parent.dernierEleveConsulteId
-        : liens[0].eleveId;
-  }
-
-  const lien = liens.find((l) => l.eleveId === selectedId)!;
-  const eleve = lien.eleve;
   const classeLabel = CLASSE_LABELS[eleve.classe] ?? eleve.classe;
 
   const inactifDepuisMs = eleve.derniereActiviteLe ? Date.now() - eleve.derniereActiviteLe.getTime() : null;
@@ -82,7 +55,7 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
   sixMoisAvant.setDate(1);
   sixMoisAvant.setHours(0, 0, 0, 0);
 
-  const [corrections, lacunes, sessionsSemaine, prochaineEcheance, historique] = await Promise.all([
+  const [corrections, lacunes, sessionsSemaine, prochaineEcheance, historique, alertes] = await Promise.all([
     prisma.correctionDetail.findMany({
       where: { eleveId: eleve.id },
       select: { note: true, createdAt: true },
@@ -106,6 +79,7 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
       take: 4,
       select: { note: true, createdAt: true, epreuve: { select: { titre: true } }, matiere: { select: { nom: true } } },
     }),
+    calculerAlertes(eleve.id),
   ]);
 
   const notesValides = corrections.map((c) => c.note).filter((n): n is number => n !== null);
@@ -124,8 +98,6 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
     return { label: NOMS_MOIS[mois.getMonth()], value: Math.round(moyenne * 10) / 10 };
   });
 
-  const lacunesCritiques = lacunes.filter((l) => l.niveauMaitrise < 30);
-  const lacunesASurveiller = lacunes.filter((l) => l.niveauMaitrise >= 30 && l.niveauMaitrise < 60);
   const lacunePrioritaire = lacunes[0];
 
   const joursAvantEcheance = prochaineEcheance?.dateExamen
@@ -217,34 +189,7 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
         </section>
         <section className="rounded-2xl bg-surface p-6 shadow-sm">
           <h2 className="text-base font-bold text-texte">Alertes intelligentes</h2>
-          {lacunesCritiques.length === 0 && lacunesASurveiller.length === 0 ? (
-            <p className="mt-3 text-sm text-texte-muted">
-              Pas encore d&apos;alerte — elles apparaîtront dès que {eleve.nom} aura une activité à analyser.
-            </p>
-          ) : (
-            <div className="mt-3 space-y-3">
-              {lacunesCritiques.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-bold tracking-wide text-danger uppercase">Critique</p>
-                  {lacunesCritiques.map((l) => (
-                    <p key={l.notion} className="rounded-lg bg-danger-light px-3 py-2 text-sm text-texte">
-                      ● Lacune importante en {l.notion} ({l.niveauMaitrise}% de maîtrise).
-                    </p>
-                  ))}
-                </div>
-              )}
-              {lacunesASurveiller.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-bold tracking-wide text-accent uppercase">À surveiller</p>
-                  {lacunesASurveiller.map((l) => (
-                    <p key={l.notion} className="rounded-lg bg-accent-light px-3 py-2 text-sm text-texte">
-                      ⚠ {l.notion} — {l.niveauMaitrise}% de maîtrise.
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <AlertesIntelligentes alertes={alertes} nomEleve={eleve.nom} />
         </section>
       </div>
 
@@ -287,13 +232,12 @@ export default async function ParentDashboardPage({ searchParams }: PageProps<"/
       </div>
 
       <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded-xl border-2 border-border bg-surface px-4 py-2.5 text-sm font-semibold text-texte-muted opacity-60"
+        <a
+          href={`/api/parent/rapport-mensuel?eleve=${eleve.id}`}
+          className="rounded-xl border-2 border-border bg-surface px-4 py-2.5 text-sm font-semibold text-texte transition-colors hover:border-primary/40"
         >
-          ↓ Exporter le rapport mensuel (PDF) — Bientôt
-        </button>
+          ↓ Exporter le rapport mensuel (PDF)
+        </a>
       </div>
 
       <p className="mt-6 flex items-start gap-2 text-xs text-texte-muted">

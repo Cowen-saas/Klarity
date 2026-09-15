@@ -16,9 +16,9 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/parent", label: "Vue d'ensemble", icon: IconChart },
-  { href: "/parent/progression", label: "Progression", icon: IconChart, disabled: true },
-  { href: "/parent/notes", label: "Notes", icon: IconPencil, disabled: true },
-  { href: "/parent/lacunes", label: "Lacunes", icon: IconBulb, disabled: true },
+  { href: "/parent/progression", label: "Progression", icon: IconChart },
+  { href: "/parent/notes", label: "Notes", icon: IconPencil },
+  { href: "/parent/lacunes", label: "Lacunes", icon: IconBulb },
   { href: "/parent/temps-passe", label: "Temps passé", icon: IconClock },
   { href: "/parent/notifications", label: "Notifications", icon: IconBell },
   { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },

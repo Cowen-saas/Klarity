@@ -4297,3 +4297,86 @@ supprimées après vérification. Script ad hoc supprimé.
 
 Passe 6 — Écrans parent (Progression avec vraies données, Notes, Lacunes) + export PDF du rapport
 mensuel.
+
+## 58. Passe 6 — Écrans parent (Progression, Notes, Lacunes) + export PDF (15 septembre 2026)
+
+Sixième passe du chantier IA réelle (§52-§57), la plus dense. Trois écrans déjà prévus dans le nav
+parent (`/parent/progression`, `/parent/notes`, `/parent/lacunes`, `ParentShell.tsx`, désactivés en
+attendant cette passe), plus l'export PDF du rapport mensuel (§2.2).
+
+### Correction d'une lacune pré-existante : les "alertes intelligentes" ne suivaient pas le CDC §2.2.2
+
+En construisant l'écran Progression (qui doit reprendre "alertes intelligentes avec de vraies
+données"), constaté que la logique déjà en place sur la vue d'ensemble (`/parent`, code d'avant ce
+chantier) ne correspondait **pas** aux règles réelles du CDC §2.2.2. Elle calculait Critique/À
+surveiller à partir de simples seuils sur `Lacune.niveauMaitrise` (<30 / 30-60), alors que le CDC
+spécifie explicitement :
+
+- **CRITIQUE** : lacune active **persistante ≥ 21 jours** (pas un seuil de maîtrise).
+- **À SURVEILLER** : **baisse de moyenne mensuelle par matière** (mois courant vs précédent), ou
+  **baisse de temps passé ≥ 20% sur la semaine**.
+- **INFO** (absent de l'ancienne logique — aucun signal positif n'était jamais calculé) : matière en
+  progression, quiz complétés cette semaine.
+
+Remplacé par un moteur unique et correct, `src/lib/parent/alertes.ts` (`calculerAlertes`), **jamais un
+appel IA** (même principe que `Lacune.niveauMaitrise`, §4.3) — utilisé à la fois par la vue d'ensemble
+(remplace l'ancienne logique) et par le nouvel écran Progression, pour ne jamais avoir deux définitions
+différentes d'« alerte » dans l'app.
+
+### Code partagé factorisé (évite la duplication IDOR-sensible sur 5 écrans)
+
+- `src/lib/parent/contexte-eleve.ts` (`resoudreContexteEleve`) — résolution "quel enfant le parent
+  consulte" (liens + `?eleve=` vérifié contre `ParentEleveLink`, jamais fait confiance en direct),
+  précédemment dupliquée telle quelle uniquement sur la vue d'ensemble ; maintenant partagée par les 4
+  écrans + la route d'export PDF.
+- `src/components/parent/AlertesIntelligentes.tsx` — rendu des 3 niveaux, partagé vue d'ensemble +
+  Progression.
+
+### Écrans sans maquette dédiée (Notes, Lacunes) — jugement assumé
+
+- **Notes** : historique complet des épreuves corrigées (la vue d'ensemble n'en montre que 4), lecture
+  seule, même présentation visuelle.
+- **Lacunes** : reprend le langage visuel de "Mes lacunes" côté élève (maquette 09 — grille par
+  matière, barres colorées par seuil) mais **lecture seule** : aucun bouton de quiz déclenchable (ce
+  n'est pas l'élève qui consulte).
+
+### Export PDF (§2.2) — génération à la demande, pas de stockage persistant
+
+Nouvelle dépendance `pdfkit` (installée uniquement côté `app` — pas besoin côté `worker`, génération
+synchrone sans appel IA). `GET /api/parent/rapport-mensuel?eleve=` construit le PDF en mémoire et le
+streame directement (`Content-Disposition: attachment`) — jamais écrit sur `StorageProvider`, cohérent
+avec le CDC ("génération à la demande à partir des données existantes, pas de stockage persistant").
+Reprend les indicateurs déjà affichés sur la vue d'ensemble (moyenne, épreuves du mois, lacunes actives,
+alertes) dans un template sobre pensé pour l'impression.
+
+### Vérifié réellement — vrai parcours de connexion parent (OTP), 3 niveaux d'alerte déclenchés pour de vrai
+
+Élève + parent de test réels, lien `ParentEleveLink` créé directement (pas de vrai SMS envoyé — l'OTP
+est inséré directement en base avec le même hachage bcrypt que `hashOtp`, pour ne pas dépendre du
+provider SMS réel désormais actif en local) :
+
+- Connexion parent réelle via le vrai flux NextAuth `callback/parent` (codeEleve + téléphone + OTP) :
+  **HTTP 302, session obtenue**.
+- Données de test construites pour déclencher précisément les 5 alertes possibles : 1 lacune vieille de
+  25 jours (**Critique** confirmée), une baisse de moyenne en Mathématiques 15→8 (**À surveiller**
+  confirmée), une baisse de temps passé de 75% cette semaine (**À surveiller** confirmée), une hausse
+  de moyenne en Physique 10→16 (**Info** confirmée), un quiz terminé cette semaine (**Info** confirmée)
+  — **les 5 apparaissent réellement dans le HTML rendu de `/parent`**, pas seulement en base.
+- `/parent/progression`, `/parent/notes`, `/parent/lacunes` : HTTP 200, données réelles confirmées
+  présentes sur chaque écran.
+- **Export PDF réel** : HTTP 200, `Content-Type: application/pdf`, 2457 octets, signature `%PDF-`
+  confirmée valide.
+- **IDOR vérifié** : `?eleve=<élève non lié>` sur `/parent/notes` retombe silencieusement sur l'enfant
+  réellement lié, aucune fuite de données d'un élève tiers.
+- `tsc --noEmit` (0 erreur) et `eslint` sur tout `src/` (0 erreur, 2 warnings pré-existants sans
+  rapport).
+
+### Nettoyage
+
+Toutes les données de test réelles (élève ×2, parent, lien, épreuves, corrections, lacunes, sessions,
+quiz, OTP) supprimées après vérification. Script ad hoc supprimé.
+
+### Suite
+
+Passe 7 (dernière) — audit final IDOR sur toutes les routes créées dans ce chantier, vérification
+`UsageIA` de bout en bout, bascule finale.
