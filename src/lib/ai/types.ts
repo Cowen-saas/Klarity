@@ -67,6 +67,18 @@ export interface ExempleFewShot {
   notesMethodologiques: string;
 }
 
+/**
+ * Barème à appliquer en correction (§4.2.2, §6.2) — résolu par l'appelant, pas
+ * par le provider : `exemple_correction` pour Français/Philosophie (résolu par
+ * `Epreuve.typeExercice` + `ExempleCorrection`, structure JSON injectée telle
+ * quelle dans le prompt) ; `corrige_reference` pour les matières scientifiques
+ * (clé de stockage du `Epreuve.corrigeReferenceKey`, le provider le lit et le
+ * transmet comme pièce jointe — pas de barème générique pour ces matières).
+ */
+export type BaremeCorrection =
+  | { source: "exemple_correction"; baremeStructure: unknown }
+  | { source: "corrige_reference"; storageKey: string };
+
 export interface PointManque {
   notion: string;
   detail: string;

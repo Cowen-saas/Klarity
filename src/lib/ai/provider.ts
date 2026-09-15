@@ -1,4 +1,5 @@
 import type {
+  BaremeCorrection,
   ChatMessage,
   Correction,
   ContexteEpreuve,
@@ -36,7 +37,7 @@ export interface AIProvider {
   corrigerCopie(
     imageKeys: string[],
     epreuveRef: EpreuveRef,
-    bareme: unknown,
+    bareme: BaremeCorrection,
     exemplesFewShot?: ExempleFewShot[]
   ): Promise<Correction>;
 }

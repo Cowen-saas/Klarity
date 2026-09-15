@@ -3852,3 +3852,99 @@ silencieusement. Décision retenue : champ dédié `Epreuve.typeExercice`, saisi
 Script de test ad hoc (`scratch-test-type-exercice.ts`, racine, jamais suivi par git) supprimé après
 usage ; les 2 comptes admin jetables créés pendant les essais (dont un resté après un premier essai en
 échec sur un mauvais nom de cookie CSRF) supprimés de la base.
+
+## 53. Passe 1 — `ClaudeAIProvider` réel, `AI_MODE=live` (14-15 septembre 2026)
+
+Première des 7 passes du chantier IA réelle (§52). Implémente les 3 méthodes de `ClaudeAIProvider`
+(`@anthropic-ai/sdk`, nouvelle dépendance) et bascule `AI_MODE=live` une fois les trois vérifiées
+réellement, comme demandé.
+
+### `src/lib/ai/claude-provider.ts` (nouveau)
+
+- **Modèles** : `MODELE_HAIKU = "claude-haiku-4-5-20251001"`, `MODELE_SONNET = "claude-sonnet-5"`
+  (constantes exportées, réutilisées par la route de chat existante à la place de l'ancien littéral
+  codé en dur `"claude-haiku-4-5"`).
+- **`chat()`** → Haiku, texte libre. Le programme officiel (`contexteMatiere`) est injecté dans le
+  system prompt ; en mode 2 (`contexteEpreuve` fourni), l'énoncé/corrigé sont ajoutés comme contexte
+  de lecture seule avec une consigne explicite : ne jamais attribuer de note ni reproduire une
+  correction (cf. règle CLAUDE.md sur la séparation stricte chat/correction).
+- **`genererQuiz()`** → Haiku, sortie structurée forcée via **tool use** (`soumettre_quiz`, schéma
+  JSON avec 4 choix par question) plutôt qu'un parsing de texte libre — beaucoup plus fiable.
+- **`corrigerCopie()`** → Sonnet + vision. `imageKeys` sont lus directement depuis `StorageProvider`
+  (nouvelle méthode `lire()`, voir plus bas), encodés en blocs `image` base64 dans l'ordre des pages.
+  `bareme: BaremeCorrection` (nouveau type, remplace `unknown`) distingue explicitement deux sources :
+  `exemple_correction` (barème JSON injecté en texte, Français/Philosophie) et `corrige_reference`
+  (le PDF `Epreuve.corrigeReferenceKey`, lu et joint comme bloc `document` — matières scientifiques).
+  Sortie structurée forcée via tool use (`soumettre_correction`). **Garde-fou anti-injection explicite
+  dans le system prompt** (règle CLAUDE.md, §prompt injection) : le contenu photographié est
+  systématiquement traité comme une réponse à évaluer, jamais comme une instruction — consigne
+  explicite d'ignorer toute tentative de manipulation qui y apparaîtrait.
+- Retry avec backoff sur 429 : géré nativement par le SDK officiel (`maxRetries`, défaut 2) — pas de
+  code applicatif à écrire, seule l'erreur finale est traduite en `AIRateLimitError` (contrat déjà
+  attendu par les appelants, cf. `MockAIProvider`).
+
+### `StorageProvider.lire()` (nouvelle méthode d'interface)
+
+Lecture directe des octets (jamais exposée au client, contrairement à `obtenirUrlSignee`) — nécessaire
+pour transmettre les images/PDF à la vision Claude sans repasser par une URL signée HTTP interne.
+Implémentée dans `MockStorageProvider` (lecture disque + déduction du type MIME depuis l'extension) et
+`R2StorageProvider` (`GetObjectCommand`, `ContentType` renvoyé par S3).
+
+### `AIProvider.corrigerCopie()` — signature resserrée
+
+`bareme: unknown` → `bareme: BaremeCorrection` (nouveau type dans `src/lib/ai/types.ts`) : oblige tout
+appelant futur (Passe 2) à choisir explicitement entre les deux sources plutôt que de passer une valeur
+non typée. `MockAIProvider` mis à jour en conséquence (signature seulement, comportement inchangé).
+
+### `src/lib/ai/index.ts`
+
+`AI_MODE=live` instancie désormais `ClaudeAIProvider` au lieu de lever une erreur "pas encore
+implémenté".
+
+### Constat en cours de route : R2 et NotchPay déjà configurés en local
+
+En testant `corrigerCopie()`, l'upload de test a été journalisé `[STORAGE R2]` et non `[STORAGE MOCK]` —
+`STORAGE_MODE=r2` avec des identifiants R2 réels est maintenant configuré dans le `.env` local (alors
+que les entrées précédentes de ce journal indiquaient les clés R2 « pas encore obtenues »). Confirmé
+fonctionnel par un aller-retour upload/lecture/suppression réel pendant le test. Simple constat, aucune
+action requise ici — pertinent pour la Passe 2 (les copies photographiées iront réellement sur R2).
+
+### Vérifié réellement (pas seulement `tsc`), coût réel affiché
+
+- `tsc --noEmit` et `eslint` sur tous les fichiers touchés : **0 erreur**.
+- **`chat()` réel (appel direct à la classe, hors route)** : question sur les dérivées, réponse Haiku
+  cohérente et pédagogique, 161 tokens in / 96 out, coût réel ≈ **$0.000641**.
+- **`genererQuiz()` réel** : 2 lacunes de test → 2 questions à choix multiples bien formées (4 choix
+  chacune, bonne réponse cohérente, `lacuneId` correctement reporté) — coût marginal (non mesuré
+  individuellement, l'interface `AIProvider.genererQuiz` ne renvoie pas de tokens).
+- **`corrigerCopie()` — vérification format de requête + authentification, sans dépenser de tokens de
+  vision** (le vrai test avec une vraie copie est réservé à la Passe 2, décision actée avec
+  l'utilisateur) : image de test uploadée sur le vrai stockage R2, appel réel avec une clé API invalide
+  → rejeté par l'API Anthropic réelle en `AuthenticationError` (`401`, "API key is invalid"), confirmant
+  que la construction de la requête (lecture storage, encodage base64, structure des blocs image, appel
+  réseau) est correcte jusqu'à l'authentification — fichier de test nettoyé du bucket après coup.
+- **Bascule `AI_MODE=live` et test de bout en bout via la vraie route de chat** (après avoir découvert
+  qu'un simple `docker compose restart` ne relit PAS le `.env` modifié — seul `--force-recreate`
+  applique la nouvelle valeur, contrairement à `restart` qui réutilise l'environnement figé à la
+  création du conteneur ; corrigé en recréant `app`/`worker`) : élève de test créé par la vraie route
+  d'inscription publique, connecté via le vrai flux NextAuth `callback/eleve`, conversation + message
+  créés via les vraies routes API. Réponse Haiku réelle reçue (plus la réponse `[MOCK]` de
+  l'itération précédente) — Claude a correctement identifié que le théorème de Pythagore n'est pas au
+  programme officiel de Terminale transmis en contexte, signe que l'injection du programme fonctionne.
+  **Ligne `UsageIA` réelle confirmée en base** : `{typeUsage: "CHAT", modele: "HAIKU", tokensInput: 1674,
+  tokensOutput: 253, coutEstime: "0.002939"}` — tokens et coût réels, pas simulés.
+
+**Coût réel total consommé pendant les tests de cette passe : environ $0.0036** (chat direct + chat via
+la vraie route ; `genererQuiz` et le test d'authentification de `corrigerCopie` n'ont rien facturé côté
+vision).
+
+### Nettoyage
+
+Élève de test, conversation, messages et ligne `UsageIA` supprimés après chaque test (via les vraies
+routes API quand possible). Fichier de test uploadé sur R2 supprimé. Scripts de test ad hoc
+(`scratch-test-*.ts`, racine, jamais suivis par git) supprimés après usage.
+
+### Suite
+
+Passe 2 (pipeline de correction complet) peut commencer : écran upload, job worker asynchrone,
+`CorrectionDetail`/`Lacune`, test réel avec une vraie copie (premier vrai appel Sonnet vision facturé).

@@ -24,6 +24,10 @@ const EXTENSION_PAR_TYPE: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const TYPE_PAR_EXTENSION: Record<string, string> = Object.fromEntries(
+  Object.entries(EXTENSION_PAR_TYPE).map(([type, ext]) => [ext, type])
+);
+
 function extensionDepuis(fichier: FichierAUploader): string {
   const parType = EXTENSION_PAR_TYPE[fichier.contentType];
   if (parType) return parType;
@@ -64,6 +68,17 @@ export class MockStorageProvider implements StorageProvider {
 
   async supprimer(key: string): Promise<void> {
     await rm(cheminDisque(key), { force: true });
+  }
+
+  async lire(key: string): Promise<{ contenu: Buffer; contentType: string }> {
+    let contenu: Buffer;
+    try {
+      contenu = await readFile(cheminDisque(key));
+    } catch (cause) {
+      throw new StorageError(`Fichier introuvable (${key}) : ${(cause as Error).message}`);
+    }
+    const extension = path.extname(key).replace(/^\./, "").toLowerCase();
+    return { contenu, contentType: TYPE_PAR_EXTENSION[extension] ?? "application/octet-stream" };
   }
 }
 

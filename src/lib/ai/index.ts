@@ -1,14 +1,16 @@
 import type { AIProvider } from "./provider";
 import { MockAIProvider } from "./mock-provider";
+import { ClaudeAIProvider } from "./claude-provider";
 
 export type { AIProvider } from "./provider";
 export * from "./types";
+export { MODELE_HAIKU, MODELE_SONNET } from "./claude-provider";
 
 /**
- * Sélection au démarrage via AI_MODE = mock | live (§6.2). ClaudeAIProvider
- * (Haiku + Sonnet réels) arrive en Phase 3, dès obtention de la clé API
- * Anthropic (§6.5) — uniquement un changement de config + une nouvelle classe,
- * aucune réécriture du code appelant grâce à cette interface.
+ * Sélection au démarrage via AI_MODE = mock | live (§6.2). `live` utilise
+ * `ClaudeAIProvider` (Haiku + Sonnet réels, cf. `claude-provider.ts`) — clé
+ * `ANTHROPIC_API_KEY` requise. Uniquement un changement de config, aucune
+ * réécriture du code appelant grâce à cette interface.
  */
 let cachedProvider: AIProvider | undefined;
 
@@ -23,10 +25,8 @@ export function getAIProvider(): AIProvider {
       cachedProvider = new MockAIProvider();
       return cachedProvider;
     case "live":
-      throw new Error(
-        "ClaudeAIProvider n'est pas encore implémenté (Phase 3, cf. cahier des charges §6.5) — " +
-          "clé API Anthropic requise. Utilisez AI_MODE=mock en attendant."
-      );
+      cachedProvider = new ClaudeAIProvider();
+      return cachedProvider;
     default:
       throw new Error(`AI_MODE invalide : "${mode}" (attendu : mock | live)`);
   }

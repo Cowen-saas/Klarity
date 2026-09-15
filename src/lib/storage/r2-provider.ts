@@ -112,4 +112,14 @@ export class R2StorageProvider implements StorageProvider {
       throw new StorageError(`Échec de suppression R2 (${key}) : ${(cause as Error).message}`);
     }
   }
+
+  async lire(key: string): Promise<{ contenu: Buffer; contentType: string }> {
+    try {
+      const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const contenu = Buffer.from(await res.Body!.transformToByteArray());
+      return { contenu, contentType: res.ContentType ?? "application/octet-stream" };
+    } catch (cause) {
+      throw new StorageError(`Échec de lecture R2 (${key}) : ${(cause as Error).message}`);
+    }
+  }
 }

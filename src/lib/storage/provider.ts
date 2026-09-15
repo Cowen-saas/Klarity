@@ -23,4 +23,11 @@ export interface StorageProvider {
 
   /** Supprime le fichier d'une clé (idempotent : ne lève pas si déjà absent). */
   supprimer(key: string): Promise<void>;
+
+  /**
+   * Lecture directe des octets, pour un usage **serveur interne uniquement**
+   * (ex. transmission à la vision IA, §6.2) — jamais exposée au client, qui
+   * doit toujours passer par `obtenirUrlSignee`.
+   */
+  lire(key: string): Promise<{ contenu: Buffer; contentType: string }>;
 }

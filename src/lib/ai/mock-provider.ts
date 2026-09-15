@@ -1,6 +1,7 @@
 import type { AIProvider } from "./provider";
 import {
   AIRateLimitError,
+  type BaremeCorrection,
   type ChatMessage,
   type Correction,
   type ContexteEpreuve,
@@ -59,7 +60,7 @@ export class MockAIProvider implements AIProvider {
   async corrigerCopie(
     imageKeys: string[],
     epreuveRef: EpreuveRef,
-    _bareme: unknown,
+    _bareme: BaremeCorrection,
     exemplesFewShot?: ExempleFewShot[]
   ): Promise<Correction> {
     this.maybeSimulateRateLimit();

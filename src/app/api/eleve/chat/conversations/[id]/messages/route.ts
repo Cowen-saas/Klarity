@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Filiere, NiveauClasse } from "@prisma/client";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { getAIProvider, AIRateLimitError, type ChatMessage } from "@/lib/ai";
+import { getAIProvider, AIRateLimitError, MODELE_HAIKU, type ChatMessage } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
 
 /**
@@ -121,7 +121,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       conversationId: id,
       role: "ASSISTANT",
       contenu: reponse.contenu,
-      modeleIA: "claude-haiku-4-5",
+      modeleIA: MODELE_HAIKU,
       tokensInput: reponse.tokensInput,
       tokensOutput: reponse.tokensOutput,
     },
