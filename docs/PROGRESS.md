@@ -4137,6 +4137,12 @@ CLAUDE.md/v1.12. `Lacune.resolu` passe à `true` dès que ce ratio atteint 70% �
 cohérent avec le seuil "bonne maîtrise" déjà utilisé dans l'écran "Mes lacunes" (Passe 3), **pas une
 valeur du CDC** : à ajuster si l'utilisateur a un seuil différent en tête.
 
+**Confirmé par l'utilisateur après coup** : « 70% est un bon seuil de départ, cohérent avec le CDC
+(§2.2.2 : valeurs de départ non figées, à ajuster après usage réel). » Le §2.2.2 du CDC (alertes
+intelligentes côté parent) fixe déjà ce principe de seuils de départ révisables une fois des données
+réelles disponibles — le seuil de résolution des lacunes suit donc la même logique explicitement
+validée, plutôt qu'une simple hypothèse technique laissée en suspens.
+
 ### Sécurité des réponses de quiz
 
 `bonneReponse` et `explication` ne sont jamais envoyées au client pour une question pas encore
