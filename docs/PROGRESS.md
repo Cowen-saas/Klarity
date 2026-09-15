@@ -4104,3 +4104,105 @@ supplémentaire pour cet écran.
 
 Passe 4 — Quiz quotidien (maquette 10) + job BullMQ. Débloquera le bouton "Commencer le quiz associé"
 laissé désactivé dans cette passe.
+
+## 56. Passe 4 — Quiz journalier + quiz ciblé, job BullMQ (15 septembre 2026)
+
+Quatrième passe du chantier IA réelle (§52-§55). Fidèle à la maquette 10 (une question à la fois,
+progression, feedback immédiat, écran de résultat avec carrés colorés). Deux origines couvertes
+(`Quiz.origine`, v1.11) : **journalier** (automatique, cron quotidien + génération à la demande) et
+**ciblé** (déclenché depuis "Mes lacunes" sur une notion précise — débloque le bouton laissé désactivé
+en Passe 3).
+
+### `QuestionGeneree.explication` — nouveau champ, migration nécessaire
+
+La maquette affiche une explication pédagogique après chaque réponse ("✓ Bonne réponse ! Il y a 4 rois
+sur 32 cartes..."). Ni l'interface `AIProvider` ni `QuizQuestion` ne portaient ce champ — ajouté aux
+deux : `QuestionGeneree.explication?` (types.ts, généré par Claude via l'outil `soumettre_quiz`,
+désormais requis dans son schéma), `QuizQuestion.explication String? @db.Text` (migration
+`20260915124754_add_explication_quiz_question`). `QuizGenere` gagne aussi `tokensInput`/`tokensOutput`
+(comme `Correction`/`ReponseIA`) pour une vraie traçabilité `UsageIA` sur ce type d'usage aussi.
+
+### Sélection de la matière ciblée par le quiz journalier
+
+`genererQuiz()` est scopé à une seule matière (§6.1) ; un élève peut avoir des lacunes actives dans
+plusieurs matières. Le job journalier choisit la matière avec le plus de lacunes actives (égalité
+tranchée par le niveau de maîtrise moyen le plus bas) plutôt que de générer un quiz par matière chaque
+jour — un seul quiz "du jour", conforme au singulier de la maquette et du nom de la fonctionnalité.
+
+### `Lacune.niveauMaitrise` — recalcul déterministe confirmé, seuil de résolution assumé
+
+Recalculé à chaque réponse comme un ratio réponses correctes/total **sur toutes les questions jamais
+répondues pour cette lacune** (pas seulement le quiz en cours) — aucun appel IA, conforme à la règle
+CLAUDE.md/v1.12. `Lacune.resolu` passe à `true` dès que ce ratio atteint 70% — seuil choisi pour rester
+cohérent avec le seuil "bonne maîtrise" déjà utilisé dans l'écran "Mes lacunes" (Passe 3), **pas une
+valeur du CDC** : à ajuster si l'utilisateur a un seuil différent en tête.
+
+### Sécurité des réponses de quiz
+
+`bonneReponse` et `explication` ne sont jamais envoyées au client pour une question pas encore
+répondue (aussi bien dans la route API que dans le composant serveur de la page) — sinon l'élève
+pourrait les lire dans le HTML/JSON avant de répondre. Révélées uniquement une fois `reponseEleve`
+non nul.
+
+### Code changé
+
+- `prisma/schema.prisma` + migration — `QuizQuestion.explication`.
+- `src/lib/ai/types.ts`, `claude-provider.ts`, `mock-provider.ts` — `explication` + tokens sur
+  `QuizGenere`.
+- `src/lib/queue/quiz.ts`, `src/lib/quiz/generer-quiz.ts` (nouveaux) — files BullMQ (cron quotidien
+  05:00 tous élèves + file à la demande par élève, journalier ou ciblé) et logique de génération.
+- `src/worker/index.ts` — 2 workers quiz câblés + scheduler cron enregistré.
+- `src/app/api/eleve/quiz/aujourdhui/route.ts`, `cible/route.ts`, `[id]/route.ts`,
+  `[id]/repondre/route.ts` (nouveaux) — IDOR vérifié partout (lacune/quiz filtrés par `eleveId`).
+- `src/app/eleve/quiz/page.tsx` (hub, redirige si un quiz du jour existe déjà),
+  `src/app/eleve/quiz/[id]/page.tsx` (écran générique de prise de quiz).
+- `src/components/eleve/QuizAujourdhui.tsx`, `QuizPlayer.tsx` (nouveaux).
+- `src/components/eleve/EleveShell.tsx` — nav "Quiz" activée.
+- `src/components/eleve/MesLacunes.tsx` — bouton "Commencer le quiz associé" branché pour de vrai
+  (enqueue + sondage + redirection), remplace le placeholder désactivé de la Passe 3.
+
+### Incident (même cause qu'en Passe 2, corrigé plus vite cette fois)
+
+Le job journalier a d'abord échoué (`Unknown argument 'explication'`) : le conteneur `worker` a son
+propre `node_modules`, donc son propre `@prisma/client` généré — pas régénéré automatiquement quand
+`prisma migrate dev` tourne côté `app`. Corrigé par `npx prisma generate` dans le conteneur `worker` +
+redémarrage. **À surveiller pour toutes les passes futures qui touchent au schéma** : régénérer le
+client Prisma des deux côtés (`app` et `worker`), pas seulement celui qui a lancé la migration.
+
+### Vérifié réellement — vrais appels Haiku, vraies réponses, scoring déterministe confirmé
+
+Élève de test réel, 3 vraies lacunes créées, quiz journalier généré à la demande (2 vraies questions
+Haiku, une par lacune, énoncés/choix/explications cohérents et corrects mathématiquement) :
+
+- Réponse **correcte** à la question 1 (Thalès) → `niveauMaitrise` recalculé à **100**, `resolu` passé
+  à **true** — confirmé déterministe (1/1 réponse correcte).
+- Réponse **incorrecte** à la question 2 (suites arithmétiques) → `niveauMaitrise` à **0**, `resolu`
+  resté `false`.
+- `Quiz.statut` passé à `TERMINE`, `score=1` dès que toutes les questions ont une réponse.
+- `UsageIA` réelle : `{modele: HAIKU, tokensInput: 1235, tokensOutput: 533, coutEstime: 0.0039}`.
+- Écran réel `/eleve/quiz/[id]` vérifié : HTTP 200.
+- **Quiz ciblé** testé séparément sur une 3ème lacune : généré avec `origine=CIBLE` et
+  `lacuneCibleId` corrects.
+- `tsc --noEmit` (0 erreur) et `eslint` sur tout `src/` (0 erreur, 2 warnings pré-existants sans
+  rapport).
+- Note qualité (pas un bug) : l'explication générée pour la question de Thalès s'auto-corrige en
+  cours de texte ("AD = 6cm... en relisant l'énoncé... AD = 9cm") — Haiku a hésité dans son propre
+  raisonnement affiché, sans conséquence sur le mécanisme (bonne réponse, scoring, `niveauMaitrise`
+  tous corrects) ; à surveiller si ça se reproduit souvent, mais hors scope d'un ajustement de prompt
+  dans cette passe.
+
+### Nettoyage
+
+Toutes les données de test réelles (élève, lacunes, quiz, questions, `UsageIA`) supprimées après
+vérification. Scripts ad hoc supprimés.
+
+### Incident infrastructure (sans rapport avec le code) pendant cette passe
+
+Docker Desktop a renvoyé une 500 sur tout listing de conteneurs (`docker ps`, `docker compose ps`)
+pendant une bonne partie de la vérification — bloqué jusqu'à ce que l'utilisateur redémarre Docker
+Desktop lui-même. Après redémarrage, aucun conteneur ne tournait (`docker compose up -d` relancé) —
+comportement normal, pas une régression.
+
+### Suite
+
+Passe 5 — Chat mode 2 (contextualisé à une épreuve).

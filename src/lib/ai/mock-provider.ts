@@ -47,14 +47,15 @@ export class MockAIProvider implements AIProvider {
   async genererQuiz(lacunes: LacunePourQuiz[], matiere: string): Promise<QuizGenere> {
     this.maybeSimulateRateLimit();
     const cibles = lacunes.length > 0 ? lacunes : [{ id: "mock", notion: matiere, niveauMaitrise: 0 }];
-    return {
-      questions: cibles.map((lacune, index) => ({
-        enonce: `[MOCK] Question ${index + 1} sur la notion "${lacune.notion}" (${matiere}).`,
-        choix: ["Proposition A", "Proposition B", "Proposition C", "Proposition D"],
-        bonneReponse: "Proposition A",
-        lacuneId: lacune.id,
-      })),
-    };
+    const questions = cibles.map((lacune, index) => ({
+      enonce: `[MOCK] Question ${index + 1} sur la notion "${lacune.notion}" (${matiere}).`,
+      choix: ["Proposition A", "Proposition B", "Proposition C", "Proposition D"],
+      bonneReponse: "Proposition A",
+      explication: `[MOCK] Explication simulée pour la notion "${lacune.notion}".`,
+      lacuneId: lacune.id,
+    }));
+    const texte = questions.map((q) => q.enonce).join(" ");
+    return { questions, tokensInput: estimerTokens(texte), tokensOutput: estimerTokens(texte) };
   }
 
   async corrigerCopie(

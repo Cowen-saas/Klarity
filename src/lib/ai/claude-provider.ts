@@ -106,9 +106,10 @@ const QUIZ_TOOL: Tool = {
             enonce: { type: "string" },
             choix: { type: "array", items: { type: "string" }, minItems: 4, maxItems: 4 },
             bonneReponse: { type: "string", description: "Doit être exactement l'une des 4 valeurs de choix." },
+            explication: { type: "string", description: "Courte explication pédagogique affichée à l'élève après sa réponse." },
             lacuneId: { type: "string", description: "id de la lacune ciblée par cette question, si applicable." },
           },
-          required: ["enonce", "choix", "bonneReponse"],
+          required: ["enonce", "choix", "bonneReponse", "explication"],
         },
       },
     },
@@ -169,8 +170,9 @@ export class ClaudeAIProvider implements AIProvider {
       "maîtrise actuel sur 100, plus le niveau est bas plus la question doit retravailler les bases) :\n\n" +
       JSON.stringify(cibles) +
       "\n\nUne question par lacune listée, chacune avec exactement 4 choix plausibles et une seule bonne " +
-      "réponse (reprise mot pour mot dans `choix`). Renseigne `lacuneId` avec l'id de la lacune ciblée. " +
-      "Soumets le résultat via l'outil soumettre_quiz.";
+      "réponse (reprise mot pour mot dans `choix`). Renseigne `lacuneId` avec l'id de la lacune ciblée et " +
+      "`explication` avec une courte explication pédagogique (2-3 phrases) à afficher à l'élève après sa " +
+      "réponse, qu'elle soit correcte ou non. Soumets le résultat via l'outil soumettre_quiz.";
 
     const res = await appelerAvecGestionErreurs(() =>
       client().messages.create({
@@ -182,8 +184,8 @@ export class ClaudeAIProvider implements AIProvider {
         tool_choice: { type: "tool", name: "soumettre_quiz" },
       })
     );
-    const input = toolUseDe(res.content, "soumettre_quiz").input as QuizGenere;
-    return input;
+    const input = toolUseDe(res.content, "soumettre_quiz").input as Omit<QuizGenere, "tokensInput" | "tokensOutput">;
+    return { ...input, tokensInput: res.usage.input_tokens, tokensOutput: res.usage.output_tokens };
   }
 
   async corrigerCopie(

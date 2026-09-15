@@ -41,11 +41,15 @@ export interface QuestionGeneree {
   enonce: string;
   choix: string[];
   bonneReponse: string;
+  /** Affichée après réponse (maquette 10) — pédagogique, jamais utilisée pour le scoring (déterministe, §4.3). */
+  explication?: string;
   lacuneId?: string;
 }
 
 export interface QuizGenere {
   questions: QuestionGeneree[];
+  tokensInput: number;
+  tokensOutput: number;
 }
 
 export interface EpreuveRef {

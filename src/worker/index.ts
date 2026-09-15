@@ -3,12 +3,18 @@ import { createRedisConnection } from "@/lib/redis";
 import { QUEUE_PAIEMENT_MOCK, type PaiementMockJobData } from "@/lib/queue/paiement";
 import { QUEUE_RETENTION, enregistrerSchedulersRetention, type JobRetention } from "@/lib/queue/retention";
 import { QUEUE_CORRECTION, type CorrectionJobData } from "@/lib/queue/correction";
+import { QUEUE_QUIZ, getQuizEleveQueue, enregistrerSchedulerQuiz, type QuizEleveJobData } from "@/lib/queue/quiz";
 import { traiterWebhookPaiement } from "@/lib/payment/webhook-handler";
 import { signerWebhookMock } from "@/lib/payment/mock-provider";
 import { detecterInactivite } from "@/lib/retention/detection-inactivite";
 import { anonymiserComptesExpires } from "@/lib/retention/anonymisation-auto";
 import { archiverPhotosAncienneAnnee } from "@/lib/retention/archivage-photos";
 import { traiterTentative } from "@/lib/correction/traiter-tentative";
+import {
+  genererQuizJournalierPourEleve,
+  genererQuizJournalierPourTousLesEleves,
+  genererQuizCiblePourEleve,
+} from "@/lib/quiz/generer-quiz";
 
 /**
  * Entrypoint for the `worker` Compose service (§3, §3.1, §8.1) — runs in a process
@@ -20,9 +26,10 @@ import { traiterTentative } from "@/lib/correction/traiter-tentative";
  *    automatique, archivage annuel des photos de copies.
  *  - `correction` (§2.1, §4.3, §6.2, §6.4) — traitement asynchrone d'une
  *    tentative de copie (appel Sonnet vision), jamais inline dans une route.
+ *  - `quiz` (cron quotidien, tous les élèves) et `quiz-eleve` (à la demande,
+ *    journalier ou ciblé) (§2.1, §4.3, §6.1) — génération Haiku, jamais inline.
  *
- * Les files quiz/notifications restent à câbler aux côtés des fonctionnalités
- * qui les alimentent.
+ * La file notifications reste à câbler aux côtés de la fonctionnalité qui l'alimente.
  */
 async function main() {
   const connection = createRedisConnection();
@@ -113,12 +120,49 @@ async function main() {
     console.error(`[worker] échec correction tentative ${job?.data.tentativeId}`, err);
   });
 
+  // --- Quiz journalier (§2.1, §4.3, §6.1) — cron quotidien (tous les élèves) ---
+  const quizCronWorker = new Worker(
+    QUEUE_QUIZ,
+    async () => {
+      const r = await genererQuizJournalierPourTousLesEleves();
+      console.log(`[worker] quiz journalier (cron) : ${r.generes} généré(s), ${r.ignores} ignoré(s), ${r.erreurs} erreur(s)`);
+    },
+    { connection: createRedisConnection() }
+  );
+  quizCronWorker.on("failed", (job, err) => {
+    console.error(`[worker] échec cron quiz journalier ${job?.name}`, err);
+  });
+
+  // --- Quiz à la demande (un seul élève — bouton "Générer mon quiz du jour" ou quiz ciblé) ---
+  const quizEleveWorker = new Worker<QuizEleveJobData>(
+    getQuizEleveQueue().name,
+    async (job) => {
+      const id = job.data.lacuneId
+        ? await genererQuizCiblePourEleve(job.data.eleveId, job.data.lacuneId)
+        : await genererQuizJournalierPourEleve(job.data.eleveId);
+      console.log(`[worker] quiz à la demande élève ${job.data.eleveId} -> ${id ?? "aucun (lacune introuvable/déjà résolue)"}`);
+    },
+    { connection: createRedisConnection() }
+  );
+  quizEleveWorker.on("failed", (job, err) => {
+    console.error(`[worker] échec quiz à la demande ${job?.data.eleveId}`, err);
+  });
+
   await enregistrerSchedulersRetention();
   console.log("[worker] schedulers rétention enregistrés (detection + anonymisation hebdo, archivage annuel)");
 
+  await enregistrerSchedulerQuiz();
+  console.log("[worker] scheduler quiz journalier enregistré (quotidien 05:00)");
+
   const shutdown = async () => {
     console.log("[worker] shutting down");
-    await Promise.allSettled([paiementMockWorker?.close(), retentionWorker.close(), correctionWorker.close()]);
+    await Promise.allSettled([
+      paiementMockWorker?.close(),
+      retentionWorker.close(),
+      correctionWorker.close(),
+      quizCronWorker.close(),
+      quizEleveWorker.close(),
+    ]);
     await connection.quit();
     process.exit(0);
   };

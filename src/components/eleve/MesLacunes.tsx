@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconWarning, IconPencil } from "@/components/icons";
+
+const INTERVALLE_SONDAGE_MS = 2000;
 
 interface LacuneVue {
   id: string;
@@ -45,8 +49,47 @@ function IndicateurStatut({ statut }: { statut: Statut }) {
  * plus faible, comme dans la maquette).
  */
 export function MesLacunes({ lacunes }: { lacunes: LacuneVue[] }) {
+  const router = useRouter();
   const [selectionId, setSelectionId] = useState<string | null>(lacunes[0]?.id ?? null);
   const selection = lacunes.find((l) => l.id === selectionId) ?? null;
+  const [generationEnCours, setGenerationEnCours] = useState<string | null>(null); // lacuneId en cours de génération
+  const [erreurQuiz, setErreurQuiz] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!generationEnCours) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/eleve/quiz/cible?lacuneId=${generationEnCours}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.quiz) {
+          router.push(`/eleve/quiz/${data.quiz.id}`);
+        }
+      } catch {
+        // silencieux — la prochaine itération réessaiera
+      }
+    }, INTERVALLE_SONDAGE_MS);
+    return () => clearInterval(interval);
+  }, [generationEnCours, router]);
+
+  async function commencerQuizCible(lacuneId: string) {
+    setErreurQuiz(null);
+    try {
+      const res = await apiFetch("/api/eleve/quiz/cible", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lacuneId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErreurQuiz(data.error ?? "Génération impossible.");
+        return;
+      }
+      setGenerationEnCours(lacuneId);
+    } catch {
+      setErreurQuiz("Impossible de contacter le serveur.");
+    }
+  }
 
   const parMatiere = useMemo(() => {
     const groupes = new Map<string, LacuneVue[]>();
@@ -116,20 +159,27 @@ export function MesLacunes({ lacunes }: { lacunes: LacuneVue[] }) {
               </p>
               {selection.explication && <p className="mt-3 text-sm text-texte-muted">{selection.explication}</p>}
 
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm text-texte-muted">
-                  <IconPencil className="h-4 w-4" aria-hidden="true" />
-                  Exercices ciblés — bientôt disponible
-                </div>
-              </div>
+              {erreurQuiz && (
+                <p role="alert" className="mt-3 flex items-center gap-1.5 text-sm text-danger">
+                  <IconWarning className="h-4 w-4" weight="fill" aria-hidden="true" />
+                  {erreurQuiz}
+                </p>
+              )}
 
               <button
                 type="button"
-                disabled
-                title="Le quiz ciblé par lacune arrive prochainement"
-                className="mt-4 w-full cursor-not-allowed rounded-xl bg-primary/40 py-3 text-sm font-bold text-white"
+                onClick={() => commencerQuizCible(selection.id)}
+                disabled={generationEnCours !== null}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
               >
-                Commencer le quiz associé — bientôt disponible
+                {generationEnCours === selection.id ? (
+                  "Préparation du quiz…"
+                ) : (
+                  <>
+                    <IconPencil className="h-4 w-4" aria-hidden="true" />
+                    Commencer le quiz associé
+                  </>
+                )}
               </button>
             </div>
           )}

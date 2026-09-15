@@ -570,6 +570,7 @@ model QuizQuestion {
   enonce       String   @db.Text
   choixJson    Json
   bonneReponse String
+  explication  String?  @db.Text // pédagogique, affichée après réponse (maquette 10) — générée par l'IA avec la question
   reponseEleve String?
   correcte     Boolean?
 
