@@ -4380,3 +4380,139 @@ quiz, OTP) supprimées après vérification. Script ad hoc supprimé.
 
 Passe 7 (dernière) — audit final IDOR sur toutes les routes créées dans ce chantier, vérification
 `UsageIA` de bout en bout, bascule finale.
+
+## 59. Passe 7 — Audit IDOR final et vérification UsageIA de bout en bout (15 septembre 2026)
+
+Septième et dernière passe du chantier IA réelle (§52-§58). Audit uniquement — aucun changement de code,
+tout ce qui a été vérifié était déjà correct.
+
+### Audit IDOR — deux patterns légitimes coexistants, les deux vérifiés en conditions réelles
+
+Relecture de toutes les routes créées Passes 2-6 (`tentatives`, `tentatives/latest`, `corrections/[id]/
+signaler`, `quiz/aujourdhui`, `quiz/cible`, `quiz/[id]`, `quiz/[id]/repondre`, `chat/conversations`
+(étendue), `chat/conversations/[id]/messages` (étendue), `parent/rapport-mensuel`) : deux façons
+équivalentes de se protéger contre l'IDOR coexistent dans le code, toutes deux légitimes —
+
+1. **Requête pré-filtrée par propriétaire** (`WHERE id = ... AND eleveId = session.user.id`) — la
+   ressource d'un autre utilisateur n'est **jamais chargée**, donc ne peut jamais fuiter même en cas de
+   bug ailleurs dans le handler. Utilisé par `tentatives/latest`, `quiz/[id]`, `quiz/[id]/repondre`,
+   `quiz/cible`, `chat/conversations` (création). Pas de ligne `AuditLogSecurite` générée dans ce cas :
+   impossible de distinguer "id inexistant" de "id d'un autre élève" sans une requête supplémentaire,
+   et ce n'est pas nécessaire pour la protection elle-même.
+2. **Chargement puis comparaison explicite** (fetch par id seul, puis compare `eleveId`) — légèrement
+   moins strict par construction, mais permet de **journaliser** une tentative réelle d'accès à la
+   ressource d'un tiers (`AuditLogSecurite.typeEvenement = IDOR_BLOCKED`, visible sur
+   `/admin/securite`). Pattern déjà établi avant ce chantier (`chat/conversations/[id]/messages`),
+   repris pour `corrections/[id]/signaler`.
+
+**Vérifié réellement, pas seulement relu** : deux élèves de test réels (A, B), A propriétaire de vraies
+ressources (tentative, correction, quiz+question, conversation mode 2), B tentant d'y accéder :
+
+- `GET tentatives/latest` sur l'épreuve de A par B → **`tentative: null`**, jamais celle de A.
+- `POST corrections/[id]/signaler` sur la correction de A par B → **404**.
+- `GET quiz/[id]` sur le quiz de A par B → **404**.
+- `POST quiz/[id]/repondre` sur la question de A par B → **404**, confirmé en base que la question de A
+  n'a **pas** été altérée (`reponseEleve` toujours `null`).
+- `POST chat/conversations` avec l'épreuve de A par B (B sans sa propre correction) → **404**, jamais la
+  conversation de A.
+- `GET chat/conversations/[id]/messages` sur la conversation de A par B → **404**.
+- Confirmé en base : la correction de A n'a pas été signalée par B (`signalee: false`).
+- **Exactement 2 lignes `AuditLogSecurite` (`IDOR_BLOCKED`)** créées pendant le test — correspondant
+  précisément aux 2 routes utilisant le pattern "chargement puis comparaison" (signalement + messages
+  chat), confirmant que la distinction entre les deux patterns décrite ci-dessus est bien celle observée
+  en pratique, pas une supposition.
+- IDOR côté parent déjà vérifié en Passe 6 (`?eleve=` non lié retombe sur l'enfant réellement lié) — non
+  reproduit ici, déjà confirmé avec des données réelles.
+
+### UsageIA — vérifié de bout en bout, dashboard admin inclus
+
+Relu le code de `/admin/usage-ia` (`src/app/admin/(protected)/usage-ia/page.tsx`) : les agrégations
+(`groupBy` par modèle et par type d'usage, coût par élève, journal paginé) sont entièrement génériques —
+aucune logique spécifique à un modèle ou un type qui pourrait mal traiter les lignes `SONNET`/
+`CORRECTION` différemment des lignes `HAIKU`/`CHAT` déjà vérifiées dans les passes précédentes.
+
+Test réel final (appels à coût minimal, pas de nouvel appel Sonnet vision — celui-ci déjà vérifié en
+Passe 2 avec des données réelles à $0.021939, non reproduit ici pour ne pas dépenser deux fois) : 1 vrai
+message de chat + 1 vrai quiz journalier générés pour un élève de test, puis **`/admin/usage-ia` chargé
+avec une vraie session admin** — HTTP 200, les deux nouvelles lignes réelles apparaissent immédiatement
+dans le journal (type, modèle, code élève, tokens, coût tous corrects), confirmant que le tableau de
+bord reflète bien des données fraîches, pas seulement que les lignes existent en base.
+
+### Nettoyage
+
+Toutes les données de test réelles (élèves ×3, admin de test, épreuve, corrections, tentatives, quiz,
+questions, lacune, conversation, messages, `AuditLogSecurite`, `UsageIA`) supprimées après vérification.
+Scripts ad hoc supprimés. Aucun fichier de code modifié dans cette passe.
+
+## 60. Récapitulatif complet — Chantier « IA réelle » (Passes 1 à 7) (15 septembre 2026)
+
+Déclenché par l'obtention d'une vraie clé `ANTHROPIC_API_KEY`. Objectif : débloquer tout ce qui
+dépendait jusque-là d'un `AIProvider` simulé. Découpé en 7 passes indépendantes à la demande de
+l'utilisateur (§52), chacune testée avec de vrais appels IA et commitée séparément.
+
+### Ce qui a été construit, passe par passe
+
+1. **`ClaudeAIProvider` réel** (§53, commit `05a276c`) — `chat()`/`genererQuiz()` (Haiku),
+   `corrigerCopie()` (Sonnet + vision), sortie structurée forcée par tool use, garde-fou anti-injection
+   sur le contenu photographié. `AI_MODE=live` basculé une fois les 3 méthodes vérifiées.
+2. **Pipeline de correction complet** (§54, commit `8f56fe9`) — upload multi-pages (maquette 07), job
+   BullMQ asynchrone, écran de résultat (maquette 08, adapté au modèle de données réel — voir écarts
+   ci-dessous), signalement. `Epreuve.typeExercice` ajouté juste avant (migration, décision explicite de
+   l'utilisateur : champ saisi par l'admin, jamais déduit par l'IA).
+3. **Écran « Mes lacunes »** (§55, commit `ec9b653`) — grille par matière, alimentée par de vraies
+   `Lacune`, texte explicatif réutilisé depuis la correction (zéro appel IA supplémentaire).
+4. **Quiz journalier + quiz ciblé** (§56, commit `92cbea3`) — job BullMQ cron quotidien + génération à
+   la demande, `Lacune.niveauMaitrise` recalculé de façon déterministe (jamais un appel IA), seuil de
+   résolution 70% confirmé par l'utilisateur (cohérent avec le CDC §2.2.2 sur les valeurs de départ
+   ajustables après usage réel).
+5. **Chat mode 2** (§57, commit `0d7e7f5`) — contextualisé à une épreuve corrigée, réutilise le texte de
+   correction déjà produit (gratuit), résumé léger de l'énoncé plutôt que le PDF intégral (coût
+   maîtrisé sur une conversation longue — approche validée par l'utilisateur, cache de prompts Anthropic
+   noté comme piste future si le coût réel le justifie).
+6. **Écrans parent** Progression/Notes/Lacunes + export PDF (§58, commit `9d1babc`) — corrige au passage
+   une lacune pré-existante : les « alertes intelligentes » ne suivaient pas les vraies règles du CDC
+   §2.2.2, remplacées par un moteur unique partagé (`src/lib/parent/alertes.ts`).
+7. **Audit final** (§59, cette entrée) — IDOR et `UsageIA` vérifiés en conditions réelles sur toutes les
+   routes créées, aucun changement de code nécessaire.
+
+### Écarts de fidélité aux maquettes, assumés et documentés au fil de l'eau
+
+- **Maquette 08** (résultat de correction) : découpage question-par-question de la maquette remplacé par
+  2 buckets (Points forts / Points à travailler avec notion+explication), cohérent avec le modèle de
+  données réel (`pointsForts`/`pointsManques`, pas de sous-questions numérotées) — confirmé par
+  l'utilisateur.
+- **Maquette 09** (Mes lacunes) et **maquette 11** (dashboard parent) : carte/recommandation vidéo
+  omise — le pipeline de recommandation vidéo (§2.5, YouTube Data API) n'a jamais été construit et
+  n'était pas dans le périmètre de ce chantier.
+- **Notes** et **Lacunes côté parent** : aucune maquette dédiée, écrans dessinés cohérents avec le reste
+  du dashboard parent déjà construit (demande explicite de l'utilisateur, §52 point 7).
+
+### Coût réel total consommé sur le crédit Anthropic depuis le début de ce chantier
+
+| Passe | Appel(s) réel(s) | Tokens (in/out) | Coût réel |
+|---|---|---|---|
+| 1 | `chat()` direct | 161 / 96 | $0.000641 |
+| 1 | `chat()` via la vraie route | 1674 / 253 | $0.002939 |
+| 2 | `corrigerCopie()` (Sonnet vision, vraie copie de test) | 3823 / 698 | $0.021939 |
+| 4 | `genererQuiz()` journalier | 1235 / 533 | $0.003900 |
+| 4 | `genererQuiz()` ciblé | — | **non capturé avant nettoyage (voir note)** |
+| 5 | `chat()` mode 2 | 2038 / 534 | $0.004708 |
+| 7 | `chat()` (vérification finale) | 1669 / 69 | $0.002014 |
+| 7 | `genererQuiz()` (vérification finale) | 1193 / 302 | $0.002703 |
+
+**Total précisément additionné et vérifiable en base à chaque étape : $0,038844.**
+
+**Note d'honnêteté sur un trou dans le suivi** : en Passe 4, le test du quiz ciblé (partie B) a bien
+déclenché un vrai appel Haiku, mais la ligne `UsageIA` correspondante a été supprimée pendant le
+nettoyage avant que son coût exact ne soit lu et noté — erreur de séquencement dans le script de test,
+pas un appel non facturé. Par comparaison avec les autres appels `genererQuiz()` de cette session (une
+question ciblée contre 2 questions pour les autres, donc grossièrement moitié moins) : coût estimé entre
+$0,0015 et $0,0020, non vérifié avec la même précision que le reste de ce tableau.
+
+**Total réaliste, avec cet appel non précisément tracé : environ $0,040 à $0,041** — l'écart entre le
+total précis et cette estimation est de l'ordre du millième de dollar, négligeable au regard du budget,
+mais signalé explicitement plutôt que masqué (cf. CLAUDE.md : rapporter les échecs/imprécisions, ne
+jamais arrondir une incertitude vers la commodité).
+
+Toutes ces données de test (élèves, admins, épreuves, corrections, lacunes, quiz, conversations) ont
+été supprimées après vérification à chaque passe — aucune trace de test ne subsiste en base.
