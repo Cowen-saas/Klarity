@@ -4057,3 +4057,50 @@ git) supprimés.
 
 Passe 3 (écran "Mes lacunes", maquette 09) — le nav élève a déjà un point d'entrée prévu et désactivé
 (`/eleve/lacunes`, `EleveShell.tsx`) prêt à activer, maintenant que de vraies `Lacune` peuvent exister.
+
+## 55. Passe 3 — Écran "Mes lacunes" (15 septembre 2026)
+
+Troisième passe du chantier IA réelle (§52-§54). Nav élève déjà prévue et désactivée
+(`/eleve/lacunes`, `EleveShell.tsx`) — réactivée maintenant que de vraies `Lacune` peuvent exister
+(Passe 2). Fidèle à la maquette 09 (grille "Mes lacunes par matière", barres colorées par seuil,
+panneau de détail pour la lacune sélectionnée).
+
+### Deux écarts par rapport à la maquette, hors scope de cette passe
+
+- **Recommandation vidéo** (§2.5) : la maquette montre une carte "Vidéo : ...". Le pipeline vidéo
+  (YouTube Data API, `Video`/`LacuneVideoCache`) n'a jamais été construit et n'était pas dans la liste
+  des 10 points de ce chantier — carte omise plutôt que simulée avec une fausse vidéo.
+- **Quiz ciblé** ("Commencer le quiz associé") : dépend de `genererQuiz()` branché sur une vraie UI, pas
+  encore construit (Passe 4, prochaine). Bouton affiché mais désactivé ("bientôt disponible"), pas un
+  lien mort.
+
+### Texte explicatif par lacune — réutilisé, pas régénéré
+
+La maquette montre un texte explicatif par lacune ("Tu confonds souvent..."). `Lacune` elle-même ne
+stocke aucun texte de ce genre — seul `notion` + `niveauMaitrise`. Plutôt qu'un nouvel appel IA pour
+produire ce texte, il est lu depuis `CorrectionDetail.pointsManques[].detail` de la correction qui a
+créé/mis à jour la lacune (via `Lacune.sourceTentativeId`, qui — malgré son nom — pointe vers un id
+`CorrectionDetail`, cf. schema.prisma), en retrouvant l'entrée dont `notion` correspond. Zéro coût IA
+supplémentaire pour cet écran.
+
+### Code changé
+
+- `src/app/eleve/lacunes/page.tsx` (nouveau) — requête `Lacune` filtrée `resolu: false`, triée par
+  `niveauMaitrise` croissant (pire lacune en premier, comme la sélection par défaut de la maquette).
+- `src/components/eleve/MesLacunes.tsx` (nouveau) — grille par matière, seuils de couleur (≥70 vert,
+  40-69 ambre, <40 rouge — déduits des valeurs visibles sur la maquette), panneau de détail cliquable.
+- `src/components/eleve/EleveShell.tsx` — nav "Mes lacunes" activée (`disabled: true` retiré).
+
+### Vérifié réellement
+
+- `tsc --noEmit` et `eslint` : 0 erreur.
+- Élève de test réel, 4 vraies `Lacune` insérées (2 Mathématiques, 1 Physique, 1 marquée `resolu: true`)
+  → page réelle chargée avec une vraie session (`GET /eleve/lacunes` → 200) : les 2 matières apparaissent,
+  la lacune la plus faible (Probabilités, 31%) est bien présente et sélectionnée par défaut, la lacune
+  `resolu: true` n'apparaît **pas** (filtrage confirmé), la lacune à bonne maîtrise (Mécanique, 74%)
+  apparaît bien dans sa carte. Nettoyage effectué après vérification.
+
+### Suite
+
+Passe 4 — Quiz quotidien (maquette 10) + job BullMQ. Débloquera le bouton "Commencer le quiz associé"
+laissé désactivé dans cette passe.
