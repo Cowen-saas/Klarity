@@ -4736,3 +4736,60 @@ ne correspond pas au vrai corrigé de référence de l'épreuve empruntée, donc
 vrai élève) supprimés également — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne,
 les 6 comptes élève réels préexistants intacts). Script ad hoc (`scratch-test-cache-hit.ts`, jamais
 commité) et serveur HTTP local de test supprimés.
+
+## 64. Pipeline vidéo automatisé (§2.5) — Passe 2 : composant `VideoCard` + écran "Mes lacunes" (16 septembre 2026)
+
+Suite de la Passe 1 (§63). Aucune maquette précise pour l'affichage vidéo lui-même (la 09 ne montre qu'une
+petite puce texte "🎥 Vidéo : ...") — skill `ui-ux-pro-max` consultée pour concevoir un vrai composant média
+(recherches `--domain ux` : miniature en `aspect-ratio` réservé pour éviter le layout shift, click-to-play
+plutôt qu'autoplay natif) plutôt que de reproduire la puce du mockup, conformément à la demande explicite de
+l'utilisateur de ne pas sous-dimensionner ce composant.
+
+### Construit
+
+- **`src/components/video/VideoCard.tsx`** (nouveau, réutilisable — prévu aussi pour la Passe 3 chat) :
+  miniature réelle YouTube (`i.ytimg.com/vi/{id}/hqdefault.jpg`, aucun appel API supplémentaire) en
+  `aspect-video`, superposition bouton lecture teal (`IconPlay` Phosphor ajouté à `icons.tsx`), libellé
+  "VIDÉO RECOMMANDÉE" (même style que le bandeau contextuel du chat) + titre en gras. Le lecteur
+  `youtube-nocookie.com` (`<iframe>`) n'est monté qu'après clic explicite — jamais de cookie de suivi
+  avant interaction (§3, §4.2, public mineur).
+- **Vérification de la convention typographique existante avant de coder** : `font-serif` (IBM Plex Serif)
+  est déjà réservé dans tout le codebase aux données numériques/codes en emphase (notes /20, `codeEleve`,
+  statistiques) — jamais aux titres de prose. Le titre de la vidéo utilise donc `font-bold` sans-serif,
+  cohérent avec les titres de carte existants (`ResultatCorrection.tsx`), pas une nouvelle convention.
+- **`src/app/eleve/lacunes/page.tsx`** : résout, pour chaque `Lacune` affichée, la première vidéo de son
+  `LacuneVideoCache` (lecture seule — jamais un nouvel appel YouTube/Haiku depuis cette page, §3). Une
+  notion sans entrée de cache ou avec un tableau vide affiche simplement l'absence de carte, pas une erreur.
+- **`MesLacunes.tsx`** : le panneau de détail (`max-w-md`, laissant de l'espace inutilisé sur la maquette
+  09) passe en grille `lg:grid-cols-[minmax(0,28rem)_1fr]` — `VideoCard` occupe tout l'espace libéré à
+  droite ; à défaut de vidéo, un placeholder en pointillés de même gabarit ("Aucune vidéo disponible pour
+  cette notion pour l'instant.") occupe la même place, jamais un vide brut.
+
+### Testé réellement dans le navigateur
+
+Réutilisation délibérée d'un vrai id YouTube déjà vérifié pertinent en Passe 1 (`d6Co0q01QH0`, retenu par
+un vrai appel Haiku la veille) plutôt qu'un nouveau cycle recherche+filtrage complet — la Passe 1 a déjà
+prouvé le pipeline IA/YouTube réel ; cette passe teste l'écran, pas le pipeline. Élève de test réel
+(`ELE-FX4-GJK`) créé via `/api/eleve/inscription`, connecté par un vrai flux NextAuth (cookie de session
+httpOnly géré nativement par le navigateur, `fetch` exécuté dans la page). Deux `Lacune` de test réelles :
+une avec vidéo en cache, une sans.
+
+- **Carte avec vidéo** : capture confirmée — vraie miniature YouTube chargée (bug trouvé et corrigé au
+  passage : `loading="lazy"` sur la miniature ne déclenchait aucune requête réseau dans cet environnement
+  de test, retiré — la carte étant toujours immédiatement visible dans son panneau, l'eager loading par
+  défaut est de toute façon le bon choix ici), bouton lecture teal superposé, libellé et titre corrects.
+- **Clic sur le bouton lecture** : confirmé par introspection DOM (`document.querySelector('iframe')`) —
+  un vrai `<iframe src="https://www.youtube-nocookie.com/embed/d6Co0q01QH0?autoplay=1">` correctement
+  dimensionné (496×279, ratio 16:9) est monté après le clic. **Limite d'outillage rencontrée, sans rapport
+  avec le code** : la capture d'écran via CDP se bloque de façon intermittente sur cette session après
+  interaction avec un lecteur vidéo tiers réel (timeout `Page.captureScreenshot`) — contournée par
+  vérification DOM directe plutôt que par capture visuelle pour cet état précis.
+- **Carte sans vidéo (placeholder)** : capture confirmée — encart en pointillés de même gabarit que la
+  carte vidéo, message clair, aucune rupture de mise en page.
+- `tsc --noEmit` et `eslint src` sur tout le dépôt : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Nettoyage
+
+Élève de test, ses 2 `Lacune`, le `Video`/`LacuneVideoCache` réutilisés pour ce test supprimés après
+vérification — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne, les 6 comptes élève
+réels préexistants intacts).

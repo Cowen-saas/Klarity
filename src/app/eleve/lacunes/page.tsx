@@ -21,9 +21,14 @@ export const metadata: Metadata = {
  * vers un id `CorrectionDetail`), plutôt que de refaire un appel IA pour
  * produire un texte qui existe déjà.
  *
- * Recommandation vidéo (§2.5) et quiz ciblé (Passe 4) hors scope de cette
- * passe — pipeline vidéo pas encore construit, quiz pas encore câblé :
- * la carte vidéo est omise, le bouton quiz reste désactivé ("Bientôt").
+ * Recommandation vidéo (§2.5, Passe 2 du chantier vidéo) : résolue ici
+ * directement depuis `LacuneVideoCache`/`Video` (déjà peuplés en tâche de
+ * fond par le pipeline, cf. `src/lib/video/pipeline.ts`) — jamais un nouvel
+ * appel YouTube/Haiku déclenché depuis cette page (lecture seule, §3). Une
+ * notion sans entrée de cache signifie que le pipeline n'est pas encore
+ * passé dessus (job en file ou pas encore déclenché) ; une entrée avec un
+ * tableau vide signifie qu'aucune vidéo pertinente n'a été retenue — les
+ * deux cas affichent l'absence de carte plutôt qu'une erreur.
  */
 export default async function MesLacunesPage() {
   const session = await auth();
@@ -37,15 +42,33 @@ export default async function MesLacunesPage() {
     include: { matiere: { select: { nom: true } }, sourceCorrection: { select: { pointsManques: true } } },
   });
 
+  const notions = [...new Set(lacunes.map((l) => l.notion))];
+  const caches = await prisma.lacuneVideoCache.findMany({
+    where: { notionCle: { in: notions } },
+    select: { notionCle: true, videoIdsJson: true },
+  });
+  const premierVideoIdParNotion = new Map(
+    caches.map((c) => [c.notionCle, (c.videoIdsJson as string[])[0] as string | undefined])
+  );
+  const videoIdsAResoudre = [...premierVideoIdParNotion.values()].filter((id): id is string => Boolean(id));
+  const videos = await prisma.video.findMany({
+    where: { id: { in: videoIdsAResoudre } },
+    select: { id: true, titre: true, providerVideoId: true },
+  });
+  const videoParId = new Map(videos.map((v) => [v.id, v]));
+
   const lacunesVue = lacunes.map((l) => {
     const pointsManques = (l.sourceCorrection?.pointsManques as { notion: string; detail: string }[] | null) ?? [];
     const explication = pointsManques.find((pm) => pm.notion === l.notion)?.detail ?? null;
+    const videoId = premierVideoIdParNotion.get(l.notion);
+    const video = videoId ? videoParId.get(videoId) : undefined;
     return {
       id: l.id,
       notion: l.notion,
       matiere: l.matiere.nom,
       niveauMaitrise: l.niveauMaitrise,
       explication,
+      video: video ? { titre: video.titre, providerVideoId: video.providerVideoId } : null,
     };
   });
 

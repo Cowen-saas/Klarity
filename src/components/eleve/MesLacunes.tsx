@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { IconCheckCircle, IconWarning, IconPencil } from "@/components/icons";
+import { VideoCard } from "@/components/video/VideoCard";
 
 const INTERVALLE_SONDAGE_MS = 2000;
 
@@ -13,6 +14,7 @@ interface LacuneVue {
   matiere: string;
   niveauMaitrise: number;
   explication: string | null;
+  video: { titre: string; providerVideoId: string } | null;
 }
 
 type Statut = "bon" | "moyen" | "faible";
@@ -152,35 +154,45 @@ export function MesLacunes({ lacunes }: { lacunes: LacuneVue[] }) {
           </div>
 
           {selection && (
-            <div className="mt-6 max-w-md rounded-2xl bg-surface p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-texte">{selection.notion}</h2>
-              <p className={`mt-1 flex items-center gap-1.5 text-sm font-bold ${TEXTE_PAR_STATUT[statutDe(selection.niveauMaitrise)]}`}>
-                {selection.niveauMaitrise}% de maîtrise <IndicateurStatut statut={statutDe(selection.niveauMaitrise)} />
-              </p>
-              {selection.explication && <p className="mt-3 text-sm text-texte-muted">{selection.explication}</p>}
-
-              {erreurQuiz && (
-                <p role="alert" className="mt-3 flex items-center gap-1.5 text-sm text-danger">
-                  <IconWarning className="h-4 w-4" weight="fill" aria-hidden="true" />
-                  {erreurQuiz}
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,28rem)_1fr] lg:items-start">
+              <div className="rounded-2xl bg-surface p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-texte">{selection.notion}</h2>
+                <p className={`mt-1 flex items-center gap-1.5 text-sm font-bold ${TEXTE_PAR_STATUT[statutDe(selection.niveauMaitrise)]}`}>
+                  {selection.niveauMaitrise}% de maîtrise <IndicateurStatut statut={statutDe(selection.niveauMaitrise)} />
                 </p>
-              )}
+                {selection.explication && <p className="mt-3 text-sm text-texte-muted">{selection.explication}</p>}
 
-              <button
-                type="button"
-                onClick={() => commencerQuizCible(selection.id)}
-                disabled={generationEnCours !== null}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
-              >
-                {generationEnCours === selection.id ? (
-                  "Préparation du quiz…"
-                ) : (
-                  <>
-                    <IconPencil className="h-4 w-4" aria-hidden="true" />
-                    Commencer le quiz associé
-                  </>
+                {erreurQuiz && (
+                  <p role="alert" className="mt-3 flex items-center gap-1.5 text-sm text-danger">
+                    <IconWarning className="h-4 w-4" weight="fill" aria-hidden="true" />
+                    {erreurQuiz}
+                  </p>
                 )}
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() => commencerQuizCible(selection.id)}
+                  disabled={generationEnCours !== null}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+                >
+                  {generationEnCours === selection.id ? (
+                    "Préparation du quiz…"
+                  ) : (
+                    <>
+                      <IconPencil className="h-4 w-4" aria-hidden="true" />
+                      Commencer le quiz associé
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {selection.video ? (
+                <VideoCard titre={selection.video.titre} providerVideoId={selection.video.providerVideoId} />
+              ) : (
+                <div className="flex min-h-[12rem] items-center justify-center rounded-2xl border-2 border-dashed border-border p-6 text-center text-sm text-texte-muted">
+                  Aucune vidéo disponible pour cette notion pour l&apos;instant.
+                </div>
+              )}
             </div>
           )}
         </>
