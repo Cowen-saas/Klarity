@@ -5,6 +5,7 @@ import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { getAIProvider, AIRateLimitError, MODELE_HAIKU, type ChatMessage, type ContexteEpreuve } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
+import { resoudreVideosPourMessages } from "@/lib/video/chat-recommendation";
 
 /**
  * Fil de messages d'une conversation chat-tuteur, mode 1 ou mode 2 (§2.1,
@@ -97,7 +98,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     where: { conversationId: id },
     orderBy: { createdAt: "asc" },
   });
-  return NextResponse.json({ messages });
+  const videoParMessageId = await resoudreVideosPourMessages(messages, session.user.id, conversation.matiereId);
+  const messagesAvecVideo = messages.map((m) => ({ ...m, video: videoParMessageId.get(m.id) ?? null }));
+  return NextResponse.json({ messages: messagesAvecVideo });
 }
 
 const bodySchema = z.object({ contenu: z.string().min(1).max(4000) });
@@ -182,5 +185,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     },
   });
 
-  return NextResponse.json({ messageEleve, messageAssistant }, { status: 201 });
+  const videoParMessageId = await resoudreVideosPourMessages([messageAssistant], session.user.id, conversation.matiereId);
+  const messageAssistantAvecVideo = { ...messageAssistant, video: videoParMessageId.get(messageAssistant.id) ?? null };
+
+  return NextResponse.json({ messageEleve, messageAssistant: messageAssistantAvecVideo }, { status: 201 });
 }

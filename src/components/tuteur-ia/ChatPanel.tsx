@@ -16,6 +16,7 @@ interface Message {
   id: string;
   role: "ELEVE" | "ASSISTANT";
   contenu: string;
+  video?: { titre: string; providerVideoId: string } | null;
 }
 
 /**
@@ -192,7 +193,7 @@ export function ChatPanel({ contexteEpreuve }: { contexteEpreuve?: ContexteEpreu
         )}
         {chargement && <p className="text-sm text-texte-muted">Chargement…</p>}
         {!chargement &&
-          messages.map((m) => <MessageBubble key={m.id} role={m.role} contenu={m.contenu} />)}
+          messages.map((m) => <MessageBubble key={m.id} role={m.role} contenu={m.contenu} video={m.video} />)}
         {!chargement && messages.length === 0 && conversationId && (
           <p className="text-sm text-texte-muted">
             {contexteEpreuve ? "Pose ta première question sur cette copie." : "Pose ta première question sur cette matière."}

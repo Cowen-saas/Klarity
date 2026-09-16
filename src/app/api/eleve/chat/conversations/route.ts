@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Filiere, NiveauClasse } from "@prisma/client";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
+import { resoudreVideosPourMessages } from "@/lib/video/chat-recommendation";
 
 /**
  * Chat-tuteur (§2.1, §4.4) : trouve ou crée la conversation.
@@ -17,6 +18,14 @@ import { prisma } from "@/lib/prisma";
  * les deux modes (CLAUDE.md) ; jamais de bascule implicite entre les deux.
  */
 const bodySchema = z.object({ matiereId: z.string().min(1).optional(), epreuveId: z.string().min(1).optional() });
+
+/** Annote l'historique déjà existant d'une conversation rouverte (§2.5, Passe 3) — même correspondance déterministe que la route messages. */
+async function avecVideos<T extends { id: string; matiereId: string; eleveId: string; messages: { id: string; role: "ELEVE" | "ASSISTANT"; contenu: string }[] }>(
+  conversation: T
+): Promise<T> {
+  const videoParMessageId = await resoudreVideosPourMessages(conversation.messages, conversation.eleveId, conversation.matiereId);
+  return { ...conversation, messages: conversation.messages.map((m) => ({ ...m, video: videoParMessageId.get(m.id) ?? null })) };
+}
 
 export async function POST(request: Request) {
   const garde = await exigerRole("ELEVE");
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
         include: { messages: { orderBy: { createdAt: "asc" } } },
       });
     }
-    return NextResponse.json({ conversation });
+    return NextResponse.json({ conversation: await avecVideos(conversation) });
   }
 
   const matiereId = parsed.data.matiereId!;
@@ -77,5 +86,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ conversation });
+  return NextResponse.json({ conversation: await avecVideos(conversation) });
 }

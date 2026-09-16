@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { resoudrePremiereVideoParNotion } from "@/lib/video/lecture";
 import { MesLacunes } from "@/components/eleve/MesLacunes";
 
 export const metadata: Metadata = {
@@ -43,32 +44,18 @@ export default async function MesLacunesPage() {
   });
 
   const notions = [...new Set(lacunes.map((l) => l.notion))];
-  const caches = await prisma.lacuneVideoCache.findMany({
-    where: { notionCle: { in: notions } },
-    select: { notionCle: true, videoIdsJson: true },
-  });
-  const premierVideoIdParNotion = new Map(
-    caches.map((c) => [c.notionCle, (c.videoIdsJson as string[])[0] as string | undefined])
-  );
-  const videoIdsAResoudre = [...premierVideoIdParNotion.values()].filter((id): id is string => Boolean(id));
-  const videos = await prisma.video.findMany({
-    where: { id: { in: videoIdsAResoudre } },
-    select: { id: true, titre: true, providerVideoId: true },
-  });
-  const videoParId = new Map(videos.map((v) => [v.id, v]));
+  const videoParNotion = await resoudrePremiereVideoParNotion(notions);
 
   const lacunesVue = lacunes.map((l) => {
     const pointsManques = (l.sourceCorrection?.pointsManques as { notion: string; detail: string }[] | null) ?? [];
     const explication = pointsManques.find((pm) => pm.notion === l.notion)?.detail ?? null;
-    const videoId = premierVideoIdParNotion.get(l.notion);
-    const video = videoId ? videoParId.get(videoId) : undefined;
     return {
       id: l.id,
       notion: l.notion,
       matiere: l.matiere.nom,
       niveauMaitrise: l.niveauMaitrise,
       explication,
-      video: video ? { titre: video.titre, providerVideoId: video.providerVideoId } : null,
+      video: videoParNotion.get(l.notion) ?? null,
     };
   });
 

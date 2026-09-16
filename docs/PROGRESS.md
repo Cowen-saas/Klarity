@@ -4793,3 +4793,60 @@ une avec vidéo en cache, une sans.
 Élève de test, ses 2 `Lacune`, le `Video`/`LacuneVideoCache` réutilisés pour ce test supprimés après
 vérification — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne, les 6 comptes élève
 réels préexistants intacts).
+
+## 65. Pipeline vidéo automatisé (§2.5) — Passe 3 : bloc vidéo dans le chat-tuteur (16 septembre 2026)
+
+Dernière passe applicative du chantier vidéo (§63, §64) avant l'audit final (Passe 4). Câble la
+correspondance déterministe texte↔notion validée avec l'utilisateur avant même de commencer le
+chantier (§63) : le chat (`chat()`) ne produit qu'un texte libre, sans notion structurée — la vidéo
+recommandée est donc résolue en comparant le texte de la réponse Haiku aux `Lacune.notion` actives de
+l'élève dans la matière en cours, sans coût IA supplémentaire ni migration.
+
+### Construit
+
+- **`src/lib/video/lecture.ts`** (nouveau, extrait de la Passe 2) : `resoudrePremiereVideoParNotion()`
+  factorisée — réutilisée à la fois par `/eleve/lacunes` (page.tsx simplifiée) et le chat, pour ne pas
+  dupliquer la résolution `LacuneVideoCache`/`Video`.
+- **`src/lib/video/chat-recommendation.ts`** (nouveau) : `resoudreVideosPourMessages()` — pour chaque
+  message ASSISTANT, cherche si son texte mentionne littéralement une notion active (comparaison
+  insensible à la casse, notions les plus longues d'abord en cas de chevauchement), puis résout la
+  vidéo en cache correspondante. **Recalculée à chaque lecture** (pas figée à l'envoi) : une lacune
+  résolue depuis cesse simplement d'apparaître sur les anciens messages — décision assumée pour éviter
+  toute nouvelle colonne sur `MessageChat`.
+- Branché aux **3 endroits** qui renvoient des messages de conversation : `POST
+  /api/eleve/chat/conversations` (historique existant à la réouverture), `GET`
+  `.../[id]/messages` (rechargement), `POST .../[id]/messages` (nouveau message) — sinon la vidéo
+  n'apparaîtrait que sur les tout nouveaux messages, jamais sur l'historique déjà chargé.
+- **`MessageBubble.tsx`** : nouveau prop `video` optionnel, `VideoCard` affiché sous la bulle assistant
+  (jamais dans la bulle elle-même — média, pas texte), largeur alignée sur celle de la bulle
+  (`max-w-[80%]`), cohérent avec le placement inline de la maquette 05.
+- Bonus naturel de l'architecture partagée (pas un ajout de périmètre séparé, comme anticipé au
+  découpage) : `ChatPanel` servant aussi le mode 2, une vidéo recommandée peut également y apparaître —
+  cohérent avec le tableau CDC §2.1 qui prévoit une vidéo recommandée dans les deux modes.
+
+### Testé réellement (vrai élève, vraie conversation, vrai appel Haiku)
+
+Réutilisation délibérée d'un vrai id YouTube déjà vérifié pertinent en Passe 1 (comme en Passe 2) — la
+Passe 1 a déjà prouvé le pipeline recherche+filtrage réel ; cette passe teste le matching et l'affichage,
+pas le pipeline. Élève de test réel (`ELE-MUH-HGQ`) avec une vraie `Lacune` ("probabilité
+conditionnelle", Mathématiques) et sa vidéo en cache, connecté par un vrai flux NextAuth.
+
+- **Message pertinent** : "Explique-moi la probabilité conditionnelle avec un exemple simple." → vraie
+  réponse Haiku (937/307 tokens) commençant par "# Probabilité conditionnelle" et mentionnant
+  explicitement la notion → `VideoCard` affichée inline sous le message, confirmée par lecture du texte
+  de page réel (pas seulement une capture).
+- **Message sans rapport** : "Comment calculer le périmètre d'un rectangle ?" → vraie réponse Haiku
+  (1260/337 tokens) ne mentionnant pas la notion → aucune vidéo affichée, confirmé.
+- **Persistance au rechargement** : conversation rouverte (`POST /api/eleve/chat/conversations`,
+  historique existant) → les deux messages et la vidéo recommandée sur le premier réapparaissent
+  identiques, confirmant le recalcul sans état bien fonctionnel côté lecture.
+- Coût réel des 2 appels `chat()` de test : $0,002472 + $0,002945 = **$0,005417**, tracké en `UsageIA`
+  (`CHAT`/`HAIKU`) comme d'habitude.
+- `tsc --noEmit` et `eslint src` sur tout le dépôt : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Nettoyage
+
+Élève de test, ses conversations/messages, sa `Lacune` et le `Video`/`LacuneVideoCache` réutilisé
+supprimés après vérification — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne, la
+seule `Lacune` restante en base appartient à un compte réel préexistant, les 6 comptes élève réels
+intacts).
