@@ -4,6 +4,7 @@ import { QUEUE_PAIEMENT_MOCK, type PaiementMockJobData } from "@/lib/queue/paiem
 import { QUEUE_RETENTION, enregistrerSchedulersRetention, type JobRetention } from "@/lib/queue/retention";
 import { QUEUE_CORRECTION, type CorrectionJobData } from "@/lib/queue/correction";
 import { QUEUE_QUIZ, getQuizEleveQueue, enregistrerSchedulerQuiz, type QuizEleveJobData } from "@/lib/queue/quiz";
+import { QUEUE_VIDEO, type VideoJobData } from "@/lib/queue/video";
 import { traiterWebhookPaiement } from "@/lib/payment/webhook-handler";
 import { signerWebhookMock } from "@/lib/payment/mock-provider";
 import { detecterInactivite } from "@/lib/retention/detection-inactivite";
@@ -15,6 +16,7 @@ import {
   genererQuizJournalierPourTousLesEleves,
   genererQuizCiblePourEleve,
 } from "@/lib/quiz/generer-quiz";
+import { obtenirVideosPourNotion, planifierVideosPourLacunesActives } from "@/lib/video/pipeline";
 
 /**
  * Entrypoint for the `worker` Compose service (§3, §3.1, §8.1) — runs in a process
@@ -28,6 +30,9 @@ import {
  *    tentative de copie (appel Sonnet vision), jamais inline dans une route.
  *  - `quiz` (cron quotidien, tous les élèves) et `quiz-eleve` (à la demande,
  *    journalier ou ciblé) (§2.1, §4.3, §6.1) — génération Haiku, jamais inline.
+ *  - `video` (§2.5) — recherche YouTube + filtrage Haiku par notion,
+ *    déclenchée en fin de correction et par le cron quiz journalier pour les
+ *    lacunes actives plus anciennes ; jobId = notion (dédoublonnage natif).
  *
  * La file notifications reste à câbler aux côtés de la fonctionnalité qui l'alimente.
  */
@@ -126,11 +131,33 @@ async function main() {
     async () => {
       const r = await genererQuizJournalierPourTousLesEleves();
       console.log(`[worker] quiz journalier (cron) : ${r.generes} généré(s), ${r.ignores} ignoré(s), ${r.erreurs} erreur(s)`);
+
+      // Compatibilité pipeline vidéo (§2.5 point 1) — même tick que le cron quiz,
+      // pour les Lacune actives plus anciennes dont la notion n'a encore jamais
+      // été traitée (ou dont le cache a expiré), sans attendre une nouvelle correction.
+      const v = await planifierVideosPourLacunesActives();
+      console.log(`[worker] pipeline vidéo (cron) : ${v.planifiees} recherche(s) planifiée(s)`);
     },
     { connection: createRedisConnection() }
   );
   quizCronWorker.on("failed", (job, err) => {
     console.error(`[worker] échec cron quiz journalier ${job?.name}`, err);
+  });
+
+  // --- Pipeline vidéo automatisé (§2.5) — jamais inline dans une route/job appelant ---
+  const videoWorker = new Worker<VideoJobData>(
+    QUEUE_VIDEO,
+    async (job) => {
+      const { videos, depuisCache } = await obtenirVideosPourNotion(job.data);
+      console.log(
+        `[worker] pipeline vidéo notion "${job.data.notion}" -> ${videos.length} vidéo(s) ` +
+          (depuisCache ? "servie(s) depuis le cache (aucun appel réseau)." : "retenue(s) après recherche YouTube + filtrage Haiku réels.")
+      );
+    },
+    { connection: createRedisConnection() }
+  );
+  videoWorker.on("failed", (job, err) => {
+    console.error(`[worker] échec pipeline vidéo notion "${job?.data.notion}"`, err);
   });
 
   // --- Quiz à la demande (un seul élève — bouton "Générer mon quiz du jour" ou quiz ciblé) ---
@@ -162,6 +189,7 @@ async function main() {
       correctionWorker.close(),
       quizCronWorker.close(),
       quizEleveWorker.close(),
+      videoWorker.close(),
     ]);
     await connection.quit();
     process.exit(0);

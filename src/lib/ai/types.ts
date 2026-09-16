@@ -97,6 +97,26 @@ export interface Correction {
   tokensOutput: number;
 }
 
+/** Résultat brut d'une recherche YouTube (§2.5), avant filtrage IA. */
+export interface VideoCandidate {
+  videoId: string;
+  titre: string;
+  description: string;
+  chaineNom: string;
+}
+
+/** Vidéo retenue par le filtrage Haiku (§2.5) — sous-ensemble jugé pertinent/pédagogique. */
+export interface VideoRetenue {
+  videoId: string;
+  titre: string;
+}
+
+export interface FiltrageVideos {
+  retenues: VideoRetenue[];
+  tokensInput: number;
+  tokensOutput: number;
+}
+
 /** Levée par MockAIProvider quand une erreur 429 est simulée à la demande (§6.3). */
 export class AIRateLimitError extends Error {
   constructor(message = "AI provider rate limit exceeded (simulated)") {

@@ -6,9 +6,11 @@ import type {
   ContexteMatiere,
   EpreuveRef,
   ExempleFewShot,
+  FiltrageVideos,
   LacunePourQuiz,
   QuizGenere,
   ReponseIA,
+  VideoCandidate,
 } from "./types";
 
 /**
@@ -40,4 +42,10 @@ export interface AIProvider {
     bareme: BaremeCorrection,
     exemplesFewShot?: ExempleFewShot[]
   ): Promise<Correction>;
+
+  /**
+   * -> route vers Haiku (§6.1, §2.5). Élimine les résultats YouTube bruts hors-sujet,
+   * non pédagogiques ou de qualité douteuse ; `notion` cadre le sujet exact attendu.
+   */
+  filtrerVideos(candidats: VideoCandidate[], notion: string, matiere: string): Promise<FiltrageVideos>;
 }

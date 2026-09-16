@@ -15,9 +15,11 @@ import {
   type ContexteMatiere,
   type EpreuveRef,
   type ExempleFewShot,
+  type FiltrageVideos,
   type LacunePourQuiz,
   type QuizGenere,
   type ReponseIA,
+  type VideoCandidate,
 } from "./types";
 import { getStorageProvider } from "@/lib/storage";
 
@@ -136,6 +138,28 @@ const CORRECTION_TOOL: Tool = {
       feedbackDetaille: { type: "string" },
     },
     required: ["note", "pointsForts", "pointsManques", "feedbackDetaille"],
+  },
+};
+
+const FILTRAGE_VIDEO_TOOL: Tool = {
+  name: "retenir_videos",
+  description: "Soumet la liste des vidéos retenues comme pertinentes et pédagogiques, dans l'ordre de pertinence.",
+  input_schema: {
+    type: "object",
+    properties: {
+      retenues: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            videoId: { type: "string", description: "Doit être exactement l'un des videoId fournis en entrée." },
+            titre: { type: "string" },
+          },
+          required: ["videoId", "titre"],
+        },
+      },
+    },
+    required: ["retenues"],
   },
 };
 
@@ -274,5 +298,29 @@ export class ClaudeAIProvider implements AIProvider {
 
     const input = toolUseDe(res.content, "soumettre_correction").input as Omit<Correction, "tokensInput" | "tokensOutput">;
     return { ...input, tokensInput: res.usage.input_tokens, tokensOutput: res.usage.output_tokens };
+  }
+
+  async filtrerVideos(candidats: VideoCandidate[], notion: string, matiere: string): Promise<FiltrageVideos> {
+    const systeme =
+      "Tu es le filtre qualité du pipeline vidéo de Klarity (§2.5). Voici des résultats bruts d'une recherche " +
+      `YouTube pour la notion "${notion}" en matière "${matiere}", destinés à des élèves camerounais de collège/lycée. ` +
+      "Élimine tout résultat hors-sujet, non pédagogique (vlogs, musique, extraits sans rapport), ou de qualité " +
+      "manifestement douteuse. Parmi ce qui reste, retiens seulement les meilleures correspondances (au plus 3), " +
+      "dans l'ordre de pertinence pédagogique. S'il n'y a vraiment aucun résultat pertinent, retourne une liste vide.\n\n" +
+      `Résultats bruts :\n${JSON.stringify(candidats)}\n\n` +
+      "Soumets ta sélection via l'outil retenir_videos.";
+
+    const res = await appelerAvecGestionErreurs(() =>
+      client().messages.create({
+        model: MODELE_HAIKU,
+        max_tokens: 1024,
+        system: systeme,
+        messages: [{ role: "user", content: "Filtre ces résultats." }],
+        tools: [FILTRAGE_VIDEO_TOOL],
+        tool_choice: { type: "tool", name: "retenir_videos" },
+      })
+    );
+    const input = toolUseDe(res.content, "retenir_videos").input as { retenues: FiltrageVideos["retenues"] };
+    return { retenues: input.retenues, tokensInput: res.usage.input_tokens, tokensOutput: res.usage.output_tokens };
   }
 }

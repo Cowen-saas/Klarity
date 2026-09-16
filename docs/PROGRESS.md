@@ -4646,3 +4646,93 @@ Script ad hoc de fixture (`scratch-set-tentative.ts`, jamais commité) supprimé
 test (`ELE-6Q5-7WG`, `ELE-8WV-8JS` — ce dernier restait d'une vérification antérieure de cette même
 tâche) et leurs lignes dépendantes (`tentatives_epreuve`, `sessions_activite`) supprimés de la base
 réelle après vérification, confirmé par requête SQL (0 ligne restante sur les deux `codeEleve`).
+
+## 63. Pipeline vidéo automatisé (§2.5) — Passe 1 : backend complet, testé en conditions réelles (16 septembre 2026)
+
+Démarrage du chantier vidéo (§2.5), découpé en 4 passes à la demande de l'utilisateur (backend →
+écran "Mes lacunes" → chat-tuteur → audit final). La clé `YOUTUBE_API_KEY` était déjà configurée et
+validée (§20) mais aucun code de `src/` n'y touchait encore avant cette passe.
+
+### Décision de conception validée par l'utilisateur avant de coder
+
+Le chat mode 1 ne produit qu'un texte libre (`ReponseIA.contenu`), sans notion structurée — contrairement
+à la correction/au quiz qui forcent déjà une sortie structurée via `tool_choice`. Question posée : comment
+attacher une vidéo recommandée à une réponse de chat sans notion explicite ? Option retenue par
+l'utilisateur : **correspondance déterministe** — après la réponse Haiku, on regarde si son texte mentionne
+une des `Lacune.notion` actives de l'élève dans la matière en cours ; si oui, la vidéo déjà en cache pour
+cette notion est affichée. Zéro coût supplémentaire, zéro migration. Câblage effectif prévu Passe 3 (chat).
+
+### Construit
+
+- **`filtrerVideos()` ajouté à `AIProvider`** (`src/lib/ai/provider.ts`, `types.ts`) + implémentation réelle
+  dans `ClaudeAIProvider` (nouveau `FILTRAGE_VIDEO_TOOL`, tool_choice forcé, Haiku) et simulée dans
+  `MockAIProvider` — même patron que `chat()`/`genererQuiz()`/`corrigerCopie()`.
+- **`src/lib/video/youtube.ts`** — appel réel `YouTube Data API v3` (`search.list`), `safeSearch: strict`,
+  `videoEmbeddable: true`, `relevanceLanguage: fr` (non-négociables : public mineur §3, lecture exclusive
+  via `<iframe>` §4.2, langue FR pour l'instant, extension anglophone différée).
+- **`src/lib/video/pipeline.ts`** — `obtenirVideosPourNotion()` : sert `LacuneVideoCache` si valide (90
+  jours par défaut, ajustable sans migration) ; sinon recherche YouTube réelle → filtrage Haiku réel (si des
+  résultats bruts existent) → écrit `Video` + `LacuneVideoCache` + `UsageIA.VIDEO_FILTRAGE`
+  (`eleveId: null`, mutualisé par notion, cf. schéma). `planifierVideosPourLacunesActives()` — compatibilité
+  avec le cron quiz journalier (§2.5 point 1) pour les `Lacune` actives plus anciennes sans cache valide.
+- **File BullMQ `video`** (`src/lib/queue/video.ts`) — `jobId = notion` (dédoublonnage natif BullMQ, validé
+  par l'utilisateur avant de coder), worker dédié dans `src/worker/index.ts`.
+- **Déclenchement** : (a) fin de `traiterTentative()`, une notion à la fois, pour chaque `pointManque`
+  d'une correction réussie ; (b) même tick que le cron `quiz-journalier-tous` (worker), pour les lacunes
+  actives plus anciennes.
+- Aucune interface admin (§2.3, décision déjà actée) — entièrement automatisé.
+
+### Bug pré-existant trouvé et corrigé en testant (indépendant du pipeline vidéo)
+
+`traiterTentative()` n'entourait d'un `try/catch` que l'appel `corrigerCopie()`, jamais la transaction
+Prisma qui écrit `CorrectionDetail`/`Lacune`/`UsageIA` juste après. Une sortie Sonnet structurée mais
+malformée (rencontrée réellement pendant ce test, cf. ci-dessous) faisait échouer `tx.correctionDetail.create()`
+sans filet : la `TentativeEpreuve` restait bloquée indéfiniment en `EN_TRAITEMENT`, sans aucune voie de
+retraitement (une vraie copie d'élève y serait restée coincée en production). Corrigé : la transaction est
+maintenant elle aussi entourée d'un `try/catch` qui repasse la tentative en `ERREUR` avant de relancer
+l'erreur (`src/lib/correction/traiter-tentative.ts`).
+
+### Testé réellement (vrai élève, vraie correction, vrais appels YouTube + Haiku)
+
+Élève de test réel (`ELE-RS3-EUG`, Troisième) créé via `/api/eleve/inscription`, connecté par un vrai flux
+NextAuth (`GET /api/auth/csrf` → `POST /api/auth/callback/eleve`, cookie de session réel). Vraie copie
+photographiée (page web rendue puis capturée en JPEG via le navigateur — 3 exercices de probabilités avec
+erreurs volontaires) uploadée via la vraie route `POST /api/eleve/epreuves/[id]/tentatives` sur une épreuve
+réelle déjà en banque (Mathématiques, Troisième).
+
+- 1er essai : le vrai appel Sonnet a bien eu lieu (16554/2151 tokens) mais la sortie structurée était
+  corrompue → transaction en échec → bug ci-dessus découvert. Tentative supprimée après correctif.
+- 2e essai (image de test nettoyée) : correction réelle terminée, **5 vraies `Lacune`** créées (vérifié par
+  requête SQL). Le pipeline vidéo s'est déclenché automatiquement pour les 5 notions : recherche YouTube
+  réelle + filtrage Haiku réel pour chacune, écriture réelle de 12 `Video` (vraies vidéos pédagogiques
+  françaises sur les probabilités) et de 5 `LacuneVideoCache` (dont un tableau vide pour la notion
+  hors-sujet, où Haiku n'a rien retenu — évite de refaire la recherche en vain).
+- **Cache vérifié** : rejeu du job pour une notion déjà traitée (`Exercice 1 - Calcul de probabilité`) →
+  log worker "servie(s) depuis le cache (aucun appel réseau)" → confirmé par requête SQL : `videos` et
+  `usages_ia` (VIDEO_FILTRAGE) inchangés (12 et 5 lignes avant/après).
+- `tsc --noEmit` et `eslint src` sur tout le dépôt : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Coût réel consommé
+
+| Appel | Tokens (in/out) | Coût réel |
+|---|---|---|
+| `corrigerCopie()` (Sonnet, 2e essai, réussi) | 16554 / 1740 | $0,075762 |
+| `filtrerVideos()` × 5 (Haiku, une par notion) | ~1620/148 en moyenne | $0,011823 |
+| **Total tracké en base (`UsageIA`)** | | **$0,087585** |
+
+**Note d'honnêteté** : le 1er essai `corrigerCopie()` (16554/2151 tokens, ~$0,081927) a bien été facturé
+par Anthropic mais n'a laissé aucune trace `UsageIA` — la transaction qui l'aurait écrite a échoué avant
+d'y arriver (cf. bug ci-dessus). Le correctif empêche une `TentativeEpreuve` de rester bloquée, mais ne
+retrace pas rétroactivement ce coût précis ; un futur échec similaire resterait, lui aussi, non tracé en
+base (limite connue, non corrigée ici — hors périmètre de cette passe). **Coût réel total de la passe,
+en comptant cet essai non tracké : environ $0,169.** Recherches YouTube réelles : 5 appels `search.list`
+(500 unités de quota sur les 10 000/jour par défaut) — gratuit, quota large.
+
+### Nettoyage
+
+Élève de test, tentative, correction, 5 lacunes et leurs `UsageIA` supprimés après vérification. Les 12
+`Video` et 5 `LacuneVideoCache` créés pour les notions ad hoc de ce test (dérivées d'une copie de test qui
+ne correspond pas au vrai corrigé de référence de l'épreuve empruntée, donc jamais réutilisables par un
+vrai élève) supprimés également — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne,
+les 6 comptes élève réels préexistants intacts). Script ad hoc (`scratch-test-cache-hit.ts`, jamais
+commité) et serveur HTTP local de test supprimés.

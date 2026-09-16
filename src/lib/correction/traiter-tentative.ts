@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getAIProvider, MODELE_SONNET, AIRateLimitError, type BaremeCorrection, type ExempleFewShot } from "@/lib/ai";
+import { getAIProvider, MODELE_SONNET, type BaremeCorrection, type ExempleFewShot } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
+import { planifierRechercheVideo } from "@/lib/queue/video";
 
 /**
  * Traitement réel d'une tentative de copie (§2.1, §4.3, §6.2, §6.4) — exécuté
@@ -81,67 +82,88 @@ export async function traiterTentative(tentativeId: string): Promise<void> {
     );
   } catch (err) {
     await prisma.tentativeEpreuve.update({ where: { id: tentativeId }, data: { statut: "ERREUR" } });
-    if (err instanceof AIRateLimitError) {
-      throw err; // laisse BullMQ réessayer (job marqué failed, backoff natif du worker à défaut d'options dédiées)
-    }
+    throw err; // laisse BullMQ marquer le job failed (backoff natif du worker à défaut d'options dédiées)
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const detail = await tx.correctionDetail.create({
+        data: {
+          epreuveId: epreuve.id,
+          eleveId: tentative.eleveId,
+          matiereId: epreuve.matiereId,
+          note: correction.note,
+          pointsForts: correction.pointsForts,
+          pointsManques: correction.pointsManques as unknown as Prisma.InputJsonValue,
+          feedbackDetaille: correction.feedbackDetaille,
+          modeleIA: MODELE_SONNET,
+          tokensInput: correction.tokensInput,
+          tokensOutput: correction.tokensOutput,
+        },
+      });
+
+      await tx.tentativeEpreuve.update({
+        where: { id: tentativeId },
+        data: { statut: "TERMINE", dateTraitement: new Date() },
+      });
+
+      for (const pointManque of correction.pointsManques) {
+        const existante = await tx.lacune.findFirst({
+          where: { eleveId: tentative.eleveId, matiereId: epreuve.matiereId, notion: pointManque.notion, resolu: false },
+        });
+        if (existante) {
+          await tx.lacune.update({
+            where: { id: existante.id },
+            data: { dateMiseAJour: new Date(), sourceTentativeId: detail.id },
+          });
+        } else {
+          await tx.lacune.create({
+            data: {
+              eleveId: tentative.eleveId,
+              matiereId: epreuve.matiereId,
+              notion: pointManque.notion,
+              niveauMaitrise: 0,
+              sourceTentativeId: detail.id,
+            },
+          });
+        }
+      }
+
+      await tx.usageIA.create({
+        data: {
+          eleveId: tentative.eleveId,
+          matiereId: epreuve.matiereId,
+          typeUsage: "CORRECTION",
+          modele: "SONNET",
+          tokensInput: correction.tokensInput,
+          tokensOutput: correction.tokensOutput,
+          coutEstime: estimerCoutIA("SONNET", correction.tokensInput, correction.tokensOutput),
+        },
+      });
+    });
+  } catch (err) {
+    // Écriture DB échouée après un appel Sonnet déjà facturé (ex. sortie structurée
+    // malformée par le modèle) — sans ce filet, la tentative restait bloquée
+    // indéfiniment en EN_TRAITEMENT, sans possibilité de nouvelle tentative (bug
+    // trouvé en testant le déclenchement du pipeline vidéo, §2.5).
+    await prisma.tentativeEpreuve.update({ where: { id: tentativeId }, data: { statut: "ERREUR" } });
     throw err;
   }
 
-  await prisma.$transaction(async (tx) => {
-    const detail = await tx.correctionDetail.create({
-      data: {
-        epreuveId: epreuve.id,
-        eleveId: tentative.eleveId,
-        matiereId: epreuve.matiereId,
-        note: correction.note,
-        pointsForts: correction.pointsForts,
-        pointsManques: correction.pointsManques as unknown as Prisma.InputJsonValue,
-        feedbackDetaille: correction.feedbackDetaille,
-        modeleIA: MODELE_SONNET,
-        tokensInput: correction.tokensInput,
-        tokensOutput: correction.tokensOutput,
-      },
+  // Déclenche le pipeline vidéo (§2.5) pour chaque notion de lacune touchée — job
+  // asynchrone, dédupliqué par notion (jobId), jamais bloquant pour la correction
+  // elle-même. Le job lui-même sert le cache si une autre tentative a déjà traité
+  // cette notion entre-temps (aucun nouvel appel YouTube/Haiku dans ce cas).
+  const notionsUniques = new Set(correction.pointsManques.map((pm) => pm.notion));
+  for (const notion of notionsUniques) {
+    await planifierRechercheVideo({
+      notion,
+      matiereId: epreuve.matiereId,
+      matiereNom: epreuve.matiere.nom,
+      classe: epreuve.classe,
+      filiere: epreuve.filiere,
     });
-
-    await tx.tentativeEpreuve.update({
-      where: { id: tentativeId },
-      data: { statut: "TERMINE", dateTraitement: new Date() },
-    });
-
-    for (const pointManque of correction.pointsManques) {
-      const existante = await tx.lacune.findFirst({
-        where: { eleveId: tentative.eleveId, matiereId: epreuve.matiereId, notion: pointManque.notion, resolu: false },
-      });
-      if (existante) {
-        await tx.lacune.update({
-          where: { id: existante.id },
-          data: { dateMiseAJour: new Date(), sourceTentativeId: detail.id },
-        });
-      } else {
-        await tx.lacune.create({
-          data: {
-            eleveId: tentative.eleveId,
-            matiereId: epreuve.matiereId,
-            notion: pointManque.notion,
-            niveauMaitrise: 0,
-            sourceTentativeId: detail.id,
-          },
-        });
-      }
-    }
-
-    await tx.usageIA.create({
-      data: {
-        eleveId: tentative.eleveId,
-        matiereId: epreuve.matiereId,
-        typeUsage: "CORRECTION",
-        modele: "SONNET",
-        tokensInput: correction.tokensInput,
-        tokensOutput: correction.tokensOutput,
-        coutEstime: estimerCoutIA("SONNET", correction.tokensInput, correction.tokensOutput),
-      },
-    });
-  });
+  }
 
   console.log(
     `[correction] tentative ${tentativeId} terminée — note ${correction.note}, ` +

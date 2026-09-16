@@ -8,9 +8,11 @@ import {
   type ContexteMatiere,
   type EpreuveRef,
   type ExempleFewShot,
+  type FiltrageVideos,
   type LacunePourQuiz,
   type QuizGenere,
   type ReponseIA,
+  type VideoCandidate,
 } from "./types";
 
 /**
@@ -81,6 +83,13 @@ export class MockAIProvider implements AIProvider {
       tokensInput: estimerTokens(feedbackDetaille) * imageKeys.length,
       tokensOutput: estimerTokens(feedbackDetaille),
     };
+  }
+
+  async filtrerVideos(candidats: VideoCandidate[], notion: string, matiere: string): Promise<FiltrageVideos> {
+    this.maybeSimulateRateLimit();
+    const retenues = candidats.slice(0, 1).map((c) => ({ videoId: c.videoId, titre: `[MOCK] ${c.titre}` }));
+    const texte = `[MOCK][Haiku] Filtrage vidéo simulé pour la notion "${notion}" (${matiere}).`;
+    return { retenues, tokensInput: estimerTokens(texte), tokensOutput: estimerTokens(texte) };
   }
 }
 
