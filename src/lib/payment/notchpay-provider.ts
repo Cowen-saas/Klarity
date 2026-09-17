@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PaymentProvider } from "./provider";
+import { PaiementRefuseError } from "./types";
 import type { MethodePaiement, OperateurMobileMoney, PaiementSession, Payeur, ResultatPaiement, StatutPaiement } from "./types";
 
 /**
@@ -94,6 +95,35 @@ async function texteErreur(res: Response): Promise<string> {
   }
 }
 
+/**
+ * Distingue un refus **métier** (4xx — numéro invalide, saisie rejetée par
+ * NotchPay/l'opérateur) d'une **panne technique** (5xx, réponse inattendue) :
+ * seul le premier cas est un `PaiementRefuseError` avec un message déjà sûr à
+ * afficher à l'utilisateur ; le second reste une `Error` générique, à traiter
+ * comme une indisponibilité du provider par l'appelant. Le détail brut
+ * NotchPay est conservé dans tous les cas pour les logs serveur, jamais
+ * affiché tel quel côté client en production.
+ */
+async function erreurAppelNotchPay(res: Response, etape: string): Promise<Error> {
+  const texteBrut = await texteErreur(res);
+  let detail = texteBrut;
+  try {
+    const corps = JSON.parse(texteBrut) as { message?: string; errors?: Record<string, string[]> };
+    const premierChampErreur = corps.errors ? Object.values(corps.errors)[0]?.[0] : undefined;
+    detail = premierChampErreur ?? corps.message ?? texteBrut;
+  } catch {
+    // Corps non-JSON : on garde le texte brut tel quel.
+  }
+
+  if (res.status >= 400 && res.status < 500) {
+    return new PaiementRefuseError(
+      "Le paiement a été refusé par l'opérateur Mobile Money. Vérifie le numéro et réessaie.",
+      detail
+    );
+  }
+  return new Error(`Échec ${etape} NotchPay (${res.status}) : ${detail}`);
+}
+
 export class NotchPayProvider implements PaymentProvider {
   private readonly publicKey: string;
   private readonly webhookSecret: string;
@@ -120,7 +150,7 @@ export class NotchPayProvider implements PaymentProvider {
       body: JSON.stringify({ amount: montant, currency: devise, phone: payeur.telephone, description: "Abonnement Klarity Premium" }),
     });
     if (!initRes.ok) {
-      throw new Error(`Échec d'initialisation NotchPay (${initRes.status}) : ${await texteErreur(initRes)}`);
+      throw await erreurAppelNotchPay(initRes, "d'initialisation");
     }
     const initData = (await initRes.json()) as NotchPayInitResponse;
     const reference = initData.transaction.reference;
@@ -131,7 +161,7 @@ export class NotchPayProvider implements PaymentProvider {
       body: JSON.stringify({ channel: CHANNEL_PAR_OPERATEUR[payeur.operateur], data: { phone: payeur.telephone } }),
     });
     if (!chargeRes.ok) {
-      throw new Error(`Échec de déclenchement Mobile Money NotchPay (${chargeRes.status}) : ${await texteErreur(chargeRes)}`);
+      throw await erreurAppelNotchPay(chargeRes, "de déclenchement Mobile Money");
     }
 
     return {

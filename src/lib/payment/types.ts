@@ -33,3 +33,22 @@ export interface ResultatPaiement {
   montant: number;
   devise: string;
 }
+
+/**
+ * Levée quand le provider de paiement **refuse la requête** (numéro invalide,
+ * saisie rejetée par l'opérateur, etc.) — une erreur métier dont la cause est
+ * connue et explicable à l'utilisateur, distincte d'une panne technique
+ * (réseau, provider indisponible, 5xx). `message` est déjà formulé pour
+ * l'utilisateur final (français, sans détail d'implémentation) ;
+ * `detailProvider` garde la réponse brute du provider pour les logs serveur
+ * et l'indice dev, jamais affiché tel quel côté client en production.
+ */
+export class PaiementRefuseError extends Error {
+  readonly detailProvider: string;
+
+  constructor(message: string, detailProvider: string) {
+    super(message);
+    this.name = "PaiementRefuseError";
+    this.detailProvider = detailProvider;
+  }
+}

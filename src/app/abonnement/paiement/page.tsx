@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenirTarifPremium } from "@/lib/payment/tarification";
+import { indiceDevPaiement } from "@/lib/payment";
 import { PaiementStepper } from "@/components/abonnement/PaiementStepper";
 import { PaiementForm } from "@/components/abonnement/PaiementForm";
 
@@ -47,6 +48,7 @@ export default async function PaiementPage({ searchParams }: PageProps<"/abonnem
         reduction={tarif.reduction}
         prixNormal={tarif.prixNormal}
         payeurRole={session.user.role}
+        indiceDev={indiceDevPaiement()}
       />
     </div>
   );

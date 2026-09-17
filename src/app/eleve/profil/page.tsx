@@ -103,7 +103,7 @@ export default async function EleveProfilPage() {
           )}
           {!estPremiumActif && (
             <Link
-              href="/abonnement"
+              href="/abonnement?compte=1"
               className="mt-4 block rounded-xl bg-primary py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
             >
               Passer à Premium

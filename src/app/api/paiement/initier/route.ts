@@ -3,7 +3,7 @@ import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getPaymentProvider } from "@/lib/payment";
+import { getPaymentProvider, indiceDevPaiement, PaiementRefuseError } from "@/lib/payment";
 import { obtenirTarifPremium, DEVISE_DEFAUT } from "@/lib/payment/tarification";
 import { planifierWebhookMock } from "@/lib/queue/paiement";
 import { verifierPinConfirmation } from "@/lib/auth/confirmation";
@@ -111,11 +111,29 @@ export async function POST(request: Request) {
   const telephoneFormate = `+237${telephone}`;
 
   const provider = getPaymentProvider();
-  const paiementSession = await provider.initierPaiement(tarif.prix, DEVISE_DEFAUT, "MOBILE_MONEY", {
-    telephone: telephoneFormate,
-    role: payeurRole,
-    operateur,
-  });
+  let paiementSession;
+  try {
+    paiementSession = await provider.initierPaiement(tarif.prix, DEVISE_DEFAUT, "MOBILE_MONEY", {
+      telephone: telephoneFormate,
+      role: payeurRole,
+      operateur,
+    });
+  } catch (err) {
+    if (err instanceof PaiementRefuseError) {
+      // Erreur métier (numéro invalide, refus opérateur) : cause connue,
+      // message déjà sûr pour l'utilisateur — le détail brut du provider ne
+      // sert qu'aux logs serveur, jamais renvoyé tel quel au client.
+      console.warn(`[paiement] refusé par le provider : ${err.detailProvider}`);
+      return NextResponse.json({ error: err.message, indiceDevMock: indiceDevPaiement() }, { status: 422 });
+    }
+    // Panne technique (réseau, provider indisponible, 5xx) : cause inconnue
+    // de l'utilisateur, on ne lui promet pas un diagnostic qu'on n'a pas.
+    console.error("[paiement] échec technique du provider de paiement", err);
+    return NextResponse.json(
+      { error: "Le service de paiement est momentanément indisponible. Réessaie dans quelques instants." },
+      { status: 502 }
+    );
+  }
 
   const paiement = await prisma.paiement.create({
     data: {
@@ -150,10 +168,7 @@ export async function POST(request: Request) {
       montant: tarif.prix,
       devise: DEVISE_DEFAUT,
       periode: tarif.nomPeriode,
-      indiceDevMock:
-        process.env.NODE_ENV !== "production"
-          ? "Mode simulation : un numéro se terminant par 0 échoue, tout autre numéro réussit."
-          : undefined,
+      indiceDevMock: indiceDevPaiement(),
     },
     { status: 201 }
   );

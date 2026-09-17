@@ -5338,3 +5338,132 @@ vrai flux NextAuth.
 
 Élève de test et son `Abonnement` de test supprimés après vérification — les 6 comptes élève réels
 intacts.
+
+## 75. `/eleve/profil` : "Passer à Premium" renvoyait vers l'aiguillage anonyme au lieu du paiement direct (18 septembre 2026)
+
+Signalé par l'utilisateur : dans `/eleve/profil`, cliquer "Passer à Premium" mène bien à `/abonnement`,
+mais cliquer ensuite "Choisir Premium" y renvoyait vers `/abonnement/eleve-ou-parent` au lieu d'aller
+droit à la page de paiement.
+
+### Diagnostic
+
+`src/app/abonnement/page.tsx` traite explicitement `?compte=1` comme le **seul** marqueur qui active la
+vue "nav interne authentifiée" (commentaire de tête de fichier, décision explicite après un incident de
+session apparemment partagée) — sans lui, `modeCompte` est faux, la session n'est même pas lue
+(`const session = modeCompte ? await auth() : null;`), et `hrefPremium` tombe dans la branche
+`!authentifie` → `/abonnement/eleve-ou-parent`, quel que soit l'état de connexion réel. Or
+`src/app/eleve/profil/page.tsx:106` liait "Passer à Premium" vers `href="/abonnement"` **sans** ce
+marqueur — seul endroit du code dans ce cas ; `EleveShell.tsx`/`ParentShell.tsx` (sidebar) et toutes les
+redirections serveur de `/abonnement/paiement/page.tsx` utilisent déjà `/abonnement?compte=1`
+partout ailleurs (vérifié par recherche exhaustive).
+
+### Correctif
+
+Un seul changement : `href="/abonnement"` → `href="/abonnement?compte=1"` dans
+`src/app/eleve/profil/page.tsx`.
+
+### Testé réellement
+
+Élève de test créé via l'API d'inscription réelle, connecté par le vrai flux NextAuth
+(`POST /api/auth/callback/eleve`), puis requêtes HTTP réelles avec la session obtenue :
+- `GET /eleve/profil` → contient bien `href="/abonnement?compte=1"`.
+- `GET /abonnement?compte=1` → le bouton "Choisir Premium" pointe maintenant directement vers
+  `href="/abonnement/paiement?eleve=<id>"`, plus de détour par `eleve-ou-parent`.
+
+### Nettoyage
+
+Élève de test supprimé après vérification (`DELETE FROM eleves ... RETURNING` confirmé sur la ligne
+exacte) — les comptes réels intacts.
+
+## 76. Crash 500 à la confirmation PIN du paiement — refus NotchPay non rattrapé, indice dev obsolète (18 septembre 2026)
+
+Signalé par l'utilisateur : à l'étape "Confirme avec ton code secret" du paiement Premium, la validation
+échouait systématiquement avec "Impossible de contacter le serveur, vérifie ta connexion."
+
+### Diagnostic — vraie cause confirmée par les logs et une reproduction réelle
+
+`docker compose ps` : les 5 conteneurs tournent normalement, aucun souci d'infra. Logs réels du conteneur
+`app` au moment de l'erreur :
+
+```
+Error: Échec de déclenchement Mobile Money NotchPay (422) : {"code":"422",...,
+"message":"Invalid test phone number. Please use one of the following formats:
++237670000000 (success), +237670000001 (insufficient funds), +237670000002 (failure),
++237670000003 (timeout), +237670000004 (canceled)", ...}
+    at NotchPayProvider.initierPaiement (src/lib/payment/notchpay-provider.ts:134:13)
+    at async POST (src/app/api/paiement/initier/route.ts:114:27)
+ POST /api/paiement/initier 500 in 2838ms
+```
+
+Reproduit réellement avec un élève de test (`ELE-4Z9-AW8`), vraie session NextAuth, `POST
+/api/paiement/initier` avec le PIN correct et un numéro `677123456` (format valide, accepté par la
+validation Zod du formulaire) → **500, corps vide**.
+
+Cause réelle : `PAYMENT_MODE=notchpay` / `NOTCHPAY_ENV=sandbox` sont actifs (§39-§41) — le sandbox
+NotchPay n'accepte que 5 numéros de test fixes (`+237670000000` à `...004`), pas n'importe quel numéro
+camerounais valide. `notchpay-provider.ts` levait une `Error` générique non rattrapée sur tout rejet
+NotchPay (4xx comme 5xx), donc la route répondait `500` avec un corps vide → côté client, `res.json()`
+échouait dans `PaiementForm.soumettrePaiement()` → tombait dans le `catch` générique → message trompeur
+"vérifie ta connexion", alors que le serveur avait répondu et que NotchPay avait bien été contacté. Le
+second problème aggravant : l'indice dev affiché avant soumission (`PaiementForm.tsx`,
+`DEV_HINT_VISIBLE`) affichait encore la convention du **provider mock** ("un numéro terminé par 0
+échoue"), obsolète depuis le passage à NotchPay réel — il poussait donc activement à utiliser un numéro
+qui échouerait systématiquement en sandbox.
+
+### Correctif — les 3 points demandés
+
+1. **Rattrapage propre des rejets NotchPay** (`src/lib/payment/types.ts`, `notchpay-provider.ts`,
+   `api/paiement/initier/route.ts`) : nouvelle classe `PaiementRefuseError` (même patron que
+   `AIRateLimitError`/`SmsEnvoiError`/`StorageError` déjà dans le code), levée uniquement pour un rejet
+   NotchPay 4xx (numéro invalide, saisie refusée — une cause métier connue), avec un message déjà sûr
+   pour l'utilisateur ; le détail brut du provider est gardé sur `detailProvider`, jamais renvoyé tel
+   quel au client, seulement loggé côté serveur. Un 5xx/panne réseau reste une `Error` générique. La
+   route distingue maintenant explicitement les deux dans un `try/catch` autour de
+   `provider.initierPaiement()` :
+   - `PaiementRefuseError` → `422` + `{"error": "Le paiement a été refusé par l'opérateur Mobile Money.
+     Vérifie le numéro et réessaie."}` (+ l'indice dev, cf. point 2).
+   - toute autre erreur → `502` + `{"error": "Le service de paiement est momentanément indisponible.
+     Réessaie dans quelques instants."}`, avec `console.error` du détail complet pour les logs.
+   Côté client, `PaiementForm.tsx` affiche maintenant ce message serveur dans les deux sous-étapes
+   ("formulaire" et "revalidation") — le message générique "vérifie ta connexion" ne reste que pour le
+   cas où `fetch()` lui-même échoue (vraie coupure réseau, aucune réponse reçue).
+2. **Indice dev corrigé** (`src/lib/payment/index.ts`, nouvelle fonction `indiceDevPaiement()`) : calculé
+   côté serveur à partir du provider **réellement actif** (`PAYMENT_MODE`/`NOTCHPAY_ENV`), pas d'un simple
+   `NODE_ENV` côté client qui ne peut pas le savoir — mock → ancienne convention ("numéro terminé par
+   0") ; NotchPay sandbox → les 5 vrais numéros de test avec leur résultat ; NotchPay live → rien (pas de
+   convention de test en production). Utilisé à la fois pour l'indice affiché avant soumission
+   (`abonnement/paiement/page.tsx` → prop `indiceDev` de `PaiementForm`) et pour le champ `indiceDevMock`
+   des réponses API (succès **et** erreur métier désormais, avant seulement succès).
+3. **Audit des autres reliquats du provider mock** : recherche exhaustive
+   (`indiceDevMock`/`terminé par 0`/`DEV_HINT_VISIBLE`/`Mode simulation`) dans `src/` — seuls les deux
+   endroits ci-dessus existaient encore avec la convention obsolète, déjà corrigés. Vérifié aussi
+   `BandeauModeTest.tsx` et les écrans admin `paiements`/`revenus` (`PAYMENT_MODE`/`paiementsSontReels()`)
+   : déjà corrects, pilotés dynamiquement par le provider actif, rien à changer.
+
+### Testé réellement — les 5 numéros de test sandbox + 1 numéro invalide
+
+`tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants dans `mock-provider.ts`, sans
+rapport). Puis, élève de test réel (`ELE-DEV-JH6`), vraie session NextAuth, 6 appels réels à `POST
+/api/paiement/initier` avec le PIN correct :
+
+| Numéro | Cas | Résultat |
+|---|---|---|
+| `+237670000000` | Succès | `201`, paiement créé |
+| `+237670000001` | Fonds insuffisants | `201`, paiement créé |
+| `+237670000002` | Échec | `201`, paiement créé |
+| `+237670000003` | Timeout | `201`, paiement créé |
+| `+237670000004` | Annulé | `201`, paiement créé |
+| `677123456` (hors liste) | — | `422` propre, message clair + indice dev, **plus de crash 500** |
+
+Les 5 numéros de test valident bien l'**initiation** NotchPay (le point qui crashait) — les 5 issues
+(succès/fonds insuffisants/échec/timeout/annulé) elles-mêmes ne se matérialisent qu'après webhook
+NotchPay différé, jamais reçu en local faute de tunnel public exposé (limite déjà documentée dans
+`notchpay-provider.ts`, sans rapport avec ce correctif). Logs serveur confirmés propres sur le cas
+refusé : `[paiement] refusé par le provider : Invalid test phone number...` suivi de
+`POST /api/paiement/initier 422` — plus aucune trace d'exception non rattrapée.
+
+### Nettoyage
+
+`Paiement`/`Abonnement`/`Eleve` de test supprimés en cascade correcte (paiements puis abonnement puis
+élève, `Paiement.abonnementId` n'ayant pas de cascade automatique) — vérifié par `DELETE ... RETURNING`
+à chaque étape. Comptes réels intacts.

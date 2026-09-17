@@ -15,12 +15,19 @@ interface PaiementFormProps {
   reduction: number;
   prixNormal: number;
   payeurRole: "ELEVE" | "PARENT";
+  /**
+   * Indice de test affiché en dev, calculé côté serveur par
+   * `indiceDevPaiement()` (`@/lib/payment`) à partir du provider **réellement
+   * actif** — `undefined` en production. Ne jamais recalculer côté client :
+   * un composant client n'a pas accès à `PAYMENT_MODE`/`NOTCHPAY_ENV`, donc
+   * ne peut pas savoir s'il faut la convention du mock ou celle du sandbox
+   * NotchPay.
+   */
+  indiceDev?: string;
 }
 
 type Operateur = "ORANGE" | "MTN";
 type SousEtape = "methode" | "formulaire" | "revalidation";
-
-const DEV_HINT_VISIBLE = process.env.NODE_ENV !== "production";
 
 /**
  * Écrans 15 (choix du moyen) + 16 (formulaire Mobile Money) — §2.4, §2.6 —
@@ -30,13 +37,14 @@ const DEV_HINT_VISIBLE = process.env.NODE_ENV !== "production";
  * OTP SMS, donc aucune étape supplémentaire ici pour lui). Ne crée aucune
  * session — seule la requête d'initiation du paiement en dépend.
  */
-export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, payeurRole }: PaiementFormProps) {
+export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, payeurRole, indiceDev }: PaiementFormProps) {
   const router = useRouter();
   const [sousEtape, setSousEtape] = useState<SousEtape>("methode");
   const [operateur, setOperateur] = useState<Operateur | null>(null);
   const [telephone, setTelephone] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [verrouille, setVerrouille] = useState(false);
 
@@ -50,6 +58,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
       return false;
     }
     setError(null);
+    setErrorHint(null);
     return true;
   }
 
@@ -68,7 +77,11 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
       });
       const data = await res.json();
       if (!res.ok) {
+        // Le serveur distingue déjà un refus métier (422, message sûr côté
+        // utilisateur) d'une panne technique (502, message générique) — on
+        // affiche tel quel dans les deux cas, plus l'indice dev le cas échéant.
         setError(data.error ?? "Une erreur est survenue, réessaie.");
+        setErrorHint(typeof data.indiceDevMock === "string" ? data.indiceDevMock : null);
         setSubmitting(false);
         if (res.status === 423) {
           setVerrouille(true);
@@ -79,7 +92,10 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
       }
       router.push(`/abonnement/verification/${data.paiementId}?eleve=${eleveId}`);
     } catch {
+      // Le fetch lui-même a échoué (pas de réponse du tout) — ici, et
+      // seulement ici, un vrai problème réseau/connexion côté client.
       setError("Impossible de contacter le serveur, vérifie ta connexion.");
+      setErrorHint(null);
       setSubmitting(false);
     }
   }
@@ -175,11 +191,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
                 autoFocus
               />
             </div>
-            {DEV_HINT_VISIBLE && (
-              <p className="mt-2 text-xs text-texte-muted">
-                Mode simulation : un numéro terminé par 0 échoue, tout autre numéro réussit.
-              </p>
-            )}
+            {indiceDev && <p className="mt-2 text-xs text-texte-muted">{indiceDev}</p>}
 
             <div className="mt-6 flex items-center justify-between rounded-xl bg-fond px-4 py-3 text-sm">
               <span className="text-texte-muted">Total à payer</span>
@@ -188,7 +200,12 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
               </span>
             </div>
 
-            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            {error && (
+              <div className="mt-3">
+                <p className="text-sm text-danger">{error}</p>
+                {errorHint && <p className="mt-1 text-xs text-texte-muted">{errorHint}</p>}
+              </div>
+            )}
 
             <button
               type="button"
@@ -216,7 +233,12 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
               <PinInput id="pin-confirmation" label="Code secret" value={pin} onChange={setPin} autoFocus />
             </div>
 
-            {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+            {error && (
+              <div className="mt-4">
+                <p className="text-sm text-danger">{error}</p>
+                {errorHint && <p className="mt-1 text-xs text-texte-muted">{errorHint}</p>}
+              </div>
+            )}
 
             <button
               type="button"
@@ -233,6 +255,7 @@ export function PaiementForm({ eleveId, montant, devise, reduction, prixNormal, 
               onClick={() => {
                 setSousEtape("formulaire");
                 setError(null);
+                setErrorHint(null);
                 setVerrouille(false);
               }}
               className="mt-3 text-sm font-medium text-texte-muted hover:text-texte"
