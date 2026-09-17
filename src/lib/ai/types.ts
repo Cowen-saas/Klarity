@@ -89,6 +89,17 @@ export interface PointManque {
 }
 
 export interface Correction {
+  /**
+   * false si l'image transmise n'est pas une copie exploitable pour cette
+   * épreuve (illisible, hors-sujet, absence de copie) — dans ce cas, `note`/
+   * `pointsForts`/`pointsManques` sont ignorés par l'appelant, seul
+   * `raisonRefus` compte (bug trouvé en test : Sonnet improvisait déjà ce
+   * signal en texte libre dans `feedbackDetaille` sans qu'aucun code ne le
+   * lise, cf. PROGRESS.md).
+   */
+  copieValide: boolean;
+  /** Renseigné uniquement si `copieValide` est false — jamais utilisé sinon. */
+  raisonRefus?: string;
   note: number;
   pointsForts: string[];
   pointsManques: PointManque[];

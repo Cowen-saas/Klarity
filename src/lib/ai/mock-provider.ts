@@ -67,6 +67,23 @@ export class MockAIProvider implements AIProvider {
     exemplesFewShot?: ExempleFewShot[]
   ): Promise<Correction> {
     this.maybeSimulateRateLimit();
+
+    // Convention de test (§2.1, bug copie invalide) : une clé contenant "copie-invalide"
+    // simule le refus de Sonnet, sans avoir besoin d'un vrai appel Sonnet pour tester ce chemin.
+    if (imageKeys.some((k) => k.includes("copie-invalide"))) {
+      const raisonRefus = "[MOCK] Les pièces jointes ne correspondent pas à une copie exploitable pour cette épreuve.";
+      return {
+        copieValide: false,
+        raisonRefus,
+        note: 0,
+        pointsForts: [],
+        pointsManques: [],
+        feedbackDetaille: raisonRefus,
+        tokensInput: estimerTokens(raisonRefus),
+        tokensOutput: estimerTokens(raisonRefus),
+      };
+    }
+
     const feedbackDetaille =
       `[MOCK][Sonnet] Correction simulée de l'épreuve ${epreuveRef.epreuveId} ` +
       `(${epreuveRef.matiere}, ${epreuveRef.classe}${epreuveRef.filiere ? `, série ${epreuveRef.filiere}` : ""}) ` +
@@ -74,6 +91,7 @@ export class MockAIProvider implements AIProvider {
       (exemplesFewShot?.length ? `, avec ${exemplesFewShot.length} exemple(s) few-shot injecté(s).` : ".");
 
     return {
+      copieValide: true,
       note: 12.5,
       pointsForts: ["[MOCK] Structure claire", "[MOCK] Bonne maîtrise du vocabulaire spécifique"],
       pointsManques: [

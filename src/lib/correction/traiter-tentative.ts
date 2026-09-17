@@ -85,6 +85,38 @@ export async function traiterTentative(tentativeId: string): Promise<void> {
     throw err; // laisse BullMQ marquer le job failed (backoff natif du worker à défaut d'options dédiées)
   }
 
+  // Copie non exploitable détectée par Sonnet (§2.1, bug trouvé en test) : jamais de
+  // CorrectionDetail/Lacune/recherche vidéo dans ce cas — l'appel a bien un coût réel
+  // (tracké ici malgré le rejet), mais aucune donnée de correction n'est écrite, et
+  // l'absence de CorrectionDetail laisse `doitTraiter` (route d'upload) autoriser un
+  // nouveau réessai sans qu'aucune règle "une seule correction par tentative" bloque.
+  if (!correction.copieValide) {
+    try {
+      await prisma.$transaction([
+        prisma.tentativeEpreuve.update({
+          where: { id: tentativeId },
+          data: { statut: "COPIE_INVALIDE", dateTraitement: new Date(), messageErreur: correction.raisonRefus ?? correction.feedbackDetaille },
+        }),
+        prisma.usageIA.create({
+          data: {
+            eleveId: tentative.eleveId,
+            matiereId: epreuve.matiereId,
+            typeUsage: "CORRECTION",
+            modele: "SONNET",
+            tokensInput: correction.tokensInput,
+            tokensOutput: correction.tokensOutput,
+            coutEstime: estimerCoutIA("SONNET", correction.tokensInput, correction.tokensOutput),
+          },
+        }),
+      ]);
+    } catch (err) {
+      await prisma.tentativeEpreuve.update({ where: { id: tentativeId }, data: { statut: "ERREUR" } });
+      throw err;
+    }
+    console.warn(`[correction] tentative ${tentativeId} rejetée — copie invalide : ${correction.raisonRefus ?? correction.feedbackDetaille}`);
+    return;
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
       const detail = await tx.correctionDetail.create({

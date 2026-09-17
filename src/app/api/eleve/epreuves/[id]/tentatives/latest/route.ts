@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const tentative = await prisma.tentativeEpreuve.findFirst({
     where: { eleveId: garde.session.user.id, epreuveId },
     orderBy: { dateSoumission: "desc" },
-    select: { id: true, numeroTentative: true, statut: true },
+    select: { id: true, numeroTentative: true, statut: true, messageErreur: true },
   });
 
   return NextResponse.json({ tentative });

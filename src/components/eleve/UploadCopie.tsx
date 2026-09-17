@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { IconWarning } from "@/components/icons";
 
-type StatutTentative = "EN_ATTENTE" | "EN_TRAITEMENT" | "TERMINE" | "ERREUR";
+type StatutTentative = "EN_ATTENTE" | "EN_TRAITEMENT" | "TERMINE" | "ERREUR" | "COPIE_INVALIDE";
 
 interface TentativeVue {
   id: string;
   statut: StatutTentative;
+  /** Renseigné uniquement pour statut = COPIE_INVALIDE (raisonRefus de Sonnet). */
+  messageErreur?: string | null;
 }
 
 interface UploadCopieProps {
@@ -136,6 +138,27 @@ export function UploadCopie({ epreuveId, titre, matiere, tentativeInitiale }: Up
           className="mt-6 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
         >
           Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  if (tentative && tentative.statut === "COPIE_INVALIDE") {
+    return (
+      <div className="w-full rounded-3xl bg-surface p-10 text-center shadow-sm">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent-light text-accent">
+          <IconWarning className="h-8 w-8" weight="fill" aria-hidden="true" />
+        </div>
+        <h1 className="mt-5 text-lg font-bold text-texte">Ce n&apos;est pas la bonne copie.</h1>
+        <p className="mt-1 text-sm text-texte-muted">
+          {tentative.messageErreur ?? "L'image envoyée ne correspond pas à une copie exploitable pour cette épreuve."}
+        </p>
+        <button
+          type="button"
+          onClick={() => setTentative(null)}
+          className="mt-6 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+        >
+          Envoyer la bonne copie
         </button>
       </div>
     );

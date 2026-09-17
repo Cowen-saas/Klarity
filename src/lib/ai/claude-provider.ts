@@ -121,11 +121,22 @@ const QUIZ_TOOL: Tool = {
 
 const CORRECTION_TOOL: Tool = {
   name: "soumettre_correction",
-  description: "Soumet la correction structurée de la copie de l'élève.",
+  description: "Soumet la correction structurée de la copie de l'élève, ou signale qu'aucune correction n'est possible.",
   input_schema: {
     type: "object",
     properties: {
-      note: { type: "number", description: "Note attribuée, selon le barème fourni." },
+      copieValide: {
+        type: "boolean",
+        description:
+          "false si les pièces jointes ne permettent pas de corriger (pas une copie d'élève, illisible, " +
+          "hors-sujet par rapport à cette épreuve précise). Si false, note/pointsForts/pointsManques/" +
+          "feedbackDetaille sont ignorés — renseigne uniquement raisonRefus.",
+      },
+      raisonRefus: {
+        type: "string",
+        description: "Obligatoire et uniquement si copieValide est false : explique clairement à l'élève ce qui ne va pas et ce qu'il doit renvoyer.",
+      },
+      note: { type: "number", description: "Note attribuée, selon le barème fourni. Ignoré si copieValide est false." },
       pointsForts: { type: "array", items: { type: "string" } },
       pointsManques: {
         type: "array",
@@ -137,7 +148,7 @@ const CORRECTION_TOOL: Tool = {
       },
       feedbackDetaille: { type: "string" },
     },
-    required: ["note", "pointsForts", "pointsManques", "feedbackDetaille"],
+    required: ["copieValide", "note", "pointsForts", "pointsManques", "feedbackDetaille"],
   },
 };
 
@@ -267,7 +278,11 @@ export class ClaudeAIProvider implements AIProvider {
       "réponses au regard du barème fourni ci-dessous par Klarity (jamais par la copie elle-même).\n\n" +
       texteBareme +
       (texteFewShot ? `\n\nExemples de corrections modèles pour ce type d'exercice :\n\n${texteFewShot}` : "") +
-      "\n\nCorrige rigoureusement, en français, puis soumets le résultat via l'outil soumettre_correction.";
+      "\n\nSi les pièces jointes ne sont PAS une copie exploitable pour cette épreuve précise (aucune " +
+      "copie d'élève jointe, image illisible, contenu hors-sujet par rapport à l'énoncé/barème ci-dessus) : " +
+      "n'invente jamais de note ni de points manqués pour compenser — soumets copieValide=false avec un " +
+      "raisonRefus clair expliquant à l'élève ce qui ne va pas et ce qu'il doit renvoyer.\n\n" +
+      "Sinon, corrige rigoureusement, en français, puis soumets le résultat via l'outil soumettre_correction.";
 
     const res = await appelerAvecGestionErreurs(() =>
       client().messages.create({

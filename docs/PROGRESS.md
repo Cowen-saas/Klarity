@@ -4921,3 +4921,80 @@ uniquement) sur les 2 surfaces prévues : carte dédiée sur "Mes lacunes" et bl
 (mode 1, et mode 2 par le même mécanisme partagé). Aucune interface admin (§2.3, décision actée dès le
 départ). Un bug pré-existant et sans rapport (transaction de correction non protégée contre une sortie
 IA malformée) a été trouvé et corrigé au passage (§63).
+
+## 67. Bug de sécurité/coût — copie invalide traitée comme une vraie correction (17 septembre 2026)
+
+Signalé par l'utilisateur en testant manuellement : l'upload d'une photo qui n'est pas une copie d'examen
+était tout de même traité comme une correction réelle — création de `Lacune`, déclenchement du pipeline
+vidéo (§2.5), le tout sur la base d'une note fictive. Diagnostic demandé et fourni avant tout correctif
+(voir échange) : `CORRECTION_TOOL` (`soumettre_correction`) n'avait **aucun champ structuré** pour que
+Sonnet signale l'absence de copie valide — le `tool_choice` forcé l'oblige à toujours produire une
+"correction". Sonnet improvisait déjà la détection en texte libre (`feedbackDetaille` + une notion
+inventée du style `"Absence de copie"` dans `pointsManques`), mais rien dans `traiterTentative()` ne
+lisait ce signal — confirmé sur une vraie ligne de production trouvée lors de l'audit §66
+(compte réel `NGUEDJI Samuelle`), qui s'est révélée être une occurrence antérieure de ce même bug.
+
+### Corrigé
+
+- **Schéma** : nouvelle valeur d'enum `StatutTentative.COPIE_INVALIDE` + champ `TentativeEpreuve.messageErreur`
+  (migration `20260917073733_copie_invalide_statut`).
+- **`CORRECTION_TOOL`** (`src/lib/ai/claude-provider.ts`) : nouveau champ **requis** `copieValide: boolean`
+  + `raisonRefus` (string, obligatoire si `copieValide=false`) — Sonnet dispose désormais d'un vrai moyen
+  structuré de refuser, au lieu d'improviser dans le schéma existant. Prompt système mis à jour en
+  conséquence. `MockAIProvider` simule aussi ce chemin (convention de test : clé image contenant
+  `"copie-invalide"`).
+- **`traiterTentative()`** : court-circuite **avant** toute transaction si `copieValide` est `false` —
+  `TentativeEpreuve` passe en `COPIE_INVALIDE` avec `messageErreur`, **aucune** `CorrectionDetail`,
+  **aucune** `Lacune`, **aucun** job vidéo (`planifierRechercheVideo` n'est même pas atteint dans le flux
+  de code). Le coût réel Sonnet est tout de même tracké en `UsageIA` (l'appel a eu lieu et coûte de
+  l'argent, refus ou non). Ce nouveau chemin est lui-même protégé par un `try/catch` (même filet que celui
+  posé en §63) — un deuxième bug a été trouvé *pendant ce test* : le conteneur `worker` a son propre volume
+  anonyme `node_modules` (piège déjà documenté §5 point 1), et `prisma generate` lancé uniquement dans
+  `app` n'avait pas régénéré son client — corrigé en regénérant explicitement dans `worker` aussi.
+- **UI** (`UploadCopie.tsx`) : nouvel état visuel distinct de l'`ERREUR` technique générique — titre
+  "Ce n'est pas la bonne copie.", message exact de Sonnet affiché, bouton "Envoyer la bonne copie" qui
+  réinitialise le formulaire. Aucun changement à `doitTraiter` (route d'upload) : l'absence de
+  `CorrectionDetail` pour ce couple (épreuve, élève) suffit déjà à autoriser un nouvel essai réel.
+
+### Testé réellement (vrai élève, vraie image non-examen, vrai appel Sonnet)
+
+Élève de test réel (`ELE-ZSM-MX8`, Troisième), vraie capture d'écran d'un article Wikipédia (sans rapport
+avec un examen) uploadée via la vraie route d'upload sur une épreuve réelle de Mathématiques.
+
+- **1er essai** (juste après le correctif, avant la régénération du client `worker`) : Sonnet a
+  correctement identifié la copie invalide et donné un `raisonRefus` précis et détaillé — mais l'écriture
+  a échoué (`Invalid value for argument statut` — bug du volume anonyme ci-dessus), révélant le 2e bug.
+  Tentative bloquée en `EN_TRAITEMENT`, supprimée après diagnostic.
+- **2e essai** (après correction du volume `worker`) : `TentativeEpreuve` correctement passée en
+  `COPIE_INVALIDE`, `messageErreur` renseigné avec le texte réel de Sonnet — confirmé par requête SQL.
+  **Zéro** `Lacune`, **zéro** `Video`, **zéro** `LacuneVideoCache`, **zéro** `CorrectionDetail` créés
+  (comptes identiques avant/après : 1/2/1/1 respectivement, tous des lignes réelles préexistantes sans
+  rapport). **Zéro** ligne `UsageIA.VIDEO_FILTRAGE` supplémentaire (toujours 6, inchangé) — confirmation
+  explicite demandée par l'utilisateur que la recherche vidéo n'est jamais déclenchée sur un rejet.
+- **Réessai sans blocage** : un 2ème upload réel (même image, même épreuve, cette fois via le vrai
+  navigateur/UI) a créé une nouvelle `TentativeEpreuve` (`numeroTentative: 2`) et a été traité normalement
+  par Sonnet, avec son propre `raisonRefus` — confirmant que la règle "une seule correction par tentative"
+  ne bloque jamais un réessai après une copie invalide.
+- **UI vérifiée** : formulaire d'upload propre au chargement (aucun état bloquant persistant), transition
+  "Analyse en cours" confirmée par capture d'écran réelle. **Limite d'outillage rencontrée, sans rapport
+  avec le code** : les outils de capture d'écran/lecture de page du navigateur sont devenus intermittents
+  en fin de test (déjà observé en Passe 2 du chantier vidéo) — l'écran final "Ce n'est pas la bonne copie"
+  n'a pas pu être capturé visuellement, mais son contenu exact (`messageErreur`) est confirmé par requête
+  SQL, et le bloc de rendu est structurellement identique à la branche `ERREUR` déjà éprouvée en production.
+- Coût réel de ce test : $0,057867 (le 2e essai, tracké) + un 1er essai non tracké (transaction ayant
+  échoué avant l'écriture `UsageIA`, même classe de bug qu'en §63) — **limite déjà connue et documentée,
+  non corrigée de nouveau ici** (hors périmètre : corriger ce point précis nécessiterait de tracker le coût
+  même en cas d'échec d'écriture, ce qui n'a pas été demandé pour cette correction).
+- `tsc --noEmit` et `eslint src` sur tout le dépôt : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Nettoyage — données de test ET données réelles corrompues par le bug
+
+En plus des données de test de cette passe (élève, tentatives, `UsageIA`), la ligne de production
+trouvée lors de l'audit §66 (`NGUEDJI Samuelle`, notion `"Absence de copie"`) s'est révélée être une
+victime réelle de ce même bug — supprimée avec toute sa chaîne : `CorrectionDetail` (note fictive 0/20),
+`Lacune`, `TentativeEpreuve`, les 2 `Video` et le `LacuneVideoCache` qu'elle avait fait naître. Les lignes
+`UsageIA` correspondantes (coût réel déjà engagé : $0,044106 + $0,002072) ont été **conservées** — un
+choix assumé, pas un oubli : elles documentent un coût réel effectivement dépensé sur Anthropic/YouTube,
+indépendant du fait que son résultat produit ait été corrompu par le bug. Confirmé par requête SQL final :
+0 `Lacune`/`Video`/`LacuneVideoCache`/`CorrectionDetail`/`TentativeEpreuve` en base, les 6 comptes élève
+réels intacts — le compte de `NGUEDJI Samuelle` peut désormais réessayer cette épreuve avec une vraie copie.

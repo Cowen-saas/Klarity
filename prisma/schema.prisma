@@ -78,6 +78,10 @@ enum StatutTentative {
   EN_TRAITEMENT
   TERMINE
   ERREUR
+  // Sonnet a détecté que l'image envoyée n'est pas une copie exploitable pour cette
+  // épreuve (illisible, hors-sujet, absence de copie) — jamais de CorrectionDetail
+  // ni de Lacune créés dans ce cas (bug trouvé et corrigé en test, cf. PROGRESS.md).
+  COPIE_INVALIDE
 }
 
 enum MotifSignalement {
@@ -459,6 +463,10 @@ model TentativeEpreuve {
   photoUploadKeys Json // tableau ordonné de clés R2, une par page photographiée (upload multi-pages, v1.10)
 
   statut StatutTentative @default(EN_ATTENTE)
+  // Renseigné uniquement pour statut = COPIE_INVALIDE — reprend le raisonRefus
+  // structuré de Sonnet (jamais utilisé pour statut = ERREUR, qui reste un
+  // message générique côté UI, incident technique et non de contenu).
+  messageErreur String?
 
   dateSoumission DateTime  @default(now())
   dateTraitement DateTime?
