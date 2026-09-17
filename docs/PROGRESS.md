@@ -354,6 +354,10 @@ tout futur ajout de dépendance.
    redaction PyMuPDF n'est plus tenable. WeasyPrint n'est pas installé dans l'environnement actuel
    (dépendances système pango/cairo, pas de `sudo`) — à prévoir aussi.
 
+5. 🟡 **Sender ID SmsPro « Klarity » en attente de validation opérateurs — aucun vrai test de
+   livraison SMS possible tant que ce n'est pas fait (§71).** `SMS_MODE` remis à `mock` pour le
+   développement en attendant. Voir §71 pour le détail complet.
+
 _(Le blocage `lightningcss`/Tailwind v4 qui figurait ici a été corrigé le 25 août — voir §4. L'IDOR,
 différé jusqu'ici faute de route par ID, est traité en §8 dès la première route concernée.)_
 
@@ -5178,3 +5182,51 @@ compte réel laissé tel quel : la connexion a réellement eu lieu, ce n'est pas
 
 Le vrai compte parent conserve exactement ses 3 liens d'origine, les 6 comptes élève réels intacts, aucune
 trace de l'élève/lien de test restante.
+
+## 72. Correctif au §71 — le SMS n'a jamais été livré ; Sender ID SmsPro toujours en attente (17 septembre 2026)
+
+**Note d'honnêteté explicite** : le §71 affirmait à tort un test SMS réussi. L'utilisateur a signalé que le
+SMS n'était en réalité **jamais arrivé sur son téléphone** — le code qu'il m'avait transmis venait de
+l'historique des messages du dashboard SmsPro, dont le statut de livraison affichait « Erreur », pas
+« Livré ». Erreur de raisonnement de ma part : j'avais conclu au succès sur la seule base d'un `HTTP 200`
+sans exception côté API d'envoi — **ce qui confirme uniquement que SmsPro a accepté la requête, jamais
+que le SMS a été livré au téléphone**. Ce risque avait pourtant déjà été identifié et écrit noir sur blanc
+dans ce même journal au §50, point 2 (« le 201 documenté confirme seulement l'acceptation pour envoi, pas
+la livraison ») — je ne l'ai pas correctement appliqué au moment de conclure au §71.
+
+### Diagnostic repris (Sender ID)
+
+`.env` avait `SMSPRO_SENDER_ID=Klarity API` — signalé par l'utilisateur comme un texte différent de celui
+réellement enregistré chez SmsPro (« Klarity », sans « API »). Corrigé (`SMSPRO_SENDER_ID=Klarity`),
+conteneurs `app`/`worker` rechargés, valeur confirmée par `printenv`.
+
+Avant de dépenser un nouveau crédit SMS réel, vérification directe via l'API SmsPro plutôt que de
+supposer que la correction textuelle suffit : la doc publique (`https://v2.smspro.cm/docs/api`, consultée
+à nouveau) documente un endpoint `GET /api/v1/sender-ids` non exploité jusqu'ici. Appelé pour de vrai
+(vraie clé) : `200 {"data":[]}` — **aucun Sender ID, ni « Klarity » ni « Klarity API », n'apparaît validé
+sur le compte actuellement**. La correction textuelle dans `.env` est donc nécessaire mais pas
+suffisante : le blocage réel reste administratif côté SmsPro (déjà noté au §50 — « Sender ID "Klarity"
+pas encore signé » — visiblement toujours vrai un mois plus tard, ou en tout cas non reflété par cet
+endpoint).
+
+### Décision (utilisateur)
+
+Plutôt que de retenter un envoi réel qui échouerait vraisemblablement pour la même raison, consigné comme
+point en attente externe (§5 point 5) : **le Sender ID « Klarity » est en cours de validation par les
+opérateurs côté SmsPro, hors contrôle du code.** `SMS_MODE` remis à `mock` pour le développement en
+attendant — confirmé chargé (`printenv` dans le conteneur `app`). Aucun nouveau test de livraison réelle
+tant que ce point n'est pas résolu côté compte SmsPro.
+
+### À refaire une fois le Sender ID validé
+
+1. Vérifier `GET /api/v1/sender-ids` montre bien « Klarity » avec un statut validé.
+2. Rebasculer `SMS_MODE=smspro`.
+3. Renvoyer un OTP réel, et cette fois **vérifier la livraison réelle** avant de conclure — soit via
+   `GET /api/v1/messages/:id` (endpoint découvert cette session, jamais encore utilisé), soit via
+   confirmation explicite de l'utilisateur qu'il a reçu le SMS sur son téléphone (pas seulement vu le
+   code sur le dashboard) — les deux mécanismes documentés par l'API pour distinguer acceptation de
+   livraison, plutôt que le seul code HTTP de la requête d'envoi.
+
+### Nettoyage
+
+Script ad hoc (`scratch-check-sender-ids.ts`, jamais commité) supprimé après vérification.
