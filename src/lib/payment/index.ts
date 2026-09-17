@@ -7,10 +7,10 @@ export * from "./types";
 
 /**
  * Sélection au démarrage via PAYMENT_MODE = mock | notchpay (§5.1).
- * Pas de mode "sandbox"/"live" séparé côté code : NotchPay n'expose qu'une
- * seule URL d'API pour les deux — c'est le préfixe de NOTCHPAY_PUBLIC_KEY
- * (`pk_test_…` vs `pk_live_…`) qui distingue un compte sandbox d'un compte
- * live, jamais PAYMENT_MODE. Voir `paiementsSontReels()` ci-dessous.
+ * Sandbox vs live (§5, compte live obtenu le 17 septembre 2026) est un axe
+ * indépendant, piloté par `NOTCHPAY_ENV` (sandbox | live, défaut sandbox) —
+ * cf. `NotchPayProvider` — pas une valeur de `PAYMENT_MODE`. Voir
+ * `paiementsSontReels()` ci-dessous.
  */
 let cachedProvider: PaymentProvider | undefined;
 
@@ -33,13 +33,13 @@ export function getPaymentProvider(): PaymentProvider {
 }
 
 /**
- * Vrai uniquement si des paiements NotchPay **réels** (clé publique live) sont
+ * Vrai uniquement si des paiements NotchPay **réels** (NOTCHPAY_ENV=live) sont
  * actifs — sert à décider si le bandeau "données de test" (`BandeauModeTest`)
  * doit s'afficher sur les écrans financiers admin (§2.3, §2.4). `PAYMENT_MODE`
- * seul ne suffit pas : `notchpay` peut tourner avec une clé `pk_test_…`
- * (sandbox) tout autant qu'avec une clé `pk_live_…`.
+ * seul ne suffit pas : `notchpay` tourne aussi bien en sandbox qu'en live,
+ * cf. `NotchPayProvider`/`NOTCHPAY_ENV`.
  */
 export function paiementsSontReels(): boolean {
   if ((process.env.PAYMENT_MODE ?? "mock") !== "notchpay") return false;
-  return (process.env.NOTCHPAY_PUBLIC_KEY ?? "").startsWith("pk_live_");
+  return (process.env.NOTCHPAY_ENV ?? "sandbox") === "live";
 }

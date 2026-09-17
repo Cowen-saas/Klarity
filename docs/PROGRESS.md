@@ -5038,3 +5038,56 @@ instruction explicite de l'utilisateur, le correctif est commité sur la seule b
 (cohérence structurelle avec `/eleve`/`/eleve/lacunes`, absence d'autre piste plausible dans
 `EleveShell.tsx`/`globals.css`) — **vérification visuelle réelle (desktop et mobile) laissée à
 l'utilisateur**, pas encore confirmée par capture d'écran de cette session.
+
+## 69. NotchPay — clés live obtenues, mécanisme sandbox/live introduit (17 septembre 2026)
+
+L'utilisateur a obtenu son compte NotchPay live (3 clés : Public, Private, Hash) et voulait les stocker à
+côté des clés sandbox sans encore basculer, avec un vrai mécanisme de choix confirmé avant activation.
+
+### Constat avant de coder
+
+Le code n'utilisait déjà que **2 des 3 clés** NotchPay (`NOTCHPAY_PUBLIC_KEY` en header `Authorization`,
+`NOTCHPAY_WEBHOOK_SECRET` = la "Hash key" pour l'HMAC des webhooks) — la clé privée n'était utilisée nulle
+part, y compris en sandbox. Le mécanisme sandbox/live existant (`src/lib/payment/index.ts`,
+`paiementsSontReels()`) était documenté comme volontairement absent de branche dédiée : c'est le *préfixe*
+de la valeur de `NOTCHPAY_PUBLIC_KEY` (`pk_test_…`/`pk_live_…`) qui distinguait les deux — incompatible
+avec le besoin exprimé de garder les deux jeux de clés actifs côte à côte. Question posée et tranchée par
+l'utilisateur : nouveau flag `NOTCHPAY_ENV` (recommandé) plutôt que garder l'ancien mécanisme (qui aurait
+demandé d'écraser manuellement les clés sandbox pour tester le live).
+
+### Construit
+
+- **`NOTCHPAY_ENV=sandbox|live`** (défaut `sandbox`, ne peut jamais basculer en live silencieusement sur
+  une valeur vide/absente) — nouvelle variable indépendante de `PAYMENT_MODE`.
+- **`NotchPayProvider`** (constructeur) : sélectionne `NOTCHPAY_PUBLIC_KEY(_LIVE)`/`NOTCHPAY_WEBHOOK_SECRET(_LIVE)`
+  selon `NOTCHPAY_ENV`, valide la valeur (`sandbox`/`live` uniquement, sinon erreur explicite).
+- **`paiementsSontReels()`** : reflète désormais `NOTCHPAY_ENV === "live"` au lieu du préfixe de clé —
+  commentaires mis à jour partout où l'ancien mécanisme était documenté (`BandeauModeTest.tsx`,
+  `admin/revenus/page.tsx`).
+- **`.env`/`.env.example`** : 3 nouvelles variables `NOTCHPAY_PUBLIC_KEY_LIVE`, `NOTCHPAY_PRIVATE_KEY_LIVE`
+  (stockée mais non lue par le code — comme son équivalent sandbox, jamais utilisée par le flux de
+  paiement actuel), `NOTCHPAY_WEBHOOK_SECRET_LIVE` — ajoutées à côté des clés sandbox existantes,
+  **intactes**. `NOTCHPAY_ENV=sandbox` explicite dans `.env` (comportement inchangé tant que
+  l'utilisateur ne colle pas ses vraies valeurs live et ne bascule pas le flag).
+
+### Testé réellement
+
+- Conteneurs `app`/`worker` recréés (`docker compose up -d`, pas seulement `restart` — un `restart` seul
+  ne recharge pas `.env` sur des conteneurs déjà créés) : les 3 nouvelles variables confirmées chargées
+  par `printenv` dans le conteneur.
+- **Non-régression sandbox** : vrai appel `initierPaiement()` via le vrai `NotchPayProvider` refactoré →
+  vraie session NotchPay sandbox obtenue (`trx.test_…`), identique au comportement d'avant ce chantier —
+  confirme que `NOTCHPAY_ENV=sandbox` (défaut) résout exactement les mêmes variables qu'avant le
+  refactor. `paiementsSontReels()` confirmé `false`.
+- **Sécurité du mécanisme** : `NOTCHPAY_ENV=live` forcé en test (avec les clés live encore vides) →
+  `paiementsSontReels()` bascule bien à `true`, mais toute tentative d'appel réel échoue immédiatement et
+  clairement (`Configuration NotchPay incomplète : NOTCHPAY_PUBLIC_KEY_LIVE manquante`) — aucun repli
+  silencieux, aucun risque de basculer en live par erreur avant que l'utilisateur n'ait rempli ses clés.
+- `tsc --noEmit` et `eslint src` : 0 erreur sur tout le dépôt (2 warnings pré-existants, sans rapport).
+
+### Reste à faire (hors périmètre de cette passe, sur décision de l'utilisateur)
+
+L'utilisateur doit coller ses 3 vraies valeurs live dans `.env` (`NOTCHPAY_PUBLIC_KEY_LIVE`,
+`NOTCHPAY_PRIVATE_KEY_LIVE`, `NOTCHPAY_WEBHOOK_SECRET_LIVE`) — jamais fait par Claude (identifiants réels,
+jamais manipulés). Le test conjoint d'un vrai paiement live (`NOTCHPAY_ENV=live`) reste à faire ensemble,
+explicitement différé par l'utilisateur tant que ce n'est pas voulu.

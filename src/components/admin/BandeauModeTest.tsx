@@ -3,11 +3,11 @@ import { IconWarning } from "@/components/icons";
 /**
  * Bandeau d'avertissement affiché sur les écrans financiers admin tant que
  * `paiementsSontReels()` (`src/lib/payment/index.ts`) est faux — càd hors
- * PAYMENT_MODE=notchpay avec une clé publique live (§5.2, §5.3). Empêche qu'un
+ * PAYMENT_MODE=notchpay avec NOTCHPAY_ENV=live (§5.2, §5.3). Empêche qu'un
  * futur lecteur — Claude ou un collaborateur — prenne ces chiffres pour du vrai
  * chiffre d'affaires. En mock, les transactions viennent du simulateur de
- * webhook (`worker`) ; en NotchPay sandbox (clé `pk_test_…`), ce sont de vrais
- * appels API mais avec de l'argent factice.
+ * webhook (`worker`) ; en NotchPay sandbox (NOTCHPAY_ENV=sandbox), ce sont de
+ * vrais appels API mais avec de l'argent factice.
  */
 export function BandeauModeTest({ mode, sujet }: { mode: string; sujet: string }) {
   return (

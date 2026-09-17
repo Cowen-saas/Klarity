@@ -22,7 +22,7 @@ function formatFCFA(n: number): string {
  * des abonnements ACTIF (jamais recalculé a posteriori, §2.4.1). CA mensuel =
  * paiements `REUSSI`. Accès global ADMIN légitime — défense par le gate ADMIN
  * (middleware + layout + contrôle en tête). Tant que `paiementsSontReels()`
- * est faux (mock, ou NotchPay avec une clé `pk_test_…`), les montants ne sont
+ * est faux (mock, ou NotchPay en NOTCHPAY_ENV=sandbox), les montants ne sont
  * pas de vrai chiffre d'affaires : bandeau explicite.
  */
 export default async function AdminRevenusPage() {

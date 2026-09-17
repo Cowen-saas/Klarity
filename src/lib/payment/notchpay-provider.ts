@@ -17,10 +17,12 @@ import type { MethodePaiement, OperateurMobileMoney, PaiementSession, Payeur, Re
  * de tunnel public exposé volontairement, cf. journal — mais `data.id` est
  * gardé en repli défensif si NotchPay l'envoie malgré tout pour cet event).
  *
- * Pas de distinction sandbox/live côté code : NotchPay expose une seule URL
- * d'API pour les deux (`https://api.notchpay.co`) — seul le préfixe de la clé
- * publique (`pk_test_…` / `pk_live_…`) distingue les deux, cf. `paiementsSontReels()`
- * dans `index.ts`.
+ * Sandbox/live (§5, compte live obtenu le 17 septembre 2026) : NotchPay expose
+ * une seule URL d'API pour les deux (`https://api.notchpay.co`) — c'est
+ * `NOTCHPAY_ENV` (`sandbox` | `live`, défaut `sandbox`) qui sélectionne la
+ * paire de clés (`NOTCHPAY_PUBLIC_KEY`/`NOTCHPAY_WEBHOOK_SECRET` en sandbox,
+ * `..._LIVE` en live), indépendamment de `PAYMENT_MODE`. Voir aussi
+ * `paiementsSontReels()` dans `index.ts`.
  *
  * Flux d'initiation en 2 appels (doc "Accept payments — Mobile Money") :
  *  1. `POST /payments` crée la transaction (montant, devise, téléphone) et
@@ -97,8 +99,13 @@ export class NotchPayProvider implements PaymentProvider {
   private readonly webhookSecret: string;
 
   constructor() {
-    this.publicKey = envObligatoire("NOTCHPAY_PUBLIC_KEY");
-    this.webhookSecret = envObligatoire("NOTCHPAY_WEBHOOK_SECRET");
+    const env = process.env.NOTCHPAY_ENV ?? "sandbox";
+    if (env !== "sandbox" && env !== "live") {
+      throw new Error(`NOTCHPAY_ENV invalide : "${env}" (attendu : sandbox | live).`);
+    }
+    const suffixe = env === "live" ? "_LIVE" : "";
+    this.publicKey = envObligatoire(`NOTCHPAY_PUBLIC_KEY${suffixe}`);
+    this.webhookSecret = envObligatoire(`NOTCHPAY_WEBHOOK_SECRET${suffixe}`);
   }
 
   async initierPaiement(montant: number, devise: string, _methode: MethodePaiement, payeur: Payeur): Promise<PaiementSession> {
