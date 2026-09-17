@@ -5134,3 +5134,47 @@ préexistants et leurs propres `Paiement`/`Abonnement` intacts). Les 3 `WebhookL
 volontairement** — table explicitement conçue comme journal d'audit append-only (CLAUDE.md), jamais
 purgée rétroactivement, au même titre que les coûts `UsageIA` déjà traités ainsi en §67. Scripts ad hoc
 (`scratch-check-notchpay-status.ts`, `scratch-send-webhook.ts`, jamais commités) supprimés.
+
+## 71. Retrait du raccourci dev OTP + premier vrai SMS SmsPro et connexion parent réelle (17 septembre 2026)
+
+Deux demandes liées : SmsPro étant configuré et vérifié (§50), le raccourci dev qui affichait/pré-remplissait
+le code OTP n'a plus lieu d'être — et un vrai envoi + une vraie connexion parent bout en bout devaient le
+confirmer.
+
+### Raccourci dev retiré — 3 fichiers, zéro trace restante
+
+- `src/lib/auth/otp.ts` — `envoyerOtp()` ne renvoie plus `{ codeDevMock }`, juste `Promise<void>`.
+- `src/app/api/auth/parent/request-otp/route.ts` — la réponse JSON ne contient plus que `{ envoye: true }`.
+- `src/components/connexion/ParentLoginForm.tsx` — état `codeDevMock`, son affectation, et le bouton
+  "Dev uniquement — code : … (cliquer pour remplir)" supprimés entièrement.
+- Vérifié par recherche exhaustive (`grep -r codeDevMock src`) : 0 occurrence restante dans le code.
+  `MockSmsProvider` continue de journaliser le code en console pour `SMS_MODE=mock` (mécanisme distinct,
+  jamais concerné par cette demande — c'est la seule façon de voir le code en mode simulé, pas un
+  raccourci d'UI).
+- `tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Testé réellement — vrai SMS SmsPro, vraie connexion parent bout en bout
+
+`SMS_MODE=smspro` était déjà actif (§50). Élève de test réel créé pour disposer d'un `codeEleve`, vrai
+OTP envoyé via `POST /api/auth/parent/request-otp` vers le vrai numéro de l'utilisateur (fourni en privé,
+jamais consigné ici ni dans aucune réponse — conformément à sa demande explicite) : réponse `{"envoye":
+true}`, aucun code renvoyé par l'API (le raccourci retiré ne cache plus rien). Confirmé côté SmsPro par
+l'absence d'erreur (le provider lève une exception explicite sur tout code HTTP ≠ 201, cf.
+`smspro-provider.ts` — un 200 sans exception confirme un vrai `201` accepté par SmsPro).
+
+L'utilisateur a lu le code sur son téléphone et me l'a transmis en message ; connexion parent complétée
+via le vrai flux NextAuth (`POST /api/auth/callback/parent`) avec ce code réel — session `role: PARENT`
+obtenue, `Parent.derniereConnexion` mis à jour, `ParentEleveLink` créé automatiquement (comportement
+normal du premier lien, §1.2/§2.2).
+
+**Découverte en vérifiant** : le numéro fourni est celui du **vrai compte parent déjà existant** de
+l'utilisateur (3 vrais élèves déjà liés). Le test a donc ajouté un 4ᵉ lien, erroné, vers l'élève de test
+jetable — repéré avant de conclure, supprimé (le lien de test uniquement, jamais le compte parent réel ni
+ses 3 liens légitimes). Élève de test et ses `OtpVerification` (codes à usage unique, non un journal
+d'audit permanent — contrairement à `WebhookLog`/`UsageIA`) supprimés. `Parent.derniereConnexion` du
+compte réel laissé tel quel : la connexion a réellement eu lieu, ce n'est pas une donnée de test à annuler.
+
+### État final vérifié par requête SQL
+
+Le vrai compte parent conserve exactement ses 3 liens d'origine, les 6 comptes élève réels intacts, aucune
+trace de l'élève/lien de test restante.

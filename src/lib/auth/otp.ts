@@ -28,7 +28,7 @@ export async function verifyOtp(code: string, hash: string): Promise<boolean> {
  * ici. L'appelant reste responsable de son propre rate limiting, adapté à son
  * contexte.
  */
-export async function envoyerOtp(telephone: string): Promise<{ codeDevMock?: string }> {
+export async function envoyerOtp(telephone: string): Promise<void> {
   const code = genererCodeOtp();
   const codeOtpHash = await hashOtp(code);
   const expiration = new Date(Date.now() + OTP_TTL_MINUTES * 60_000);
@@ -36,10 +36,4 @@ export async function envoyerOtp(telephone: string): Promise<{ codeDevMock?: str
   await prisma.otpVerification.create({ data: { telephone, codeOtpHash, expiration } });
 
   await getSmsProvider().envoyerOtp(telephone, code, OTP_TTL_MINUTES);
-
-  // Hors production uniquement : évite d'avoir à relayer le code par les logs
-  // Docker pendant les tests manuels (le bouton "remplir" du formulaire parent
-  // s'en sert). Jamais renvoyé en production — le SMS réel (§3) est le seul
-  // canal une fois le fournisseur branché.
-  return { codeDevMock: process.env.NODE_ENV !== "production" ? code : undefined };
 }
