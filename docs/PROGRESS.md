@@ -355,8 +355,10 @@ tout futur ajout de dépendance.
    (dépendances système pango/cairo, pas de `sudo`) — à prévoir aussi.
 
 5. 🟡 **Sender ID SmsPro « Klarity » en attente de validation opérateurs — aucun vrai test de
-   livraison SMS possible tant que ce n'est pas fait (§71).** `SMS_MODE` remis à `mock` pour le
-   développement en attendant. Voir §71 pour le détail complet.
+   livraison SMS possible tant que ce n'est pas fait (§72).** `SMS_MODE` remis à `mock` pour le
+   développement en attendant, et le raccourci dev OTP (retiré au §71) **remis temporairement**
+   (§73) pour ne pas bloquer les tests de connexion parent — **à retirer de nouveau** dès que ce
+   Sender ID est validé et que `SMS_MODE` repasse en `smspro` pour de bon.
 
 _(Le blocage `lightningcss`/Tailwind v4 qui figurait ici a été corrigé le 25 août — voir §4. L'IDOR,
 différé jusqu'ici faute de route par ID, est traité en §8 dès la première route concernée.)_
@@ -5230,3 +5232,47 @@ tant que ce point n'est pas résolu côté compte SmsPro.
 ### Nettoyage
 
 Script ad hoc (`scratch-check-sender-ids.ts`, jamais commité) supprimé après vérification.
+
+## 73. Raccourci dev OTP remis **temporairement** — Sender ID SmsPro toujours en attente (17 septembre 2026)
+
+Suite directe du §72 : le Sender ID « Klarity » reste en attente de validation opérateurs côté SmsPro,
+donc aucun vrai test de livraison SMS n'est possible pour l'instant. Le raccourci dev retiré au §71 (avant
+qu'on découvre que le blocage réel n'avait rien à voir avec lui) est remis **explicitement à titre
+temporaire**, à la demande de l'utilisateur, pour ne pas bloquer ses propres tests de connexion parent en
+attendant.
+
+### Isolation plus stricte qu'avant (demande explicite de l'utilisateur)
+
+Contrairement à la version retirée au §71 (gardée uniquement par `NODE_ENV !== "production"`), la version
+remise ajoute une **seconde condition, plus précise** : `SMS_MODE === "mock"` (`src/lib/auth/otp.ts`,
+`envoyerOtp()`). Concrètement, même en environnement de dev, si `SMS_MODE=smspro` est actif (comme lors
+d'un futur test réel), le code reste caché — le raccourci ne s'active *que* quand aucun SMS réel n'a été
+tenté, donc rien à protéger. Commentaire explicite en tête de la logique (`⚠️ TEMPORAIRE...`), renvoyant à
+cette entrée et au §5 point 5, dans les 3 fichiers concernés (`otp.ts`, `ParentLoginForm.tsx` — variable
+et bouton JSX) pour qu'il soit impossible de le manquer à la prochaine relecture.
+
+### Testé réellement
+
+- Élève de test jetable créé, `POST /api/auth/parent/request-otp` (numéro de test fictif, jamais un vrai
+  numéro) avec `SMS_MODE=mock` actif → réponse `{"envoye":true,"codeDevMock":"XXXXXX"}`, code retourné
+  comme avant le retrait.
+- **Connexion parent complétée avec ce code** via le vrai flux NextAuth (`POST
+  /api/auth/callback/parent`) — vraie session `role: PARENT` obtenue, identique au comportement d'avant
+  le retrait du §71.
+- Vérification visuelle du bouton "Dev uniquement — code : … (cliquer pour remplir)" dans le navigateur
+  interrompue par une déconnexion de l'extension Chrome en cours de test — non refaite, le test API
+  ci-dessus exerçant exactement le même chemin de code que le bouton (même route, même réponse JSON),
+  donc suffisant pour confirmer le mécanisme.
+- `tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Nettoyage
+
+Élève de test, parent de test et son lien, `OtpVerification` associés supprimés après vérification — les
+6 comptes élève réels et l'unique vrai compte parent (déjà existant) intacts.
+
+### Rappel — à retirer de nouveau
+
+Cf. §5 point 5 : dès que le Sender ID « Klarity » est validé côté SmsPro et que `SMS_MODE` repasse en
+`smspro` pour de bon, retirer ce raccourci une seconde fois (mêmes 3 fichiers qu'au §71) — la condition
+`SMS_MODE === "mock"` le désactive déjà automatiquement dès que `SMS_MODE=smspro`, mais le code doit
+toujours être retiré, pas seulement rester inerte.

@@ -25,6 +25,10 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [secondesRestantes, setSecondesRestantes] = useState(0);
+  // ⚠️ TEMPORAIRE — cf. commentaire complet dans src/lib/auth/otp.ts (§73 de
+  // docs/PROGRESS.md). À retirer avec le bouton "Dev uniquement" ci-dessous dès
+  // que le Sender ID SmsPro "Klarity" est validé et SMS_MODE repasse en smspro.
+  const [codeDevMock, setCodeDevMock] = useState<string | null>(null);
 
   function setEtape(next: "demande" | "verification") {
     setEtapeInterne(next);
@@ -57,6 +61,7 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
         return;
       }
       setOtp("");
+      setCodeDevMock(typeof data.codeDevMock === "string" ? data.codeDevMock : null);
       setEtape("verification");
       setSecondesRestantes(DELAI_RENVOI_SECONDES);
     } catch {
@@ -107,6 +112,17 @@ export function ParentLoginForm({ from, onEtapeChange }: ParentLoginFormProps) {
         <div className="mt-6 flex justify-center">
           <PinInput id="otp" label="Code de vérification" value={otp} onChange={setOtp} length={6} masque={false} autoFocus />
         </div>
+
+        {/* TEMPORAIRE — cf. src/lib/auth/otp.ts. À retirer une fois le Sender ID SmsPro validé. */}
+        {codeDevMock && (
+          <button
+            type="button"
+            onClick={() => setOtp(codeDevMock)}
+            className="mx-auto mt-3 block rounded-lg bg-accent-light px-3 py-1.5 text-xs font-semibold text-texte"
+          >
+            Dev uniquement — code : {codeDevMock} (cliquer pour remplir)
+          </button>
+        )}
 
         <p className="mt-3 text-sm text-texte-muted">
           {secondesRestantes > 0 ? (

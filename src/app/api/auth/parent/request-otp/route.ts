@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard." }, { status: 429 });
   }
 
-  await envoyerOtp(telephone);
+  const { codeDevMock } = await envoyerOtp(telephone);
 
-  return NextResponse.json({ envoye: true });
+  return NextResponse.json({ envoye: true, codeDevMock });
 }
