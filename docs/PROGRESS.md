@@ -5091,3 +5091,46 @@ L'utilisateur doit coller ses 3 vraies valeurs live dans `.env` (`NOTCHPAY_PUBLI
 `NOTCHPAY_PRIVATE_KEY_LIVE`, `NOTCHPAY_WEBHOOK_SECRET_LIVE`) — jamais fait par Claude (identifiants réels,
 jamais manipulés). Le test conjoint d'un vrai paiement live (`NOTCHPAY_ENV=live`) reste à faire ensemble,
 explicitement différé par l'utilisateur tant que ce n'est pas voulu.
+
+## 70. Test réel sandbox NotchPay — succès, échec, idempotence, signature (17 septembre 2026)
+
+Demandé pour re-vérifier bout en bout après le refactor `NOTCHPAY_ENV` (§69), qui touche directement
+`NotchPayProvider` (résolution des clés) — non-régression en plus du test métier demandé. Même
+méthodologie déjà établie au §41 (pas de tunnel public exposé — webhook reconstitué avec les vraies
+données NotchPay et une vraie signature HMAC via `NOTCHPAY_WEBHOOK_SECRET`, jamais un payload inventé).
+
+### Déroulé réel (3 élèves de test, `PAYMENT_MODE=notchpay` + `NOTCHPAY_ENV=sandbox`)
+
+1. 3 vrais paiements initiés via `POST /api/paiement/initier` (vrai flux NextAuth + PIN), numéros de test
+   NotchPay déjà connus du §41 : `+237670000000` (MTN succès), `+237690000000` (Orange succès),
+   `+237670000002` (échec). Les 3 vrais appels `POST /payments` + `POST /payments/{reference}` ont réussi,
+   `Paiement` créé en base avec `statut: EN_ATTENTE`.
+2. Statut réel relu via un vrai `GET /payments/{reference}` (clé publique sandbox, appel direct à l'API
+   NotchPay) : `complete`/`complete`/`failed` respectivement — confirme le comportement attendu des 3
+   numéros de test.
+3. Webhook reconstitué avec ces vraies données (référence, montant, devise, statut) et signé avec un vrai
+   HMAC-SHA256 (`NOTCHPAY_WEBHOOK_SECRET` sandbox, lu uniquement dans le conteneur), livré à
+   `POST /api/paiement/webhook` (le vrai endpoint HTTP, pas un chemin de test séparé).
+
+### Résultats vérifiés par requête SQL
+
+- **MTN succès** : `Paiement.statut = REUSSI`, `Abonnement.plan = PREMIUM`/`statut = ACTIF`,
+  `dateFin` = +30 jours, `WebhookLog.traitementStatut = CREDITE`/`signatureValide = true`.
+- **Orange succès** : identique — confirme que le canal `cm.orange` fonctionne aussi après le refactor.
+- **Échec** : `Paiement.statut = ECHEC`, **`Abonnement` resté `GRATUIT`** (jamais crédité à tort),
+  `WebhookLog.traitementStatut = ECHEC_PAIEMENT`.
+- **Idempotence** : le même webhook MTN succès rejoué à l'identique → `traitementStatut = DEJA_TRAITE`,
+  `Abonnement.dateFin` rigoureusement inchangée (`2026-10-17 13:21:14.841` avant et après) — confirmé
+  qu'aucune deuxième écriture n'a eu lieu, donc aucun double crédit.
+- **Signature invalide** (bonus, cohérence avec §41) : payload avec signature bidon → **401**
+  `SIGNATURE_INVALIDE`, rien écrit en base.
+- Non-régression confirmée : le refactor `NOTCHPAY_ENV` du §69 n'a rien changé au comportement sandbox
+  (résolution de `NOTCHPAY_PUBLIC_KEY`/`NOTCHPAY_WEBHOOK_SECRET` identique à avant).
+
+### Nettoyage
+
+Les 3 `Paiement` et `Abonnement` de test supprimés après vérification (les 6 comptes élève réels
+préexistants et leurs propres `Paiement`/`Abonnement` intacts). Les 3 `WebhookLog` de ce test **conservés
+volontairement** — table explicitement conçue comme journal d'audit append-only (CLAUDE.md), jamais
+purgée rétroactivement, au même titre que les coûts `UsageIA` déjà traités ainsi en §67. Scripts ad hoc
+(`scratch-check-notchpay-status.ts`, `scratch-send-webhook.ts`, jamais commités) supprimés.
