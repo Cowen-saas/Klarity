@@ -5276,3 +5276,65 @@ Cf. §5 point 5 : dès que le Sender ID « Klarity » est validé côté SmsPro 
 `smspro` pour de bon, retirer ce raccourci une seconde fois (mêmes 3 fichiers qu'au §71) — la condition
 `SMS_MODE === "mock"` le désactive déjà automatiquement dès que `SMS_MODE=smspro`, mais le code doit
 toujours être retiré, pas seulement rester inerte.
+
+## 74. Refonte de l'écran `/eleve/profil` — même défaut de mise en page que `/eleve/quiz` (17 septembre 2026)
+
+Signalé par l'utilisateur, skill `ui-ux-pro-max` demandée explicitement.
+
+### Diagnostic — même cause que §68, en pire
+
+`<main className="max-w-2xl px-6 py-8 sm:px-8">` (672px), sans `mx-auto`, exactement le même défaut
+structurel que `/eleve/quiz` (§68) — aucun `<main>` du dashboard élève n'a de centrage explicite,
+seules les pages en `max-w-5xl` (`/eleve`, `/eleve/lacunes`) ne montrent pas le problème car leur
+largeur remplit presque tout l'espace disponible. Mais l'utilisateur ne demandait pas qu'un simple
+recentrage : "le contenu doit exploiter pleinement l'espace disponible... pas juste un bloc
+d'informations basique" — un `mx-auto` seul aurait laissé un bloc étroit centré, toujours pauvre.
+
+### Refonte (aucune maquette dédiée pour cet écran)
+
+- **Largeur et grille reprises du tableau de bord** (`/eleve/page.tsx`) plutôt qu'un simple centrage :
+  `max-w-5xl mx-auto`, grille `lg:grid-cols-[2fr_1fr]` — le même patron qui fonctionne déjà bien sur
+  la page d'accueil élève.
+- **En-tête identité** : composant `Avatar` (`@/components/ui/Avatar`) réutilisé à l'identique (déjà
+  utilisé sur `/eleve`) en grand format (72px) + nom en titre + classe/série en sous-titre — remplace
+  le simple `<h1>Profil</h1>` texte seul.
+- **Carte principale "Informations du compte"** : lignes `dt`/`dd` réorganisées avec icônes
+  (`IconGraduationCap`, `IconCalendarBlank`) au lieu de texte nu, **+ un champ réellement nouveau**
+  ("Membre depuis", `Eleve.createdAt`) — pas juste une remise en forme visuelle, une info utile en
+  plus qui n'était pas affichée avant. Le code élève passe dans un nouveau composant dédié
+  `ProfilCodeEleve.tsx` (bouton copier-coller, même patron exact que `InscriptionWizard.tsx` déjà en
+  production — jamais un nouveau mécanisme inventé).
+- **Carte secondaire "Abonnement"** (nouvelle, colonne de droite) : lit le vrai `Abonnement` de
+  l'élève — badge "Premium actif" (carte teal pleine, date de fin) ou "Formule Gratuite" (carte
+  blanche + CTA vers `/abonnement`) — remplit la 2ᵉ colonne avec une information réelle et utile
+  plutôt qu'un espace vide décoratif.
+- Recherches `ui-ux-pro-max` (`--domain ux`) : confirmé qu'un contenu texte ne doit pas être étiré en
+  pleine largeur sans structure (règle "Container Width") — la largeur est exploitée via la richesse
+  du contenu et la grille à 2 colonnes, jamais en élargissant artificiellement le texte lui-même.
+
+### Testé réellement dans le navigateur
+
+Élève de test réel (`ELE-J6J-Z6S`, 1ère série D — pour exercer l'affichage filière) connecté par un
+vrai flux NextAuth.
+
+- **Formule Gratuite** : capture réelle confirmée — en-tête avec avatar, grille 2 colonnes bien
+  proportionnée occupant toute la largeur de la zone de contenu, carte "Informations du compte"
+  complète (classe, membre depuis, code élève, bouton copier), carte "Abonnement" avec CTA "Passer à
+  Premium". Aucun renvoi dans un coin, aucun vide disproportionné.
+- **Premium actif** : un vrai `Abonnement` `PREMIUM`/`ACTIF` inséré pour ce même élève de test →
+  confirmé par lecture du contenu réel de la page ("Premium actif", "Jusqu'au 17/10/2026", CTA
+  disparu) — capture visuelle non obtenue cette fois (instabilité de capture d'écran déjà rencontrée
+  aux Passes 2/3 du chantier vidéo et au §73, sans rapport avec le code), mais le contenu texte réel
+  de la page confirme la logique conditionnelle correcte.
+- **Bouton "Copier le code"** : le clic (simulé et via `.click()` direct en JS) n'a pas fait apparaître
+  "Copié !" — diagnostiqué précisément avant de conclure à un bug : `navigator.clipboard.writeText()`
+  appelé directement déclenche un timeout CDP de 45s, signe d'une invite de permission navigateur
+  bloquante côté environnement de test (comme une alerte JS), jamais résolue faute d'utilisateur réel
+  pour l'accepter. Le composant réutilise pourtant exactement le patron déjà en production
+  d'`InscriptionWizard.tsx` — traité comme une limite d'environnement de test, pas un défaut de code.
+- `tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants, sans rapport).
+
+### Nettoyage
+
+Élève de test et son `Abonnement` de test supprimés après vérification — les 6 comptes élève réels
+intacts.
