@@ -4850,3 +4850,74 @@ conditionnelle", Mathématiques) et sa vidéo en cache, connecté par un vrai fl
 supprimés après vérification — confirmé par requête SQL (`videos`/`lacune_video_cache` à 0 ligne, la
 seule `Lacune` restante en base appartient à un compte réel préexistant, les 6 comptes élève réels
 intacts).
+
+## 66. Pipeline vidéo automatisé (§2.5) — Passe 4 : audit final et récapitulatif du chantier (17 septembre 2026)
+
+Clôture du chantier vidéo (§63 à §65). Avant de démarrer cette passe, une demande d'ajouter une carte
+vidéo à la section Quiz a été proposée puis retirée — hors du découpage initial validé, sans citation CDC
+précise trouvée pour ce placement (outillage d'extraction PDF indisponible dans cet environnement au
+moment de vérifier), laissée pour une décision et une passe séparées futures.
+
+### Audit IDOR
+
+Les 3 routes touchées par le chantier (`GET`/`POST .../chat/conversations/[id]/messages`,
+`POST .../chat/conversations`) passent toutes `exigerRole("ELEVE")` avant tout accès, résolvent
+`session.user.id` côté serveur (jamais un champ client), et la conversation est systématiquement
+revérifiée appartenir à l'élève (`chargerConversationAutorisee`, déjà en place avant ce chantier) avant
+que `resoudreVideosPourMessages` ne lise ses lacunes. `Video`/`LacuneVideoCache` n'ont pas de propriétaire
+(`eleveId`) — mutualisés par notion par conception (§2.5, schéma) — donc aucune surface IDOR propre à ces
+2 tables : le seul point d'accès sensible est la liste des lacunes actives de l'élève, déjà bornée par
+`eleveId` + `matiereId` dans chaque appel. Aucune faille trouvée, aucun changement de code nécessaire.
+
+### Découverte réelle non planifiée : le cron quiz journalier a déjà déclenché le pipeline en production
+
+En consultant l'état de la base pour cet audit, un déclenchement **réel et autonome** du pipeline vidéo a
+été trouvé, survenu de lui-même le 16 septembre à 05:00:07 (cron `quiz-journalier-tous`, sans aucune
+action de test de ma part) : la seule `Lacune` active préexistante en base (compte réel `NGUEDJI
+Samuelle`, notion "Absence de copie") n'avait pas de cache vidéo — `planifierVideosPourLacunesActives()`
+l'a détecté, un vrai job vidéo a tourné, une vraie recherche YouTube et un vrai filtrage Haiku ont eu
+lieu, retenant 2 vidéos réelles sur la méthode de la dissertation en français. Confirmé par les logs
+worker retenus (`[worker] pipeline vidéo (cron) : 1 recherche(s) planifiée(s)`) et par les lignes réelles
+en base (`videos`, `lacune_video_cache`, `usages_ia` horodatées 05:00:07). Le cron du 17 septembre 05:00 a
+ensuite correctement trouvé cette notion déjà couverte (`0 recherche(s) planifiée(s)`) tout en régénérant
+le quiz journalier du jour — validation croisée réelle, en production, du fonctionnement conjoint des deux
+crons (§2.5 point 1), sans qu'aucun test manuel ne l'ait déclenché. **Ces 2 vidéos et leur entrée de cache
+sont de vraies données de production pour un compte réel — non supprimées** (à la différence des données
+de test des Passes 1 à 3), conformément à la règle de ne jamais toucher aux données des comptes élève
+réels préexistants.
+
+### Coût réel total du chantier vidéo (Passes 1 à 4)
+
+| Origine | Tokens (in/out) | Coût réel |
+|---|---|---|
+| Passe 1 — `corrigerCopie()` test (2e essai, réussi, tracké) | 16554 / 1740 | $0,075762 |
+| Passe 1 — `filtrerVideos()` × 5 (test, tracké) | ~1620/148 en moyenne | $0,011823 |
+| Passe 1 — `corrigerCopie()` 1er essai (réellement facturé, jamais tracké — bug documenté §63) | 16554 / 2151 | ~$0,081927 |
+| Passe 2 | — (réutilisation d'un id vidéo déjà vérifié, aucun nouvel appel) | $0 |
+| Passe 3 — `chat()` × 2 (test, tracké) | 937/307 + 1260/337 | $0,005417 |
+| **Découverte non planifiée** — `filtrerVideos()` cron réel, production (tracké, ligne conservée) | 1467 / 121 | $0,002072 |
+| **Total** | | **≈ $0,177 001** |
+
+Recherches YouTube réelles sur l'ensemble du chantier : 6 appels `search.list` (600 unités de quota sur
+les 10 000/jour par défaut) — gratuit, quota très large.
+
+### État final de la base, vérifié par requête SQL
+
+6 comptes élève réels préexistants intacts, 0 trace des élèves/tentatives/corrections/lacunes/conversations
+de test des Passes 1 à 3, `videos` et `lacune_video_cache` réduits aux 2 vraies vidéos de production
+ci-dessus (plus la vraie `Lacune` "Absence de copie" qui les a fait naître) — aucune autre notion ad hoc
+de test ne subsiste. `tsc --noEmit` et `eslint src` : 0 erreur sur l'ensemble du dépôt (2 warnings
+pré-existants sans rapport, jamais introduits par ce chantier).
+
+### Ce que le chantier a livré, en résumé
+
+Le pipeline vidéo automatisé (§2.5) est **complet et opérationnel en production** : recherche YouTube Data
+API v3 réelle, filtrage qualité Haiku réel, cache mutualisé par notion (`LacuneVideoCache`/`Video`),
+file BullMQ dédiée (`video`, dédoublonnée par notion), déclenché à la fois en fin de correction (§2.1) et
+par le cron quiz journalier pour les lacunes actives plus anciennes — les deux chemins prévus au
+découpage sont désormais vérifiés réels, y compris en production sans intervention. Affichage via le
+composant réutilisable `VideoCard` (miniature réelle, lecture `youtube-nocookie.com` après clic
+uniquement) sur les 2 surfaces prévues : carte dédiée sur "Mes lacunes" et bloc inline dans le chat-tuteur
+(mode 1, et mode 2 par le même mécanisme partagé). Aucune interface admin (§2.3, décision actée dès le
+départ). Un bug pré-existant et sans rapport (transaction de correction non protégée contre une sortie
+IA malformée) a été trouvé et corrigé au passage (§63).
