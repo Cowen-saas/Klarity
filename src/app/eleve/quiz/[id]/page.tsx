@@ -57,7 +57,7 @@ export default async function QuizPage({ params }: { params: Promise<{ id: strin
   }));
 
   return (
-    <main className="max-w-lg px-6 py-8 sm:px-8">
+    <main className="mx-auto max-w-lg px-6 py-8 sm:px-8">
       <QuizPlayer
         quizId={quiz.id}
         matiere={quiz.matiere.nom}

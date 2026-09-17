@@ -38,7 +38,7 @@ export default async function QuizAujourdhuiPage() {
   const nbLacunesActives = await prisma.lacune.count({ where: { eleveId, resolu: false } });
 
   return (
-    <main className="max-w-md px-6 py-8 sm:px-8">
+    <main className="mx-auto max-w-md px-6 py-8 sm:px-8">
       <QuizAujourdhui peutGenerer={nbLacunesActives > 0} />
     </main>
   );

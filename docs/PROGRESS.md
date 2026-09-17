@@ -4998,3 +4998,43 @@ choix assumé, pas un oubli : elles documentent un coût réel effectivement dé
 indépendant du fait que son résultat produit ait été corrompu par le bug. Confirmé par requête SQL final :
 0 `Lacune`/`Video`/`LacuneVideoCache`/`CorrectionDetail`/`TentativeEpreuve` en base, les 6 comptes élève
 réels intacts — le compte de `NGUEDJI Samuelle` peut désormais réessayer cette épreuve avec une vraie copie.
+
+## 68. Correctif mise en page — écran `/eleve/quiz` coincé dans un coin (17 septembre 2026)
+
+Signalé par l'utilisateur : `/eleve/quiz` s'affichait dans un coin de l'écran au lieu d'être centré dans
+la zone de contenu principale, contrairement à `/eleve` et `/eleve/lacunes`.
+
+### Diagnostic
+
+Aucun `<main>` du dashboard élève n'a `mx-auto` explicitement — `EleveShell.tsx` place `{children}` dans
+un simple `<div className="flex-1 pb-20 md:pb-0">` (pas un conteneur flex/grid centrant ses enfants), donc
+chaque page est responsable de son propre centrage. `/eleve` et `/eleve/lacunes` utilisent `max-w-5xl`
+(1024px) : sur un écran de bureau typique, ce bloc remplit presque toute la largeur disponible, rendant
+l'absence de centrage invisible. `/eleve/quiz` (`max-w-md`, 448px) et `/eleve/quiz/[id]` (`max-w-lg`,
+512px) sont beaucoup plus étroits — sans `mx-auto`, l'écart entre le bord gauche de la zone de contenu et
+le bord droit du viewport devient un grand vide visible, exactement l'effet "coincé dans un coin" décrit.
+
+### Corrigé
+
+`mx-auto` ajouté aux deux `<main>` concernés (`src/app/eleve/quiz/page.tsx` — hub du quiz journalier —
+et `src/app/eleve/quiz/[id]/page.tsx` — écran de prise de quiz, maquette 10), sans changer leurs largeurs
+maximales respectives (la carte de quiz reste compacte, comme sur la maquette — l'objectif est de la
+centrer, pas de l'étirer en pleine largeur comme les pages `max-w-5xl`). `tsc --noEmit` et `eslint` :
+0 erreur sur les fichiers touchés.
+
+**Observation notée mais non corrigée ici (hors périmètre demandé)** : `/eleve/tuteur-ia` et
+`/eleve/corrections` (`max-w-3xl`, 768px) ont la même absence de `mx-auto` — potentiellement visible sur
+un écran très large, à surveiller/traiter séparément si signalé.
+
+### Vérification — limite d'outillage rencontrée, non résolue dans cette passe
+
+Les outils de capture d'écran/navigation du navigateur (`screenshot`, `navigate`, `get_page_text`) sont
+tombés en panne de façon persistante en fin de session — `tabs_context_mcp` confirmait un tab valide,
+mais tout appel suivant sur ce tab échouait immédiatement ("Couldn't determine which page this action
+targets"), y compris juste après confirmation, sur plusieurs tabs et after `resize_window`. Contrairement
+aux limites d'outillage déjà rencontrées en Passes 2/3 du chantier vidéo (captures intermittentes après
+interaction), celle-ci a empêché **toute** vérification visuelle, avant comme après correctif. Sur
+instruction explicite de l'utilisateur, le correctif est commité sur la seule base du diagnostic de code
+(cohérence structurelle avec `/eleve`/`/eleve/lacunes`, absence d'autre piste plausible dans
+`EleveShell.tsx`/`globals.css`) — **vérification visuelle réelle (desktop et mobile) laissée à
+l'utilisateur**, pas encore confirmée par capture d'écran de cette session.
