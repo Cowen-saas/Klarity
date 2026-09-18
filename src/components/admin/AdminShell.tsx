@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
@@ -16,6 +17,8 @@ import {
   IconCreditCard,
   IconCoins,
   IconSettings,
+  IconMenu,
+  IconClose,
 } from "@/components/icons";
 import { KlarityLogo } from "@/components/ui/KlarityLogo";
 
@@ -50,9 +53,18 @@ function buildNavItems(correctionsSignaleesCount: number): NavItem[] {
   ];
 }
 
+/**
+ * 13 destinations — bien au-delà de ce qu'une bottom-nav peut porter
+ * lisiblement sur mobile (contrairement à Eleve/ParentShell, 8 items,
+ * cf. docs/PROGRESS.md §78-79). Mobile ici reprend donc le patron
+ * hamburger + tiroir déroulant de `LandingHeader.tsx` (§77) plutôt qu'une
+ * bottom-nav à colonnes de ~27px illisibles — pas de bottom-nav du tout
+ * n'était pas une option : sans elle, aucune navigation mobile n'existait.
+ */
 export function AdminShell({ children, correctionsSignaleesCount }: { children: ReactNode; correctionsSignaleesCount: number }) {
   const pathname = usePathname();
   const navItems = buildNavItems(correctionsSignaleesCount);
+  const [menuOuvert, setMenuOuvert] = useState(false);
 
   return (
     <div className="min-h-screen bg-fond md:flex">
@@ -65,7 +77,31 @@ export function AdminShell({ children, correctionsSignaleesCount }: { children: 
         </nav>
       </aside>
 
-      <div className="flex-1">{children}</div>
+      <header className="flex items-center justify-between border-b border-border bg-[#0e1512] px-4 py-3 text-white md:hidden">
+        <KlarityLogo wordmark="Klarity Admin" />
+        <button
+          type="button"
+          onClick={() => setMenuOuvert((v) => !v)}
+          aria-expanded={menuOuvert}
+          aria-controls="menu-mobile-admin"
+          aria-label={menuOuvert ? "Fermer le menu" : "Ouvrir le menu"}
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-white transition-colors hover:bg-white/10"
+        >
+          {menuOuvert ? <IconClose className="h-6 w-6" aria-hidden="true" /> : <IconMenu className="h-6 w-6" aria-hidden="true" />}
+        </button>
+      </header>
+
+      {menuOuvert && (
+        <nav id="menu-mobile-admin" className="border-b border-border bg-[#0e1512] px-4 py-3 text-white md:hidden">
+          <div className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} onNavigate={() => setMenuOuvert(false)} />
+            ))}
+          </div>
+        </nav>
+      )}
+
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -74,7 +110,7 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
   const Icon = item.icon;
   const classes = `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
     item.disabled
@@ -101,7 +137,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   }
 
   return (
-    <Link href={item.href} className={classes} aria-current={active ? "page" : undefined}>
+    <Link href={item.href} onClick={onNavigate} className={classes} aria-current={active ? "page" : undefined}>
       <Icon className="h-5 w-5" aria-hidden="true" />
       {item.label}
       {item.badge ? (

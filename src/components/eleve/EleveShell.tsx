@@ -55,7 +55,7 @@ export function EleveShell({ children }: EleveShellProps) {
         </div>
       </aside>
 
-      <div className="flex-1 pb-20 md:pb-0">{children}</div>
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-surface md:hidden">
         {NAV_ITEMS.map((item) => (

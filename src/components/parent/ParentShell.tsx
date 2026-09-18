@@ -42,7 +42,7 @@ export function ParentShell({ children }: { children: ReactNode }) {
         <SignOutButton className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60" />
       </aside>
 
-      <div className="flex-1 pb-20 md:pb-0">{children}</div>
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">{children}</div>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-surface md:hidden">
         {NAV_ITEMS.map((item) => (

@@ -5709,3 +5709,129 @@ vérification. Comptes réels intacts.
 Passe 4/4 (Admin : dashboard + gestion épreuves, dates d'examens, corrections signalées, paiements,
 revenus) — a priori la plus à risque vu la densité de tableaux back-office, sur le même principe. Bilan
 d'ensemble des 4 passes à l'utilisateur une fois celle-ci terminée.
+
+## 80. Chantier responsive mobile-first — Passe 4/4 : Admin (18 septembre 2026)
+
+Suite des §77-79, dernière passe. Périmètre : `AdminShell` + les 13 écrans back-office (vue d'ensemble,
+utilisateurs, élèves, parents, épreuves, exemples corrigés, corrections signalées, dates d'examens, usage
+IA, sécurité, paiements, revenus, paramètres). Même méthode qu'aux passes précédentes.
+
+### Compte de test admin — obstacle d'outillage réel rencontré et résolu
+
+Contrairement à élève/parent (compte jetable + OTP mock immédiat), un compte admin exige un vrai secret
+2FA TOTP (`prisma/create-admin.ts`, seule méthode de création, CLAUDE.md). Premiers essais de connexion
+(génération du code TOTP via `docker compose exec` puis soumission depuis le navigateur, dans des appels
+d'outils séparés) systématiquement rejetés (`CredentialsSignin` dans les logs serveur). Diagnostiqué
+avant de conclure à un bug applicatif : `bcrypt.compare` (vérifié isolément : `match: true`) et
+`verifyTotp` (vérifié isolément : `true`) fonctionnaient tous les deux correctement — donc pas un bug de
+l'app. Cause réelle isolée par élimination : le round-trip entre la génération du code (dans un appel
+d'outil) et sa soumission (dans un appel suivant) dépassait la fenêtre de validité TOTP de 30s, aggravé
+par un `bcrypt.compare` mesuré à 2-2.8s côté serveur dans cet environnement. Résolu en générant le code
+TOTP **directement côté navigateur** (implémentation RFC 6238 en JS via `crypto.subtle`, vérifiée exacte
+contre `otplib` avec un compteur HOTP fixe avant utilisation réelle) puis en soumettant immédiatement
+dans le même script — élimine toute latence inter-appels. Compte de test (`responsive-test@klarity.internal`)
+supprimé après la passe ; les entrées `AuditLogSecurite` (`LOGIN_FAIL`) qu'il a générées pendant le
+diagnostic sont volontairement laissées intactes — `utilisateurId` y est une référence texte sans clé
+étrangère, explicitement conçue pour survivre à la suppression du compte qu'elle référence (même
+convention append-only que `WebhookLog`, déjà établie aux passes précédentes de ce journal).
+
+### Bugs trouvés et corrigés
+
+1. **`AdminShell.tsx` — aucune navigation mobile, comme `ParentShell` avant le §79, mais en pire : 13
+   destinations.** Même bug racine que le §79 (sidebar `hidden md:flex` sans aucun remplacement mobile),
+   mais copier le patron bottom-nav d'Eleve/ParentShell tel quel aurait recréé l'anti-pattern "nav
+   surchargée" que la skill `ui-ux-pro-max` déconseille explicitement (repère "bottom nav ≤ 5 items") —
+   13 colonnes à ~27px chacune auraient été inutilisables. Corrigé avec un patron différent, plus adapté
+   à un grand nombre de destinations : réutilisation du hamburger + tiroir déroulant déjà construit pour
+   `LandingHeader.tsx` au §77 (liste verticale scrollable, chaque destination en pleine largeur) plutôt
+   qu'une bottom-nav. Nouveau bandeau mobile (logo + bouton menu 44×44px) ajouté — `AdminShell` n'avait
+   même pas de header mobile auparavant. Revérifié en conditions réelles (vrai compte admin, vrai
+   `role: ADMIN`) : les 13 liens du tiroir mesurés à 326px de large chacun, 40px de haut, zéro
+   débordement ; menu vérifié fonctionnel par clic réel (même séquence d'événements complète que pour le
+   menu du §77 — `.click()` seul ne déclenchait pas fiablement les handlers React ici non plus).
+2. **`/admin` (Vue d'ensemble) — 2 tableaux sans le wrapper `overflow-x-auto`**, contrairement aux 7
+   autres tableaux admin qui l'ont déjà tous (`EpreuveManager.tsx`, `paiements`, `usage-ia`, `securite`
+   ×2, `parents`, `eleves`, `utilisateurs`) — repéré par recherche exhaustive de `<table` dans
+   `src/app/admin` et `src/components/admin`. Le tableau "Monitoring usage IA" (4 colonnes) et le
+   tableau "Journal des paiements récents" (5 colonnes) auraient débordé sans aucun moyen de faire
+   défiler pour voir les colonnes cachées sur mobile — exactement le cas "tableau qui ne s'adapte pas"
+   du signalement initial. Corrigés avec le même patron que partout ailleurs (`<div className="overflow-x-auto">`
+   + `min-w-[480px]`/`min-w-[560px]`, valeurs choisies par cohérence avec des tableaux de complexité
+   comparable ailleurs dans l'admin). Revérifié en conditions réelles (vraies données de production —
+   7 élèves, vrais paiements) : les deux tableaux confirmés réellement défilables dans leur carte
+   (480px/560px de contenu dans 262px visibles à 375px), zéro débordement de page.
+3. **Les 3 shells (`AdminShell`, et par ricochet `EleveShell`/`ParentShell`) — débordement réel de la
+   page entière à largeur tablette (772px), une fois le sidebar desktop actif.** Même famille de bug que
+   la bottom-nav du §78/§79 (`flex-1` sans `min-w-0`), mais sur le conteneur de contenu principal
+   lui-même, pas une bottom-nav : `<div className="flex-1">{children}</div>` à côté du `<aside>` w-64.
+   Mesuré précisément sur `/admin` à 772px : ce conteneur rendu à **672px** de large au lieu des ~516px
+   réellement disponibles (772 − 256 de sidebar), débordement de 156px de toute la page. Cause : sans
+   `min-w-0`, un enfant flex ne peut jamais descendre sous la largeur minimale de son contenu — ici la
+   grille de tuiles/le contenu de la page, pas les tableaux eux-mêmes (déjà protégés par leur propre
+   `overflow-x-auto`, qui neutralise correctement leur contribution au calcul de largeur minimale).
+   Corrigé avec `min-w-0` sur ce conteneur dans les **3 shells** (même classe manquante, même mécanisme,
+   appliqué par prévention aux trois plutôt que d'attendre de reproduire le bug séparément sur
+   Eleve/Parent — le correctif est strictement défensif, sans effet quand il n'y a pas de conflit
+   d'espace). Revérifié en conditions réelles sur `/admin` à 772px : `overflowAmount: -17` (plus de
+   débordement), sidebar desktop et bottom/mobile-nav toujours correctement affichés/masqués selon la
+   largeur.
+
+### Vérifié réellement, sans correctif nécessaire
+
+- Les 11 autres écrans admin (utilisateurs, élèves, parents, épreuves, exemples corrigés, corrections
+  signalées, dates d'examens, usage IA, sécurité, paiements, revenus, paramètres) : 0 débordement à
+  375px, avec de vraies données de production pour la plupart.
+- Formulaire "Ajouter une épreuve" (`EpreuveManager.tsx`) : ouvert réellement (clic réel sur le bouton),
+  `grid-cols-1 sm:grid-cols-2` déjà correct, 0 débordement.
+- Les 7 tableaux qui avaient déjà leur wrapper `overflow-x-auto` : confirmés sans régression.
+
+`tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants dans `mock-provider.ts`, sans rapport).
+
+### Nettoyage
+
+Compte admin de test (`responsive-test@klarity.internal`) supprimé après vérification (`DELETE ...
+RETURNING` confirmé). Comptes réels intacts. `AuditLogSecurite` du diagnostic TOTP volontairement
+conservé (append-only, cf. ci-dessus).
+
+## 81. Bilan des 4 passes du chantier responsive mobile-first (18 septembre 2026)
+
+Les 4 passes (§77-80) sont terminées : Landing + Auth + Paiement, Élève, Parent, Admin — 13 écrans admin,
+tous les écrans élève/parent listés dans la demande initiale, plus la landing et les 3 parcours de
+connexion. **9 bugs réels trouvés et corrigés**, tous confirmés par mesure DOM réelle (`scrollWidth`,
+`getBoundingClientRect`) aux largeurs 375/~414/768px, jamais par simple lecture de code :
+
+1. Landing : aucune nav mobile + chevauchement header (§77)
+2. Landing : débordement réel du footer (email non sécable) (§77)
+3. `PinInput` : code OTP parent à 6 chiffres débordant sur tous les téléphones (§77)
+4. `EleveShell` : bottom-nav mobile cassée (libellés sur 2 lignes, barre à 77px) (§78)
+5. `ChatPanel` (chat-tuteur, modes 1 et 2) : barre de saisie à 4px de la bottom-nav (§78)
+6. `ParentShell` : aucune navigation mobile du tout (§79)
+7. `BarChart` (dashboard/Progression/Temps passé) : débordement réel de 139px avec 14 points (§79)
+8. `AdminShell` : aucune navigation mobile du tout, 13 destinations (§80)
+9. `/admin` Vue d'ensemble : 2 tableaux sans `overflow-x-auto` (§80)
+
+Plus un correctif défensif transverse (§80, point 3) : `min-w-0` sur le conteneur de contenu des 3
+shells, qui aurait fini par causer le même débordement que le point 9 à largeur tablette dès qu'une page
+élève/parent contiendrait assez de contenu dense.
+
+**Constat global** : la cause la plus fréquente et la plus grave était la même partout — un ou plusieurs
+enfants `flex-1`/`flex` sans `min-w-0`, qui empêchent un conteneur de descendre sous la largeur minimale
+de son contenu (texte non sécable, tableau, libellés de graphique). Ce mécanisme CSS explique à lui seul
+6 des 9 bugs (points 2, 3, 4, 6, 7 et le correctif transverse). L'autre catégorie récurrente : une
+navigation mobile carrément absente plutôt que mal adaptée (points 1, 6, 8) — trois shells sur trois
+écrans publics/privés différents avaient soit zéro remplacement mobile au sidebar desktop, soit un
+remplacement mal dimensionné. Aucun des `<table>` HTML du reste de la plateforme n'avait ce problème
+(patron `overflow-x-auto` + `min-w-[Npx]` déjà appliqué partout ailleurs) — seul l'écart isolé de la
+Vue d'ensemble admin (point 9) y a échappé.
+
+**Méthode retenue** faute de `resize_window` fonctionnel dans cet environnement (jamais résolu malgré
+plusieurs tentatives avec l'utilisateur, cf. §77) : une `<iframe>` à viewport CSS indépendant de la
+fenêtre réelle, combinée à une mesure DOM directe (`scrollWidth`/`getBoundingClientRect`) plutôt qu'un
+examen visuel de captures d'écran — plus précise, et fonctionnelle malgré l'instabilité récurrente des
+captures dans cet environnement (déjà documentée au §74). Chaque bug a été mesuré avant ET après
+correctif, avec des comptes de test réels (élèves, parents via le vrai flux OTP, un admin via un vrai
+flux 2FA TOTP) plutôt que des données statiques — tous supprimés après vérification.
+
+`tsc --noEmit` et `eslint src` : 0 erreur sur les 4 passes (2 warnings pré-existants dans
+`mock-provider.ts`, sans rapport avec ce chantier). 4 commits séparés, poussés au fur et à mesure de
+chaque passe plutôt qu'en un seul commit final, à la demande explicite de l'utilisateur.

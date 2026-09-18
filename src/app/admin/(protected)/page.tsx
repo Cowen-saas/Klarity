@@ -250,29 +250,31 @@ export default async function AdminDashboardPage() {
           {lignesUsageIA.length === 0 ? (
             <p className="mt-4 text-sm text-texte-muted">Aucun usage IA sur les 30 derniers jours.</p>
           ) : (
-            <table className="mt-4 w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-texte-muted uppercase">
-                  <th className="pb-2 font-semibold">Élève</th>
-                  <th className="pb-2 font-semibold">Requêtes (30j)</th>
-                  <th className="pb-2 font-semibold">Coût estimé</th>
-                  <th className="pb-2 font-semibold">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {lignesUsageIA.map((l) => {
-                  const aberrant = moyenneCoutXAF > 0 && l.coutXAF > moyenneCoutXAF * 2;
-                  return (
-                    <tr key={l.codeEleve} className={aberrant ? "bg-danger-light" : ""}>
-                      <td className="py-2 font-semibold text-texte">{l.codeEleve}</td>
-                      <td className="py-2 text-texte-muted">{l.requetes}</td>
-                      <td className={`py-2 font-semibold ${aberrant ? "text-danger" : "text-texte"}`}>{formatFCFA(l.coutXAF)}</td>
-                      <td className="py-2">{aberrant ? <span className="text-xs font-bold text-danger">△ Aberrant</span> : <span className="text-xs text-texte-muted">Normal</span>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[480px] text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-texte-muted uppercase">
+                    <th className="pb-2 font-semibold">Élève</th>
+                    <th className="pb-2 font-semibold">Requêtes (30j)</th>
+                    <th className="pb-2 font-semibold">Coût estimé</th>
+                    <th className="pb-2 font-semibold">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {lignesUsageIA.map((l) => {
+                    const aberrant = moyenneCoutXAF > 0 && l.coutXAF > moyenneCoutXAF * 2;
+                    return (
+                      <tr key={l.codeEleve} className={aberrant ? "bg-danger-light" : ""}>
+                        <td className="py-2 font-semibold text-texte">{l.codeEleve}</td>
+                        <td className="py-2 text-texte-muted">{l.requetes}</td>
+                        <td className={`py-2 font-semibold ${aberrant ? "text-danger" : "text-texte"}`}>{formatFCFA(l.coutXAF)}</td>
+                        <td className="py-2">{aberrant ? <span className="text-xs font-bold text-danger">△ Aberrant</span> : <span className="text-xs text-texte-muted">Normal</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
@@ -413,35 +415,37 @@ export default async function AdminDashboardPage() {
         {paiementsRecents.length === 0 ? (
           <p className="mt-4 text-sm text-texte-muted">Aucun paiement pour l&apos;instant.</p>
         ) : (
-          <table className="mt-4 w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-texte-muted uppercase">
-                <th className="pb-2 font-semibold">Élève</th>
-                <th className="pb-2 font-semibold">Montant</th>
-                <th className="pb-2 font-semibold">Méthode</th>
-                <th className="pb-2 font-semibold">Statut</th>
-                <th className="pb-2 font-semibold">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {paiementsRecents.map((p, i) => {
-                const statut = STATUT_PAIEMENT[p.statut] ?? { label: p.statut, classes: "bg-fond text-texte-muted" };
-                return (
-                  <tr key={i}>
-                    <td className="py-2 font-semibold text-texte">{p.abonnement.eleve.codeEleve}</td>
-                    <td className="py-2 text-texte">{formatFCFA(Number(p.montant))}</td>
-                    <td className="py-2 text-texte-muted">{p.methode}</td>
-                    <td className="py-2">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statut.classes}`}>{statut.label}</span>
-                    </td>
-                    <td className="py-2 text-texte-muted">
-                      {p.datePaiement.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="text-left text-xs text-texte-muted uppercase">
+                  <th className="pb-2 font-semibold">Élève</th>
+                  <th className="pb-2 font-semibold">Montant</th>
+                  <th className="pb-2 font-semibold">Méthode</th>
+                  <th className="pb-2 font-semibold">Statut</th>
+                  <th className="pb-2 font-semibold">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paiementsRecents.map((p, i) => {
+                  const statut = STATUT_PAIEMENT[p.statut] ?? { label: p.statut, classes: "bg-fond text-texte-muted" };
+                  return (
+                    <tr key={i}>
+                      <td className="py-2 font-semibold text-texte">{p.abonnement.eleve.codeEleve}</td>
+                      <td className="py-2 text-texte">{formatFCFA(Number(p.montant))}</td>
+                      <td className="py-2 text-texte-muted">{p.methode}</td>
+                      <td className="py-2">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statut.classes}`}>{statut.label}</span>
+                      </td>
+                      <td className="py-2 text-texte-muted">
+                        {p.datePaiement.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
