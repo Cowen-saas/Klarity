@@ -159,7 +159,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         { status: 429 }
       );
     }
-    throw err;
+    // Panne technique du provider IA (clé invalide, réseau, Anthropic
+    // indisponible) — jamais laissée remonter telle quelle : sans ce garde-fou,
+    // le framework répond avec un corps non-JSON et le client affiche à tort
+    // "Impossible de contacter le serveur, vérifie ta connexion" pour une
+    // panne serveur, jamais un problème de réseau côté élève.
+    console.error("[chat] échec technique du provider IA", err);
+    return NextResponse.json(
+      { error: "Le tuteur IA est momentanément indisponible. Réessaie dans quelques instants." },
+      { status: 502 }
+    );
   }
 
   const messageAssistant = await prisma.messageChat.create({

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { getStorageProvider } from "@/lib/storage";
+import { getStorageProvider, StorageError } from "@/lib/storage";
 import { typesExerciceValides } from "@/lib/epreuves/type-exercice";
 
 /**
@@ -95,20 +95,32 @@ export async function POST(request: Request) {
   const typeExerciceEffectif = valeursValides ? (parsed.data.typeExercice ?? null) : null;
 
   const storage = getStorageProvider();
-  const [ficheUp, corrigeUp] = await Promise.all([
-    storage.uploader({
-      dossier: "epreuves",
-      nomOriginal: fiche.file.name,
-      contentType: fiche.file.type,
-      contenu: Buffer.from(await fiche.file.arrayBuffer()),
-    }),
-    storage.uploader({
-      dossier: "corriges",
-      nomOriginal: corrige.file.name,
-      contentType: corrige.file.type,
-      contenu: Buffer.from(await corrige.file.arrayBuffer()),
-    }),
-  ]);
+  let ficheUp, corrigeUp;
+  try {
+    [ficheUp, corrigeUp] = await Promise.all([
+      storage.uploader({
+        dossier: "epreuves",
+        nomOriginal: fiche.file.name,
+        contentType: fiche.file.type,
+        contenu: Buffer.from(await fiche.file.arrayBuffer()),
+      }),
+      storage.uploader({
+        dossier: "corriges",
+        nomOriginal: corrige.file.name,
+        contentType: corrige.file.type,
+        contenu: Buffer.from(await corrige.file.arrayBuffer()),
+      }),
+    ]);
+  } catch (err) {
+    if (err instanceof StorageError) {
+      console.error("[admin/epreuves] stockage indisponible", err);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
 
   const epreuve = await prisma.epreuve.create({
     data: {

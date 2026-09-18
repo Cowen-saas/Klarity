@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { getStorageProvider } from "@/lib/storage";
+import { getStorageProvider, StorageError } from "@/lib/storage";
 import { typesExerciceValides } from "@/lib/epreuves/type-exercice";
 
 /**
@@ -198,8 +198,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   await prisma.epreuve.delete({ where: { id } });
 
+  // La ligne Epreuve est déjà supprimée à ce stade — la suppression réussie
+  // côté admin ne doit jamais dépendre du nettoyage R2 qui suit : un fichier
+  // orphelin sur R2 est un problème mineur (journalisé), pas une raison de
+  // faire croire à l'admin que sa suppression a échoué alors qu'elle a eu lieu.
   const storage = getStorageProvider();
-  await Promise.all([storage.supprimer(existante.fichePdfKey), storage.supprimer(existante.corrigeReferenceKey)]);
+  try {
+    await Promise.all([storage.supprimer(existante.fichePdfKey), storage.supprimer(existante.corrigeReferenceKey)]);
+  } catch (err) {
+    if (err instanceof StorageError) {
+      console.error(`[admin/epreuves] nettoyage R2 échoué pour l'épreuve supprimée ${id}`, err);
+    } else {
+      throw err;
+    }
+  }
 
   return NextResponse.json({ supprime: true });
 }

@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
-import { createRedisConnection } from "@/lib/redis";
+import { createRedisConnectionCourte } from "@/lib/redis";
+import { FileAttenteIndisponibleError } from "./errors";
 
 /**
  * File du pipeline de correction IA (§2.1, §4.3, §6.2, §6.4) — consommée par
@@ -17,17 +18,32 @@ export interface CorrectionJobData {
 
 let queue: Queue<CorrectionJobData> | undefined;
 
+/**
+ * Connexion "courte" délibérément (cf. `createRedisConnectionCourte`,
+ * `src/lib/redis.ts`) : ce `Queue` ne sert qu'à `.add()` depuis une route
+ * HTTP, jamais à une opération bloquante — non utilisée par le worker
+ * (qui consomme cette file via son propre nom, pas cet objet `Queue`).
+ */
 export function getCorrectionQueue(): Queue<CorrectionJobData> {
   if (!queue) {
-    queue = new Queue<CorrectionJobData>(QUEUE_CORRECTION, { connection: createRedisConnection() });
+    queue = new Queue<CorrectionJobData>(QUEUE_CORRECTION, { connection: createRedisConnectionCourte() });
   }
   return queue;
 }
 
+/**
+ * Appelée uniquement depuis `POST /api/eleve/epreuves/[id]/tentatives` :
+ * toute panne Redis est convertie en `FileAttenteIndisponibleError` plutôt
+ * que de laisser planter la route sans réponse JSON propre.
+ */
 export async function planifierCorrection(tentativeId: string): Promise<void> {
-  await getCorrectionQueue().add(
-    "corriger",
-    { tentativeId },
-    { removeOnComplete: true, removeOnFail: 20 }
-  );
+  try {
+    await getCorrectionQueue().add(
+      "corriger",
+      { tentativeId },
+      { removeOnComplete: true, removeOnFail: 20 }
+    );
+  } catch (err) {
+    throw new FileAttenteIndisponibleError(err);
+  }
 }

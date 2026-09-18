@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { planifierQuizPourEleve } from "@/lib/queue/quiz";
+import { FileAttenteIndisponibleError } from "@/lib/queue/errors";
 
 /**
  * Quiz journalier de l'élève connecté (§2.1, §4.3). GET renvoie l'état
@@ -49,6 +50,17 @@ export async function POST() {
     return NextResponse.json({ error: "Aucune lacune active — pas de quiz à générer pour l'instant." }, { status: 400 });
   }
 
-  await planifierQuizPourEleve(eleveId);
+  try {
+    await planifierQuizPourEleve(eleveId);
+  } catch (err) {
+    if (err instanceof FileAttenteIndisponibleError) {
+      console.error("[quiz/aujourdhui] file d'attente indisponible", err.cause);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
   return NextResponse.json({ enqueued: true }, { status: 202 });
 }

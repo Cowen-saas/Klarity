@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import type { Filiere, NiveauClasse } from "@prisma/client";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { getStorageProvider } from "@/lib/storage";
+import { getStorageProvider, StorageError } from "@/lib/storage";
 import { planifierCorrection } from "@/lib/queue/correction";
+import { FileAttenteIndisponibleError } from "@/lib/queue/errors";
 
 /**
  * Upload d'une tentative de copie photographiée (§2.1, §4.3). Répond
@@ -89,14 +90,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const storage = getStorageProvider();
   const photoUploadKeys: string[] = [];
-  for (const f of photos) {
-    const up = await storage.uploader({
-      dossier: "copies",
-      nomOriginal: f.name,
-      contentType: f.type,
-      contenu: Buffer.from(await f.arrayBuffer()),
-    });
-    photoUploadKeys.push(up.key);
+  try {
+    for (const f of photos) {
+      const up = await storage.uploader({
+        dossier: "copies",
+        nomOriginal: f.name,
+        contentType: f.type,
+        contenu: Buffer.from(await f.arrayBuffer()),
+      });
+      photoUploadKeys.push(up.key);
+    }
+  } catch (err) {
+    if (err instanceof StorageError) {
+      console.error("[tentatives] stockage indisponible", err);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
   }
 
   const tentative = await prisma.tentativeEpreuve.create({
@@ -111,7 +123,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
 
   if (doitTraiter) {
-    await planifierCorrection(tentative.id);
+    try {
+      await planifierCorrection(tentative.id);
+    } catch (err) {
+      if (err instanceof FileAttenteIndisponibleError) {
+        console.error("[tentatives] file d'attente indisponible", err.cause);
+        // La tentative n'a jamais été réellement mise en file — la laisser en
+        // EN_ATTENTE la coincerait indéfiniment sans job pour la traiter.
+        // On l'annule plutôt que de mentir sur son statut, pour que l'élève
+        // puisse réessayer le même envoi une fois le service rétabli.
+        await prisma.tentativeEpreuve.delete({ where: { id: tentative.id } }).catch(() => {});
+        return NextResponse.json(
+          { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+          { status: 503 }
+        );
+      }
+      throw err;
+    }
   }
 
   return NextResponse.json({ tentative }, { status: 201 });

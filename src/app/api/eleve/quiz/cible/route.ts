@@ -3,6 +3,7 @@ import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
 import { planifierQuizPourEleve } from "@/lib/queue/quiz";
+import { FileAttenteIndisponibleError } from "@/lib/queue/errors";
 
 /**
  * Quiz ciblé sur une lacune précise (§2.1, v1.11) — déclenché manuellement
@@ -49,6 +50,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Lacune introuvable." }, { status: 404 });
   }
 
-  await planifierQuizPourEleve(eleveId, lacune.id);
+  try {
+    await planifierQuizPourEleve(eleveId, lacune.id);
+  } catch (err) {
+    if (err instanceof FileAttenteIndisponibleError) {
+      console.error("[quiz/cible] file d'attente indisponible", err.cause);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
   return NextResponse.json({ enqueued: true }, { status: 202 });
 }

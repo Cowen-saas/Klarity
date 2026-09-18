@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
-import { createRedisConnection } from "@/lib/redis";
+import { createRedisConnection, createRedisConnectionCourte } from "@/lib/redis";
+import { FileAttenteIndisponibleError } from "./errors";
 
 /**
  * File du quiz journalier (§2.1, §4.3, §6.1) — job cron quotidien (worker,
@@ -31,10 +32,18 @@ export function getQuizQueue(): Queue {
   return queueTous;
 }
 
-/** Job dédié à un seul élève (génération à la demande) — file séparée du cron pour ne pas se marcher dessus. */
+/**
+ * Job dédié à un seul élève (génération à la demande) — file séparée du cron
+ * pour ne pas se marcher dessus. Connexion "courte" délibérément (cf.
+ * `createRedisConnectionCourte`, `src/lib/redis.ts`) : ce `Queue` ne sert
+ * qu'à `.add()` depuis une route HTTP (`planifierQuizPourEleve`), jamais à
+ * une opération bloquante — le worker qui consomme cette file crée sa propre
+ * connexion `createRedisConnection()` séparément (`src/worker/index.ts`),
+ * non affectée par ce choix.
+ */
 export function getQuizEleveQueue(): Queue<QuizEleveJobData> {
   if (!queueEleve) {
-    queueEleve = new Queue<QuizEleveJobData>(`${QUEUE_QUIZ}-eleve`, { connection: createRedisConnection() });
+    queueEleve = new Queue<QuizEleveJobData>(`${QUEUE_QUIZ}-eleve`, { connection: createRedisConnectionCourte() });
   }
   return queueEleve;
 }
@@ -52,11 +61,20 @@ export async function declencherJobQuizTous(q: Queue = getQuizQueue()): Promise<
   await q.add("quiz-journalier-tous", {}, { removeOnComplete: true, removeOnFail: 20 });
 }
 
-/** Génération à la demande pour un seul élève — journalier (sans lacuneId) ou ciblé (avec). */
+/**
+ * Génération à la demande pour un seul élève — journalier (sans lacuneId) ou
+ * ciblé (avec). Appelée uniquement depuis des routes `app` (jamais le
+ * worker) : toute panne Redis est convertie en `FileAttenteIndisponibleError`
+ * plutôt que de laisser planter la route appelante sans réponse JSON propre.
+ */
 export async function planifierQuizPourEleve(eleveId: string, lacuneId?: string): Promise<void> {
-  await getQuizEleveQueue().add(
-    "generer-quiz-eleve",
-    { eleveId, lacuneId },
-    { removeOnComplete: true, removeOnFail: 20 }
-  );
+  try {
+    await getQuizEleveQueue().add(
+      "generer-quiz-eleve",
+      { eleveId, lacuneId },
+      { removeOnComplete: true, removeOnFail: 20 }
+    );
+  } catch (err) {
+    throw new FileAttenteIndisponibleError(err);
+  }
 }

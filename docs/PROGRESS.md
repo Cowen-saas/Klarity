@@ -5835,3 +5835,124 @@ flux 2FA TOTP) plutôt que des données statiques — tous supprimés après vé
 `tsc --noEmit` et `eslint src` : 0 erreur sur les 4 passes (2 warnings pré-existants dans
 `mock-provider.ts`, sans rapport avec ce chantier). 4 commits séparés, poussés au fur et à mesure de
 chaque passe plutôt qu'en un seul commit final, à la demande explicite de l'utilisateur.
+
+## 82. Diagnostic complet — "Impossible de contacter le serveur" sur la plateforme déployée (18 septembre 2026)
+
+Signalé par l'utilisateur : sur le **site en ligne** (déploiement Vercel réel, pas le local), l'inscription
+élève échouait avec "Impossible de contacter le serveur, vérifie ta connexion" en validant le code secret
+(étape 3→4 de `InscriptionWizard`). Demande explicite : diagnostic complet de toute la plateforme, corriger
+partout où ce message pourrait apparaître à tort.
+
+### Diagnostic — cause racine identifiée, pas seulement le symptôme
+
+Ce message n'apparaît côté client que dans le bloc `catch` d'un appel `fetch()` — censé ne se déclencher
+que pour une vraie coupure réseau côté élève/parent. Recherche exhaustive (`grep -rl "Impossible de
+contacter le serveur"`) : **19 composants client** partagent ce même patron. Plutôt que de retoucher
+19 écrans un par un, remontée à la cause structurelle côté serveur : **tout appel serveur non protégé qui
+plante avec une exception non rattrapée produit une réponse non-JSON**, et c'est *ça* que le `catch` du
+client interprète à tort comme "pas de réseau".
+
+Traçage de chacun des 19 composants vers sa route API, puis audit de chaque route pour une dépendance
+externe non protégée (Redis, stockage R2, IA) :
+
+- **`checkRateLimit()`** (`src/lib/rate-limit.ts`) — appelée sans aucun `try/catch` dans 3 routes
+  (`/api/eleve/inscription` — **exactement la route signalée**, `/api/auth/parent/request-otp`,
+  `/api/paiement/initier`). `createRedisConnection()` lève une exception synchrone si `REDIS_URL` est
+  absent. Le `.env` local pointe vers `redis://localhost:6379`, une valeur **propre au réseau Docker**,
+  jamais transposable telle quelle à un déploiement Vercel (qui a besoin de son propre Redis
+  externe, ex. Upstash) — accès direct à la configuration Vercel indisponible depuis cet environnement
+  (`.vercel`/CLI non liés ici), donc **impossible de confirmer si `REDIS_URL` est réellement absent ou
+  mal configuré en production** ; point à vérifier par l'utilisateur lui-même (cf. "Reste à vérifier"
+  ci-dessous) — mais la vraie panne, quelle que soit sa cause exacte, produisait ce plantage non
+  rattrapé dans tous les cas.
+- **`planifierQuizPourEleve()`/`planifierCorrection()`** (BullMQ, `src/lib/queue/quiz.ts`/`correction.ts`)
+  — même famille de problème, appelées sans protection dans 3 routes (`/api/eleve/quiz/aujourdhui`,
+  `/api/eleve/quiz/cible`, `/api/eleve/epreuves/[id]/tentatives`).
+- **`storage.uploader()`** (R2, `src/lib/storage`) — non protégé dans `/api/eleve/epreuves/[id]/tentatives`
+  et `/api/admin/epreuves` (POST) ; `PATCH` de `/api/admin/epreuves/[id]` avait déjà son propre
+  `try/catch`, laissé tel quel.
+- **`aiProvider.chat()`** (Claude, live en production — `AI_MODE=live` confirmé) — dans
+  `/api/eleve/chat/conversations/[id]/messages`, seule `AIRateLimitError` était rattrapée ; toute autre
+  panne (clé invalide, réseau vers Anthropic) était `throw err;` telle quelle.
+
+Les autres routes des 19 composants (notifications, clôture de compte, réponse au quiz, signalement de
+correction, la plupart des routes admin CRUD) ne touchent que Prisma/Postgres — dépendance déjà la plus
+éprouvée de la plateforme, jamais en cause ici — donc laissées sans modification après vérification.
+
+### Découverte en testant le correctif : un `try/catch` seul ne suffisait pas
+
+Premier correctif (rattraper l'exception, répondre `503` JSON propre) implémenté puis **testé en
+conditions réelles** : Redis coupé localement (`docker compose stop redis`), requête réelle vers
+`/api/eleve/inscription`. Résultat inattendu : la requête **restait bloquée indéfiniment** (`curl -m 20`
+a expiré, aucune réponse après 20s). Cause : `createRedisConnection()` (partagée avec BullMQ) utilise
+`maxRetriesPerRequest: null` — nécessaire pour les connexions bloquantes de BullMQ, mais qui fait aussi
+attendre une commande Redis **indéfiniment** une reconnexion sur une route HTTP courte. Un `try/catch`
+ne sert à rien si la promesse ne se règle jamais. Sur Vercel, ce même blocage aurait fini par heurter le
+timeout de la plateforme (10-60s selon le plan), qui répond alors avec un corps non-JSON — le même
+message trompeur, juste après un long délai au lieu d'un échec immédiat.
+
+Corrigé avec une seconde connexion Redis dédiée (`createRedisConnectionCourte()`, `src/lib/redis.ts`),
+utilisée uniquement pour un usage requête/réponse court (rate limiting + les 2 files BullMQ appelées
+depuis des routes HTTP, jamais depuis un `Worker`/`QueueEvents`) : `commandTimeout`/`connectTimeout` à
+3000ms, `maxRetriesPerRequest: 1` — fait échouer rapidement une commande bloquée au lieu de la laisser
+pendre. Vérifié que le worker (consommateur des mêmes files) n'est pas affecté : il crée ses propres
+connexions `createRedisConnection()` séparément dans `src/worker/index.ts`, jamais réutilisées ici.
+
+### Correctifs appliqués
+
+1. `src/lib/rate-limit.ts` : `checkRateLimit()` utilise désormais `createRedisConnectionCourte()` et lève
+   `RateLimitIndisponibleError` (nouvelle classe, même patron que `AIRateLimitError`/`SmsEnvoiError`/
+   `StorageError`/`PaiementRefuseError` déjà dans le code) sur toute panne Redis.
+2. `src/lib/queue/errors.ts` (nouveau) : `FileAttenteIndisponibleError`, même principe.
+   `quiz.ts`/`correction.ts` : `getQuizEleveQueue()`/`getCorrectionQueue()` basculées sur
+   `createRedisConnectionCourte()` (jamais `getQuizQueue()`, utilisée par le cron/scheduler, laissée sur
+   la connexion longue durée d'origine) ; `planifierQuizPourEleve()`/`planifierCorrection()` rattrapent
+   et relèvent l'erreur typée.
+3. Les 3 routes `checkRateLimit` (`eleve/inscription`, `auth/parent/request-otp`, `paiement/initier`) et
+   les 3 routes BullMQ (`eleve/quiz/aujourdhui`, `eleve/quiz/cible`, `eleve/epreuves/[id]/tentatives`)
+   rattrapent maintenant l'erreur typée correspondante → `503` + `{"error": "Service momentanément
+   indisponible. Réessaie dans quelques instants."}`, avec `console.error` du détail complet côté
+   serveur. Cas particulier de `tentatives` : si l'enqueue de correction échoue après que la
+   `TentativeEpreuve` a déjà été créée en base, la ligne est supprimée (`prisma.tentativeEpreuve.delete`)
+   plutôt que laissée en `EN_ATTENTE` indéfiniment sans job pour la traiter — l'élève peut réessayer le
+   même envoi une fois le service rétabli, sans tentative fantôme.
+4. `/api/admin/epreuves` (POST) et `/api/admin/epreuves/[id]` (DELETE) : upload/suppression R2 rattrapés
+   (`StorageError`) → `503` JSON. Pour `DELETE` spécifiquement, la ligne `Epreuve` est déjà supprimée en
+   base au moment de l'appel R2 : un échec de nettoyage R2 est désormais journalisé côté serveur mais ne
+   fait plus croire à tort à l'admin que la suppression a échoué (elle a bien eu lieu).
+5. `/api/eleve/chat/conversations/[id]/messages` : toute panne technique du provider IA (pas seulement
+   `AIRateLimitError`) répond maintenant `502` + message clair, au lieu d'un `throw err` non rattrapé.
+
+### Testé réellement — reproduction de la panne, puis validation du correctif
+
+`tsc --noEmit`/`eslint src` : 0 erreur. Puis, **Redis coupé pour de vrai** (`docker compose stop redis`,
+conteneur `app` redémarré pour repartir d'un process propre) :
+
+| Test | Avant correctif | Après correctif |
+|---|---|---|
+| `POST /api/eleve/inscription` | Bloqué indéfiniment (`curl -m 20` expiré, 0 réponse) | `201` normal si Redis up ; **`503` JSON propre en 3,2s** si Redis coupé |
+| `POST /api/auth/parent/request-otp` | (même mécanisme, non testé isolément avant) | **`503` JSON propre en 4,5s** |
+
+Puis Redis redémarré (`docker compose start redis`) : `POST /api/eleve/inscription` de nouveau `201` en
+1,8s **sans action manuelle** (reconnexion automatique ioredis) — confirmé par une vraie création de
+compte. Logs du `worker` vérifiés sur la période : plusieurs `ETIMEDOUT` pendant la coupure (attendu, il
+retente indéfiniment par conception) puis `[worker] connected to Redis` — non affecté par le correctif,
+comme prévu.
+
+### Reste à vérifier (hors de portée de cet environnement)
+
+Ce correctif rend la plateforme **résiliente** à une panne Redis (échec propre et rapide au lieu d'un
+plantage silencieux), mais ne peut pas confirmer *pourquoi* Redis était injoignable sur le déploiement
+Vercel réel — accès à la configuration Vercel (variables d'environnement, `REDIS_URL` en particulier)
+indisponible depuis cette session (CLI non authentifiée, projet non lié). **À vérifier par
+l'utilisateur** dans le dashboard Vercel : `REDIS_URL` est-elle définie pour l'environnement de
+production, et pointe-t-elle vers un Redis réellement joignable depuis Vercel (ex. Upstash) ? Sans ça,
+l'inscription (et les autres flux ci-dessus) continueront de répondre `503` explicite — un net progrès
+sur le crash silencieux d'avant, mais la fonctionnalité elle-même reste dégradée tant que Redis n'est pas
+correctement configuré côté production.
+
+### Nettoyage
+
+Élèves de test créés pendant la reproduction (`TestRedisDown`, `TestRedisDown2`, `TestRedisUp`,
+`TestRedisUp2`, `TestRedisRestored`) supprimés après vérification. Aucune ligne `OtpVerification`
+orpheline (confirmé : la route échoue avant l'envoi de l'OTP quand Redis est indisponible, comme prévu).

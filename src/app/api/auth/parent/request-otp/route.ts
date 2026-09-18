@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { envoyerOtp } from "@/lib/auth/otp";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, RateLimitIndisponibleError } from "@/lib/rate-limit";
 import { normaliserTelephoneCamerounais } from "@/lib/format";
 
 /**
@@ -33,10 +33,22 @@ export async function POST(request: Request) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const [okTelephone, okIp] = await Promise.all([
-    checkRateLimit(`otp:tel:${telephone}`, LIMIT, WINDOW_SECONDS),
-    checkRateLimit(`otp:ip:${ip}`, LIMIT, WINDOW_SECONDS),
-  ]);
+  let okTelephone: boolean, okIp: boolean;
+  try {
+    [okTelephone, okIp] = await Promise.all([
+      checkRateLimit(`otp:tel:${telephone}`, LIMIT, WINDOW_SECONDS),
+      checkRateLimit(`otp:ip:${ip}`, LIMIT, WINDOW_SECONDS),
+    ]);
+  } catch (err) {
+    if (err instanceof RateLimitIndisponibleError) {
+      console.error("[request-otp] rate-limit indisponible", err.cause);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
   if (!okTelephone || !okIp) {
     return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard." }, { status: 429 });
   }

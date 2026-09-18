@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { exigerRole } from "@/lib/auth/api-guard";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, RateLimitIndisponibleError } from "@/lib/rate-limit";
 import { getPaymentProvider, indiceDevPaiement, PaiementRefuseError } from "@/lib/payment";
 import { obtenirTarifPremium, DEVISE_DEFAUT } from "@/lib/payment/tarification";
 import { planifierWebhookMock } from "@/lib/queue/paiement";
@@ -77,10 +77,22 @@ export async function POST(request: Request) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const [okIp, okEleve] = await Promise.all([
-    checkRateLimit(`paiement:ip:${ip}`, LIMIT, WINDOW_SECONDS),
-    checkRateLimit(`paiement:eleve:${eleveId}`, LIMIT, WINDOW_SECONDS),
-  ]);
+  let okIp: boolean, okEleve: boolean;
+  try {
+    [okIp, okEleve] = await Promise.all([
+      checkRateLimit(`paiement:ip:${ip}`, LIMIT, WINDOW_SECONDS),
+      checkRateLimit(`paiement:eleve:${eleveId}`, LIMIT, WINDOW_SECONDS),
+    ]);
+  } catch (err) {
+    if (err instanceof RateLimitIndisponibleError) {
+      console.error("[paiement] rate-limit indisponible", err.cause);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
   if (!okIp || !okEleve) {
     return NextResponse.json({ error: "Trop de tentatives, réessaie plus tard." }, { status: 429 });
   }

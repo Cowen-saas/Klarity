@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { genererCodeEleveUnique } from "@/lib/auth/code-eleve";
 import { hashPin } from "@/lib/auth/pin";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, RateLimitIndisponibleError } from "@/lib/rate-limit";
 
 /**
  * Inscription élève (§2.1) : nom + classe + filière (Première/Terminale
@@ -34,7 +34,19 @@ export async function POST(request: Request) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const okIp = await checkRateLimit(`inscription:ip:${ip}`, LIMIT, WINDOW_SECONDS);
+  let okIp: boolean;
+  try {
+    okIp = await checkRateLimit(`inscription:ip:${ip}`, LIMIT, WINDOW_SECONDS);
+  } catch (err) {
+    if (err instanceof RateLimitIndisponibleError) {
+      console.error("[inscription] rate-limit indisponible", err.cause);
+      return NextResponse.json(
+        { error: "Service momentanément indisponible. Réessaie dans quelques instants." },
+        { status: 503 }
+      );
+    }
+    throw err;
+  }
   if (!okIp) {
     return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard." }, { status: 429 });
   }
