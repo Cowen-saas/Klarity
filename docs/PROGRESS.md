@@ -5467,3 +5467,109 @@ refusé : `[paiement] refusé par le provider : Invalid test phone number...` su
 `Paiement`/`Abonnement`/`Eleve` de test supprimés en cascade correcte (paiements puis abonnement puis
 élève, `Paiement.abonnementId` n'ayant pas de cascade automatique) — vérifié par `DELETE ... RETURNING`
 à chaque étape. Comptes réels intacts.
+
+## 77. Chantier responsive mobile-first — Passe 1/4 : Landing + Auth + Paiement (18 septembre 2026)
+
+Signalé par l'utilisateur : le responsive de Klarity est mauvais sur mobile, alors que le CDC §1.2 exige
+explicitement un design mobile-first. Découpage en 4 passes validé avec l'utilisateur (par grande zone,
+pour committer progressivement) : **Passe 1 : Landing + Auth (inscription/connexion) + Paiement** (ce
+journal), puis Élève, Parent, Admin à suivre. Skill `ui-ux-pro-max` utilisée (recherches `--domain ux` /
+`--stack html-tailwind` sur mobile-first, tables/tap targets/overflow).
+
+### Blocage outillage rencontré et méthode de vérification retenue
+
+`resize_window` (outil navigateur) rapportait systématiquement un succès sans jamais changer le vrai
+`window.innerWidth` de l'onglet (resté bloqué à 1536px desktop, y compris après que l'utilisateur a
+restauré sa fenêtre Chrome, testé sur 4 onglets différents). Plutôt que de présenter des captures
+desktop comme si elles étaient mobiles, **contournement retenu avec l'accord explicite de
+l'utilisateur** : une `<iframe>` injectée dans une page hôte établit son propre viewport CSS indépendant
+de la fenêtre du navigateur — `window.innerWidth` à l'intérieur de l'iframe correspond exactement à sa
+largeur CSS déclarée, donc tous les media queries Tailwind (`sm:`/`md:`/`lg:`) s'y évaluent comme sur un
+vrai appareil à cette largeur. Vérifié réel, pas supposé : à 768px l'iframe affichait encore la nav
+mobile à cause d'un arrondi de 2px propre à cet environnement (DPR 2.5) — confirmé en testant 772px, où
+la nav desktop réapparaît correctement ; le vrai palier `md:` (768px CSS) fonctionne donc normalement sur
+un appareil réel, ce n'était qu'un artefact de mesure local.
+
+Les captures d'écran via `computer`/`zoom` se sont révélées instables (timeouts CDP répétés, onglets
+figés nécessitant recréation) — **instabilité déjà documentée au §74, sans rapport avec ce travail**.
+Pour ne pas dépendre de captures parfois indisponibles, vérification principale par **mesure DOM directe**
+dans l'iframe (plus précise qu'un examen visuel) : `document.documentElement.scrollWidth` vs largeur
+cible pour tout débordement horizontal, `getBoundingClientRect()` sur chaque élément cliquable pour la
+cible tactile (repère 44×44px), et identification programmatique de l'élément exact responsable d'un
+débordement. Captures visuelles obtenues en complément chaque fois que l'outil le permettait, jamais
+requises pour conclure.
+
+### Bugs identifiés et corrigés
+
+1. **`LandingHeader.tsx` — aucune navigation mobile + chevauchement/débordement à 375px.** Les liens nav
+   (`Fonctionnalités`/`Épreuves`/`Tarifs`/`Parents`) étaient `hidden md:flex` **sans aucun remplacement
+   mobile** — en dessous de 768px ils disparaissaient purement et simplement, sans bouton menu. Mesuré
+   précisément à 375px : le logo et le groupe Connexion/Créer un compte se touchaient avec **0px d'écart**
+   (`gapBetween: 0`, confirmé par `getBoundingClientRect()`), le bouton CTA passait sur 2 lignes, le
+   header gonflait à 92px de haut. Corrigé : composant passé en client component avec un bouton hamburger
+   (`IconMenu`, nouvelle icône Phosphor `List` ajoutée à `icons.tsx`) visible uniquement `md:hidden`, à
+   44×44px exactement, ouvrant un panneau déroulant reprenant nav + Connexion + Créer un compte en pleine
+   largeur. Revérifié après correctif : header à 77px, écart logo/hamburger de 165px, les 6 éléments du
+   menu mobile mesurés à 44-48px de haut chacun, zéro débordement.
+2. **`LandingFooter.tsx` — débordement horizontal réel de toute la page à 375px.** Les colonnes
+   Légal/Contact restaient côte à côte (`flex gap-16`) à toutes les largeurs ; l'adresse email
+   `cowen.noumbou@gmail.com`, chaîne non sécable, débordait de sa colonne trop étroite — mesuré :
+   `scrollWidth: 402` contre `clientWidth: 358` (27px de débordement réel, scroll horizontal sur toute la
+   page). Corrigé : colonnes empilées en dessous de `sm:` (`flex-col gap-8 sm:flex-row sm:gap-16`) +
+   `break-words` défensif sur le lien email. Revérifié : `overflowAmount: -17` (plus de débordement).
+3. **`PinInput.tsx` — le code de vérification parent à 6 chiffres débordait sur tous les téléphones
+   testés.** Cases fixes `h-14 w-14` (56px) + `gap-3` (12px) = 396px de large pour 6 cases, alors que
+   l'espace réellement disponible dans la carte de connexion à 375px n'est que d'environ 295px (calcul
+   confirmé par la suite) — le composant est partagé avec le PIN élève à 4 chiffres (260px, lui déjà
+   correct) donc le bug ne touchait que le flux OTP parent (`ParentLoginForm`, écran "Vérification").
+   Corrigé : cases responsives `h-11 w-11 gap-1` (44px, l'espacement le plus serré possible tout en
+   gardant exactement la cible tactile minimum) en dessous de `sm:`, `h-14 w-14 gap-3` (56px) au-delà.
+   Revérifié en conditions réelles (élève de test, vrai flux `POST /api/auth/parent/request-otp`) : les 6
+   cases mesurent exactement 44×44px à 375px, la dernière se termine à x=329 (46px de marge), zéro
+   débordement ; à ~770px elles reviennent à 56×56px comme avant.
+
+### Testé réellement aux 3 tailles (375 / ~414 / 768px), écran par écran
+
+- **Landing** (`/`) : header + hero + "Comment ça marche" (grille `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`,
+  empile correctement) + footer — 0 débordement aux 3 tailles après correctif, menu mobile ouvert et
+  vérifié fonctionnel (dispatch d'événements réels `pointerdown/mousedown/pointerup/mouseup/click`, le
+  simple `.click()` JS ou les clics de coordonnées `computer` ne déclenchaient pas fiablement les
+  handlers React dans l'iframe — cause non identifiée avec certitude, contourné systématiquement par cette
+  séquence d'événements complète).
+- **Inscription** (4 étapes) : étape 1 (nom) 0 débordement ; étape 2 (classe `grid-cols-3` 90×52px par
+  option, filière `grid-cols-4` 61×52px) 0 débordement, cibles tactiles largement au-dessus de 44px ;
+  étapes 3/4 (PIN, code élève) vérifiées par lecture de code — mêmes patrons déjà conformes
+  (`PinInput` 4 chiffres, boutons `w-full py-3`). `InscriptionSidePanel`/`ConnexionSidePanel` déjà
+  `hidden md:flex` par conception documentée (flux mobile = la carte seule), non touchés.
+- **Connexion élève/parent** (`ConnexionForm`, `RoleSwitcher`, `EleveLoginForm`, `ParentLoginForm`) :
+  0 débordement à toutes les étapes, y compris l'écran OTP corrigé (point 3 ci-dessus). `PhoneInput` déjà
+  construit correctement pour éviter tout débordement (`min-w-0` sur le champ interne).
+- **Connexion admin** (`/admin/connexion`) : carte `max-w-sm` autonome, inputs pleine largeur — 0
+  débordement, aucune régression, pas de panneau desktop à masquer.
+- **Paiement** (`/abonnement/paiement`, les 3 sous-étapes) : vérifié en conditions réelles avec un élève
+  de test connecté (vrai flux NextAuth) — "Votre moyen de paiement", "Mobile Money" (formulaire), et
+  "Confirme avec ton code secret" (PIN 4 chiffres, désormais 44×44px) : 0 débordement aux trois. Un essai
+  avec un numéro hors liste sandbox a bien réaffiché l'erreur métier 422 du §76 sans casser la mise en
+  page (débordement toujours à 0 avec le message d'erreur + indice dev affichés) ; un essai avec
+  `+237670000000` a bien mené à l'écran "Vérification de votre paiement..." (`/abonnement/verification/[id]`),
+  également 0 débordement.
+
+**Deux points mineurs relevés, volontairement non corrigés** (sévérité basse, patron standard) : le lien
+texte "← Retour" (~20px de haut) et les onglets `RoleSwitcher` (~36px) sont sous les 44px recommandés,
+mais ce sont des liens texte/segments pleine-largeur à faible risque d'erreur de frappe, pas des boutons
+icône isolés — corriger systématiquement chaque lien texte inline aurait dépassé le périmètre du signalement
+initial sans bénéfice UX clair.
+
+`tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants dans `mock-provider.ts`, sans rapport).
+
+### Nettoyage
+
+Élèves de test (`ELE-DEV-JH6` réutilisé pour le menu, `ELE-NEP-RHT` pour le paiement) et leurs
+`Paiement`/`Abonnement` supprimés après vérification, cascade correcte confirmée par `DELETE ...
+RETURNING`. Comptes réels intacts.
+
+### À suivre
+
+Passe 2 (Élève : dashboard + sidebar/bottom-nav, chat-tuteur, banque d'épreuves, mes copies, mes lacunes,
+quiz, profil), Passe 3 (Parent), Passe 4 (Admin) — chacune sur le même principe : audit DOM réel aux 3
+tailles, correctifs, revérification, commit/push séparé, mise à jour de ce journal.

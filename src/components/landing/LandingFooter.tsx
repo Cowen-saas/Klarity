@@ -32,7 +32,7 @@ export function LandingFooter() {
             </p>
           </div>
 
-          <div className="flex gap-16">
+          <div className="flex flex-col gap-8 sm:flex-row sm:gap-16">
             <div>
               <p className="text-sm font-bold text-texte">Légal</p>
               <ul className="mt-3 space-y-2">
@@ -49,7 +49,7 @@ export function LandingFooter() {
               <p className="text-sm font-bold text-texte">Contact</p>
               <ul className="mt-3 space-y-2 text-sm text-texte-muted">
                 <li>
-                  <a href="mailto:cowen.noumbou@gmail.com" className="hover:text-texte">
+                  <a href="mailto:cowen.noumbou@gmail.com" className="break-words hover:text-texte">
                     cowen.noumbou@gmail.com
                   </a>
                 </li>

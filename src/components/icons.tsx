@@ -36,6 +36,7 @@ import {
   DownloadSimple,
   X,
   Play,
+  List,
 } from "@phosphor-icons/react";
 
 /**
@@ -84,3 +85,4 @@ export const IconSearch = MagnifyingGlass;
 export const IconDownload = DownloadSimple;
 export const IconClose = X;
 export const IconPlay = Play;
+export const IconMenu = List;

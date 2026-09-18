@@ -56,7 +56,7 @@ export function PinInput({ id, label, value, onChange, length = 4, autoFocus = f
       <legend id={`${id}-legend`} className="mb-2 text-sm font-semibold text-texte">
         {label}
       </legend>
-      <div className="flex gap-3" role="group" aria-labelledby={`${id}-legend`}>
+      <div className="flex gap-1 sm:gap-3" role="group" aria-labelledby={`${id}-legend`}>
         {digits.map((digit, index) => (
           <input
             key={index}
@@ -74,7 +74,7 @@ export function PinInput({ id, label, value, onChange, length = 4, autoFocus = f
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
-            className="h-14 w-14 rounded-xl border-2 border-border bg-surface text-center text-xl font-semibold text-texte outline-none transition-colors focus:border-primary"
+            className="h-11 w-11 rounded-xl border-2 border-border bg-surface text-center text-lg font-semibold text-texte outline-none transition-colors focus:border-primary sm:h-14 sm:w-14 sm:text-xl"
           />
         ))}
       </div>
