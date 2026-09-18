@@ -17,43 +17,49 @@ const HAUTEUR_MIN_BARRE_PX = 4;
  * Bar chart mono-série (magnitude dans le temps) — une seule teinte (primary),
  * pas de légende nécessaire à une seule série (cf. skill dataviz). État vide
  * explicite plutôt qu'un graphique à barres nulles muettes.
+ *
+ * Chaque colonne (barre + libellé) a une largeur plancher (`min-w-10`) et le
+ * conteneur défile horizontalement (`overflow-x-auto`) : avec beaucoup de
+ * points (ex. "14 derniers jours" côté parent, `/parent/temps-passe`), des
+ * colonnes en `flex-1` sans plancher se compressaient sous la largeur
+ * minimale de leur libellé ("lun 14"), débordant réellement la page mobile
+ * de 139px (mesuré à 375px) plutôt que de rester lisibles en défilement.
  */
 export function BarChart({ data, valueFormatter = (v) => String(v), emptyMessage }: BarChartProps) {
   const max = Math.max(0, ...data.map((d) => d.value));
   const aDesDonnees = max > 0;
 
+  if (!aDesDonnees) {
+    return (
+      <div className="flex items-center justify-center text-sm text-texte-muted" style={{ height: HAUTEUR_ZONE_PX }}>
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="overflow-x-auto">
       <div
         className="flex items-end gap-3"
-        style={{ height: HAUTEUR_ZONE_PX }}
         role="img"
-        aria-label={aDesDonnees ? data.map((d) => `${d.label} : ${valueFormatter(d.value)}`).join(", ") : emptyMessage}
+        aria-label={data.map((d) => `${d.label} : ${valueFormatter(d.value)}`).join(", ")}
       >
-        {!aDesDonnees ? (
-          <p className="flex h-full w-full items-center justify-center text-sm text-texte-muted">{emptyMessage}</p>
-        ) : (
-          data.map((d) => {
-            const hauteur = Math.max(HAUTEUR_MIN_BARRE_PX, Math.round((d.value / max) * HAUTEUR_ZONE_PX));
-            return (
-              <div key={d.label} className="flex flex-1 flex-col items-center gap-2" title={`${d.label} : ${valueFormatter(d.value)}`}>
-                <div className="flex w-full items-end" style={{ height: HAUTEUR_ZONE_PX }}>
-                  <div className="w-full rounded-t-md bg-primary" style={{ height: hauteur }} />
-                </div>
+        {data.map((d) => {
+          const hauteur = Math.max(HAUTEUR_MIN_BARRE_PX, Math.round((d.value / max) * HAUTEUR_ZONE_PX));
+          return (
+            <div
+              key={d.label}
+              className="flex min-w-10 flex-1 flex-col items-center gap-2"
+              title={`${d.label} : ${valueFormatter(d.value)}`}
+            >
+              <div className="flex w-full items-end" style={{ height: HAUTEUR_ZONE_PX }}>
+                <div className="w-full rounded-t-md bg-primary" style={{ height: hauteur }} />
               </div>
-            );
-          })
-        )}
+              <p className="w-full text-center text-xs whitespace-nowrap text-texte-muted">{d.label}</p>
+            </div>
+          );
+        })}
       </div>
-      {aDesDonnees && (
-        <div className="mt-2 flex gap-3">
-          {data.map((d) => (
-            <p key={d.label} className="flex-1 text-center text-xs text-texte-muted">
-              {d.label}
-            </p>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

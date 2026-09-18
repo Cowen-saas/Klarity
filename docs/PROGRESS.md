@@ -5641,3 +5641,71 @@ Même méthode qu'en Passe 1 (iframe à viewport CSS indépendant + mesure DOM d
 Élèves de test (`ELE-GG6-4FS` PREMIERE/D pour la bottom-nav et le chat, `ELE-JSH-EC6` 3ème pour
 l'upload) supprimés après vérification (`DELETE ... RETURNING` confirmé), aucun Paiement/Abonnement créé
 cette passe donc pas de cascade à gérer. Comptes réels intacts.
+
+## 79. Chantier responsive mobile-first — Passe 3/4 : Parent (18 septembre 2026)
+
+Suite des §77-78. Périmètre : `ParentShell` (sidebar/nav), Vue d'ensemble, Progression, Notes, Lacunes,
+Temps passé, Notifications, Paramètres (clôture de compte). Décision utilisateur du début de cette passe :
+plus de point de vérification intermédiaire — un seul bilan une fois les 4 passes terminées — mais
+commit/push et mise à jour de ce journal restent faits à chaque passe. Même méthode qu'aux passes
+précédentes (iframe à viewport indépendant + mesure DOM directe).
+
+### Bugs trouvés et corrigés
+
+1. **`ParentShell.tsx` — aucune navigation mobile du tout, pas seulement dense.** Contrairement à
+   `EleveShell` (qui a une bottom-nav, même corrigée au §78), `ParentShell` n'avait **strictement rien**
+   pour mobile : le sidebar est `hidden md:flex` comme prévu, mais aucune bottom-nav ne le remplaçait —
+   en dessous de 768px, un parent n'avait **aucun moyen de naviguer** entre Vue d'ensemble / Progression /
+   Notes / Lacunes / Temps passé / Notifications / Abonnement / Paramètres. Plus sévère que le bug de
+   navigation du §77 (landing) puisqu'ici il n'y avait même pas de menu caché à débloquer — rien n'existait.
+   Corrigé en appliquant le patron `EleveShell` déjà corrigé au §78 (même bug initial que la bottom-nav
+   élève, donc corrigé d'emblée avec `min-w-0` + libellés mobiles courts dédiés + `truncate`) : nouvelle
+   bottom-nav `fixed md:hidden`, `pb-20 md:pb-0` sur le conteneur de contenu, libellés mobiles ("Accueil",
+   "Progrès", "Temps", "Notifs", "Formule", "Réglages" — sidebar desktop inchangée avec les libellés
+   complets). Revérifié en conditions réelles (parent de test connecté via le vrai flux OTP) : 8 colonnes
+   à 45px exactement, 59px de haut, zéro débordement, sidebar desktop toujours complète et bottom-nav
+   bien masquée à 770px.
+2. **`BarChart.tsx` (composant partagé — dashboard, Progression, Temps passé) — débordement réel de
+   139px avec beaucoup de points.** Chaque barre/libellé était un `flex-1` sans `min-w-0` (même famille de
+   bug que la bottom-nav du §78) : avec 6-8 points (dashboard, Progression, "par semaine") ça passait de
+   justesse, mais `/parent/temps-passe` affiche aussi un graphique **"par jour" sur 14 points** —
+   mesuré en conditions réelles (14 lignes `SessionActivite` insérées pour un élève de test) : 139px de
+   débordement horizontal réel de toute la page à 375px, les libellés ("lun 14", "mar 15"…) poussés hors
+   de leur colonne plutôt que de s'y adapter. Corrigé en restructurant le composant : barre et libellé
+   fusionnés en une seule colonne (au lieu de deux rangées `flex-1` parallèles qui devaient rester
+   alignées — plus fragile), plancher `min-w-10` (40px) par colonne, conteneur `overflow-x-auto` — au-delà
+   de la largeur disponible, le graphique défile horizontalement **à l'intérieur de sa carte** plutôt que
+   de casser la page. Revérifié : page à 0 débordement, les deux graphiques de `/parent/temps-passe`
+   confirmés réellement défilables (14 barres → 716px de contenu dans 262px visibles ; 8 barres → 404px
+   dans 262px), aria-label (résumé texte complet pour lecteur d'écran) inchangé.
+
+### Vérifié réellement, sans correctif nécessaire
+
+- **Vue d'ensemble** (`/parent`) : bandeau d'inactivité, sélecteur d'enfant, tuiles `grid-cols-2 lg:grid-cols-4`
+  (2 colonnes dès mobile — patron délibéré pour des tuiles courtes, pas le bug "grille desktop conservée"
+  visé par le signalement initial, vérifié 147px par tuile à 375px, confortable), sections
+  `grid-cols-1 lg:grid-cols-[2fr_1fr]` — 0 débordement à 375 et 772px.
+- **`EnfantSelector.tsx`** : pilules `flex flex-wrap` déjà correctes — vérifié en conditions réelles avec
+  2 enfants liés (2 vrais noms de test assez longs), passage à la ligne confirmé sans débordement.
+- **Notes, Progression (hors graphique), Lacunes** : mêmes patrons que côté élève déjà validés au §78
+  (`divide-y` au lieu de `<table>`, `grid-cols-1 sm:grid-cols-2`/`lg:grid-cols-[2fr_1fr]`) — 0 débordement.
+- **Notifications** (`NotificationForm.tsx`) : `grid-cols-1 lg:grid-cols-[3fr_2fr]`, canal `grid-cols-2`,
+  fréquence `grid-cols-1 sm:grid-cols-3` — déjà correct.
+- **Paramètres / clôture de compte** (`ClotureCompteForm.tsx`) : `grid-cols-1 lg:grid-cols-2`, case à
+  cocher dans un `<label>` pleine largeur (zone cliquable réelle bien au-delà des 16px visuels de la case) —
+  déjà correct.
+
+`tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants dans `mock-provider.ts`, sans rapport).
+
+### Nettoyage
+
+Élèves de test (`ELE-9FB-9KD`, `ELE-AFN-QSG`), leur parent commun (`+237699887766`, connecté via le vrai
+flux OTP — code retourné par `SMS_MODE=mock`), les 2 `ParentEleveLink`, les 14 `SessionActivite`
+insérées pour tester le graphique "par jour", et les `OtpVerification` associées : tous supprimés après
+vérification. Comptes réels intacts.
+
+### À suivre
+
+Passe 4/4 (Admin : dashboard + gestion épreuves, dates d'examens, corrections signalées, paiements,
+revenus) — a priori la plus à risque vu la densité de tableaux back-office, sur le même principe. Bilan
+d'ensemble des 4 passes à l'utilisateur une fois celle-ci terminée.
