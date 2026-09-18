@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getPaymentProvider } from "@/lib/payment";
+import type { ResultatPaiement } from "@/lib/payment/types";
 
 /**
  * Traitement d'un webhook de paiement (§5.4) — point d'entrée unique partagé
@@ -13,13 +14,19 @@ import { getPaymentProvider } from "@/lib/payment";
  * Idempotence stricte (§4.5, §5.4, §8) : un même événement rejoué (retry
  * réseau NotchPay, ou le même job mock relancé) ne crédite jamais deux fois —
  * dès que Paiement.statut a quitté EN_ATTENTE, tout replay est un no-op
- * journalisé, jamais une seconde écriture sur Abonnement.
+ * journalisé, jamais une seconde écriture sur Abonnement. Cette même garantie
+ * est réutilisée telle quelle par `reconcilierPaiementsEnAttente()`
+ * (`src/lib/payment/reconciliation.ts`), qui appelle `appliquerResultatPaiement`
+ * ci-dessous avec un résultat obtenu par interrogation directe du provider
+ * plutôt que par un webhook reçu — même chemin de crédit, même garde-fou.
  */
 
 const DUREE_ABONNEMENT_JOURS = 30;
 
+export type StatutTraitement = "CREDITE" | "ECHEC_PAIEMENT" | "DEJA_TRAITE" | "EVENEMENT_INTERMEDIAIRE" | "PAIEMENT_INTROUVABLE";
+
 export type ResultatTraitementWebhook =
-  | { ok: true; traitementStatut: "CREDITE" | "ECHEC_PAIEMENT" | "DEJA_TRAITE" | "EVENEMENT_INTERMEDIAIRE" }
+  | { ok: true; traitementStatut: Exclude<StatutTraitement, "PAIEMENT_INTROUVABLE"> }
   | { ok: false; traitementStatut: "SIGNATURE_INVALIDE" | "PAIEMENT_INTROUVABLE"; status: 401 | 404 };
 
 export async function traiterWebhookPaiement(
@@ -43,6 +50,32 @@ export async function traiterWebhookPaiement(
   }
 
   const resultat = await provider.traiterWebhook(payloadBrut);
+  const traitementStatut = await appliquerResultatPaiement(resultat, {
+    nomProvider,
+    payloadBrut: asJson(payloadBrut),
+    signatureValide: true,
+  });
+
+  if (traitementStatut === "PAIEMENT_INTROUVABLE") {
+    return { ok: false, traitementStatut: "PAIEMENT_INTROUVABLE", status: 404 };
+  }
+  return { ok: true, traitementStatut };
+}
+
+/**
+ * Cœur idempotent partagé entre le webhook réel et la réconciliation
+ * périodique (§ réconciliation, ajouté suite à un paiement sandbox resté bloqué
+ * en local faute de webhook livrable — cf. `docs/PROGRESS.md`). `signatureValide`
+ * reflète la provenance de `resultat`, jamais une vraie signature webhook côté
+ * réconciliation : `true` car ces données viennent d'un appel authentifié par
+ * notre propre clé API vers le provider (GET direct), pas d'un payload poussé
+ * non vérifié — la confiance vient de qui a initié l'appel, pas d'une signature.
+ */
+export async function appliquerResultatPaiement(
+  resultat: ResultatPaiement,
+  contexte: { nomProvider: string; payloadBrut: object; signatureValide: boolean }
+): Promise<StatutTraitement> {
+  const { nomProvider, payloadBrut, signatureValide } = contexte;
 
   const paiement = await prisma.paiement.findUnique({
     where: { idempotencyKey: resultat.idempotencyKey },
@@ -51,34 +84,30 @@ export async function traiterWebhookPaiement(
 
   if (!paiement) {
     await prisma.webhookLog.create({
-      data: {
-        provider: nomProvider,
-        payloadBrut: asJson(payloadBrut),
-        signatureValide: true,
-        traitementStatut: "PAIEMENT_INTROUVABLE",
-      },
+      data: { provider: nomProvider, payloadBrut, signatureValide, traitementStatut: "PAIEMENT_INTROUVABLE" },
     });
-    return { ok: false, traitementStatut: "PAIEMENT_INTROUVABLE", status: 404 };
+    return "PAIEMENT_INTROUVABLE";
   }
 
   if (paiement.statut !== "EN_ATTENTE") {
-    // Replay d'un webhook déjà traité (retry réseau, ou job mock rejoué) —
-    // no-op volontaire, aucune seconde écriture sur Abonnement.
+    // Replay (retry réseau NotchPay, job mock rejoué, ou réconciliation arrivant
+    // après qu'un webhook a déjà fait le travail) — no-op volontaire, aucune
+    // seconde écriture sur Abonnement.
     await prisma.webhookLog.create({
-      data: { provider: nomProvider, payloadBrut: asJson(payloadBrut), signatureValide: true, traitementStatut: "DEJA_TRAITE" },
+      data: { provider: nomProvider, payloadBrut, signatureValide, traitementStatut: "DEJA_TRAITE" },
     });
-    return { ok: true, traitementStatut: "DEJA_TRAITE" };
+    return "DEJA_TRAITE";
   }
 
   if (resultat.statut === "EN_ATTENTE") {
     // Événement intermédiaire (ex. NotchPay "processing") — pas encore un
     // état terminal : journalisé pour audit, mais ni Paiement ni Abonnement ne
-    // sont modifiés. Le paiement reste EN_ATTENTE jusqu'au prochain webhook
-    // terminal (REUSSI/ECHEC).
+    // sont modifiés. Le paiement reste EN_ATTENTE jusqu'au prochain événement
+    // terminal (webhook ou réconciliation).
     await prisma.webhookLog.create({
-      data: { provider: nomProvider, payloadBrut: asJson(payloadBrut), signatureValide: true, traitementStatut: "EVENEMENT_INTERMEDIAIRE" },
+      data: { provider: nomProvider, payloadBrut, signatureValide, traitementStatut: "EVENEMENT_INTERMEDIAIRE" },
     });
-    return { ok: true, traitementStatut: "EVENEMENT_INTERMEDIAIRE" };
+    return "EVENEMENT_INTERMEDIAIRE";
   }
 
   await prisma.$transaction(async (tx) => {
@@ -105,16 +134,11 @@ export async function traiterWebhookPaiement(
     }
   });
 
+  const traitementStatut = resultat.statut === "REUSSI" ? "CREDITE" : "ECHEC_PAIEMENT";
   await prisma.webhookLog.create({
-    data: {
-      provider: nomProvider,
-      payloadBrut: asJson(payloadBrut),
-      signatureValide: true,
-      traitementStatut: resultat.statut === "REUSSI" ? "CREDITE" : "ECHEC_PAIEMENT",
-    },
+    data: { provider: nomProvider, payloadBrut, signatureValide, traitementStatut },
   });
-
-  return { ok: true, traitementStatut: resultat.statut === "REUSSI" ? "CREDITE" : "ECHEC_PAIEMENT" };
+  return traitementStatut;
 }
 
 function asJson(value: unknown): object {

@@ -173,6 +173,31 @@ export class NotchPayProvider implements PaymentProvider {
     };
   }
 
+  /**
+   * `GET /payments/{reference}` — même appel déjà utilisé et validé pour
+   * reconstituer un webhook perdu à la main (§41, `docs/PROGRESS.md`), rejoué
+   * ici automatiquement par le job de réconciliation plutôt qu'à la demande.
+   * Même repli `reference` (jamais `id`, cf. commentaire de tête de fichier) que
+   * `traiterWebhook()`.
+   */
+  async verifierStatutPaiement(reference: string): Promise<ResultatPaiement> {
+    const res = await fetch(`${NOTCHPAY_BASE_URL}/payments/${reference}`, {
+      headers: { Authorization: this.publicKey },
+    });
+    if (!res.ok) {
+      throw await erreurAppelNotchPay(res, "de vérification de statut");
+    }
+    const body = (await res.json()) as { transaction: { reference: string; status: string; amount: number; currency: string } };
+    const tx = body.transaction;
+    return {
+      idempotencyKey: tx.reference,
+      statut: mapperStatutNotchPay(tx.status),
+      referenceTransaction: tx.reference,
+      montant: tx.amount,
+      devise: tx.currency,
+    };
+  }
+
   verifierSignatureWebhook(payloadBrut: unknown, signatureRecue: string): boolean {
     if (!signatureRecue) return false;
     // NotchPay hash le JSON du corps brut avec le "Hash Key" webhook (HMAC-SHA256,

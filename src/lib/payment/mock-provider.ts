@@ -62,6 +62,18 @@ export class MockPaymentProvider implements PaymentProvider {
       devise: payload.devise,
     };
   }
+
+  /**
+   * Aucun statut externe à relire en mode mock : `planifierWebhookMock()`
+   * résout déjà chaque paiement en interne après un court délai fixe
+   * (`DELAI_MOCK_MS`), donc rien ne devrait jamais rester EN_ATTENTE ici — le
+   * job de réconciliation n'a de sens que pour un provider réellement
+   * asynchrone (NotchPay). Échoue explicitement plutôt que de renvoyer un
+   * statut inventé.
+   */
+  async verifierStatutPaiement(): Promise<ResultatPaiement> {
+    throw new Error("verifierStatutPaiement() non applicable en PAYMENT_MODE=mock : aucun état externe à interroger.");
+  }
 }
 
 /** Utilitaire de test : signe un payload mock comme le ferait NotchPay (§5.4). */

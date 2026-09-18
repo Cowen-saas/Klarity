@@ -19,4 +19,14 @@ export interface PaymentProvider {
 
   /** Doit être idempotent — un même événement webhook rejoué ne crédite qu'une fois (§5.4, §8). */
   traiterWebhook(payloadBrut: unknown): Promise<ResultatPaiement>;
+
+  /**
+   * Interroge directement le provider pour l'état réel d'une transaction —
+   * jamais appelée sur le chemin webhook (qui reste du push), seulement par le
+   * job de réconciliation périodique (`src/lib/payment/reconciliation.ts`) pour
+   * rattraper un paiement resté EN_ATTENTE si le webhook ne s'est jamais livré
+   * (coupure réseau, tunnel local absent, retry épuisé côté provider).
+   * `reference` correspond à `Paiement.idempotencyKey`.
+   */
+  verifierStatutPaiement(reference: string): Promise<ResultatPaiement>;
 }

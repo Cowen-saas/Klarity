@@ -1,6 +1,10 @@
 import { Worker } from "bullmq";
 import { createRedisConnection } from "@/lib/redis";
 import { QUEUE_PAIEMENT_MOCK, type PaiementMockJobData } from "@/lib/queue/paiement";
+import {
+  QUEUE_RECONCILIATION_PAIEMENT,
+  enregistrerSchedulerReconciliationPaiement,
+} from "@/lib/queue/reconciliation-paiement";
 import { QUEUE_RETENTION, enregistrerSchedulersRetention, type JobRetention } from "@/lib/queue/retention";
 import { QUEUE_CORRECTION, type CorrectionJobData } from "@/lib/queue/correction";
 import { QUEUE_QUIZ, getQuizEleveQueue, enregistrerSchedulerQuiz, type QuizEleveJobData } from "@/lib/queue/quiz";
@@ -11,6 +15,7 @@ import { detecterInactivite } from "@/lib/retention/detection-inactivite";
 import { anonymiserComptesExpires } from "@/lib/retention/anonymisation-auto";
 import { archiverPhotosAncienneAnnee } from "@/lib/retention/archivage-photos";
 import { traiterTentative } from "@/lib/correction/traiter-tentative";
+import { reconcilierPaiementsEnAttente } from "@/lib/payment/reconciliation";
 import {
   genererQuizJournalierPourEleve,
   genererQuizJournalierPourTousLesEleves,
@@ -24,6 +29,9 @@ import { obtenirVideosPourNotion, planifierVideosPourLacunesActives } from "@/li
  *
  * Files actives :
  *  - `paiement-mock-webhook` (§5.2) — simulation du webhook NotchPay en mode mock.
+ *  - `reconciliation-paiement` — cron 5 min (PAYMENT_MODE=notchpay uniquement),
+ *    rattrape un paiement resté EN_ATTENTE si le webhook NotchPay ne s'est
+ *    jamais livré (cf. `src/lib/payment/reconciliation.ts`).
  *  - `retention` (§2.9) — 3 jobs cron : détection d'inactivité, anonymisation
  *    automatique, archivage annuel des photos de copies.
  *  - `correction` (§2.1, §4.3, §6.2, §6.4) — traitement asynchrone d'une
@@ -69,6 +77,27 @@ async function main() {
 
   paiementMockWorker?.on("failed", (job, err) => {
     console.error(`[worker] échec traitement webhook mock ${job?.data.sessionId}`, err);
+  });
+
+  // N'a de sens qu'en PAYMENT_MODE=notchpay — le mock ne reste jamais EN_ATTENTE
+  // au-delà de DELAI_MOCK_MS, rien à réconcilier pour lui.
+  const reconciliationWorker =
+    (process.env.PAYMENT_MODE ?? "mock") === "notchpay"
+      ? new Worker(
+          QUEUE_RECONCILIATION_PAIEMENT,
+          async () => {
+            const r = await reconcilierPaiementsEnAttente();
+            console.log(
+              `[worker] réconciliation paiements : ${r.verifies} vérifié(s), ${r.credites} crédité(s), ` +
+                `${r.echecs} échec(s), ${r.toujoursEnAttente} toujours en attente, ${r.erreurs} erreur(s)`
+            );
+          },
+          { connection: createRedisConnection() }
+        )
+      : undefined;
+
+  reconciliationWorker?.on("failed", (job, err) => {
+    console.error(`[worker] échec réconciliation paiements ${job?.name}`, err);
   });
 
   // --- Rétention des données (§2.9) ---
@@ -181,10 +210,16 @@ async function main() {
   await enregistrerSchedulerQuiz();
   console.log("[worker] scheduler quiz journalier enregistré (quotidien 05:00)");
 
+  if (reconciliationWorker) {
+    await enregistrerSchedulerReconciliationPaiement();
+    console.log("[worker] scheduler réconciliation paiements enregistré (toutes les 5 min)");
+  }
+
   const shutdown = async () => {
     console.log("[worker] shutting down");
     await Promise.allSettled([
       paiementMockWorker?.close(),
+      reconciliationWorker?.close(),
       retentionWorker.close(),
       correctionWorker.close(),
       quizCronWorker.close(),
