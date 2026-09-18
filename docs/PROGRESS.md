@@ -3782,12 +3782,17 @@ publique à montrer à NotchPay (validation de compte marchand), pas de servir d
 véritable déploiement, avec une base de données correctement câblée dès le départ, sera fait plus tard,
 une fois NotchPay validé et le projet prêt pour un vrai lancement.
 
-**Point à traiter plus tard**, avant tout vrai lancement — deux étapes, sans avoir besoin de copier les
+**Point à traiter plus tard**, avant tout vrai lancement — trois étapes, sans avoir besoin de copier les
 données de test locales :
 1. Remplacer le contenu de `DATABASE_URL` sur Vercel par la vraie chaîne de connexion actuellement sous
    `KLARITY_DATABASE_URL`.
 2. Lancer une fois `prisma migrate deploy` contre cette base pour lui donner la bonne structure de
    tables (vide, mais avec la bonne forme — pas un import de données).
+3. Configurer aussi `REDIS_URL` sur Vercel en production, pointant vers un vrai service Redis externe
+   joignable (ex. Upstash) — même situation de câblage que `DATABASE_URL` ci-dessus. Sans ça, les
+   8 routes dépendant de Redis (rate-limiting, BullMQ, etc. — protégées par le commit `4494db0`)
+   continueront de répondre proprement « service indisponible » plutôt que de planter, mais resteront
+   non fonctionnelles tant que ce n'est pas réglé.
 
 Aucun fichier du dépôt modifié dans cette entrée — audit en lecture seule uniquement.
 
