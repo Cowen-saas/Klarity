@@ -10,18 +10,27 @@ import { SignOutButton } from "@/components/ui/SignOutButton";
 interface NavItem {
   href: string;
   label: string;
+  /**
+   * Libellé plus court réservé à la bottom-nav mobile (8 destinations dans une
+   * barre de ~360px) — le sidebar desktop garde toujours `label` en entier.
+   * Sans ça, un libellé non sécable comme "Abonnement" force sa colonne
+   * flex-1 à son propre min-content (`min-width: auto` par défaut), ce qui
+   * grignote l'espace des colonnes voisines et fait passer les libellés à
+   * deux mots ("Tuteur IA", "Mes copies", "Mes lacunes") sur 2 lignes.
+   */
+  labelMobile?: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   disabled?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/eleve", label: "Accueil", icon: IconHome },
-  { href: "/eleve/tuteur-ia", label: "Tuteur IA", icon: IconSparkles },
+  { href: "/eleve/tuteur-ia", label: "Tuteur IA", labelMobile: "Tuteur", icon: IconSparkles },
   { href: "/eleve/epreuves", label: "Épreuves", icon: IconDocument },
-  { href: "/eleve/corrections", label: "Mes copies", icon: IconRobot },
-  { href: "/eleve/lacunes", label: "Mes lacunes", icon: IconBulb },
+  { href: "/eleve/corrections", label: "Mes copies", labelMobile: "Copies", icon: IconRobot },
+  { href: "/eleve/lacunes", label: "Mes lacunes", labelMobile: "Lacunes", icon: IconBulb },
   { href: "/eleve/quiz", label: "Quiz", icon: IconPencil },
-  { href: "/abonnement?compte=1", label: "Abonnement", icon: IconCreditCard },
+  { href: "/abonnement?compte=1", label: "Abonnement", labelMobile: "Formule", icon: IconCreditCard },
   { href: "/eleve/profil", label: "Profil", icon: IconUser },
 ];
 
@@ -94,23 +103,25 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function BottomNavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
-  const classes = `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
+  const label = item.labelMobile ?? item.label;
+  const classes = `flex min-w-0 flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
     item.disabled ? "text-texte-muted/40" : active ? "text-primary" : "text-texte-muted"
   }`;
+  const labelSpan = <span className="max-w-full truncate">{label}</span>;
 
   if (item.disabled) {
     return (
       <span className={classes} aria-disabled="true">
-        <Icon className="h-5 w-5" aria-hidden="true" />
-        {item.label}
+        <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+        {labelSpan}
       </span>
     );
   }
 
   return (
     <Link href={item.href} className={classes} aria-current={active ? "page" : undefined}>
-      <Icon className="h-5 w-5" aria-hidden="true" />
-      {item.label}
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      {labelSpan}
     </Link>
   );
 }

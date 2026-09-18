@@ -151,7 +151,11 @@ export function ChatPanel({ contexteEpreuve }: { contexteEpreuve?: ContexteEpreu
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col rounded-2xl bg-surface shadow-sm md:h-[calc(100vh-6rem)]">
+    // -7rem sur mobile = les 5rem de pb-20 réservés par EleveShell pour la
+    // bottom-nav fixe + les 2rem de py-4 de <main> (tuteur-ia/page.tsx) —
+    // sans ça la barre de saisie finissait à 4px du bord de la bottom-nav
+    // (mesuré), un débordement au moindre écart de rendu.
+    <div className="flex h-[calc(100vh-7rem)] flex-col rounded-2xl bg-surface shadow-sm md:h-[calc(100vh-6rem)]">
       <div className="flex items-center gap-3 border-b border-border px-4 py-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
           <IconSparkles className="h-5 w-5" weight="fill" aria-hidden="true" />

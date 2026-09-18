@@ -5573,3 +5573,71 @@ RETURNING`. Comptes réels intacts.
 Passe 2 (Élève : dashboard + sidebar/bottom-nav, chat-tuteur, banque d'épreuves, mes copies, mes lacunes,
 quiz, profil), Passe 3 (Parent), Passe 4 (Admin) — chacune sur le même principe : audit DOM réel aux 3
 tailles, correctifs, revérification, commit/push séparé, mise à jour de ce journal.
+
+## 78. Chantier responsive mobile-first — Passe 2/4 : Élève (18 septembre 2026)
+
+Suite du §77. Périmètre : `EleveShell` (sidebar desktop / bottom-nav mobile, partagée par tout
+l'espace élève), dashboard, chat-tuteur (modes 1 et 2), banque d'épreuves, mes copies (upload +
+résultat de correction), mes lacunes, quiz (journalier et ciblé), profil. Décision utilisateur explicite
+pour la suite du chantier : plus de point de vérification après chaque passe — un seul bilan d'ensemble
+une fois les 4 terminées — mais commit/push et mise à jour de ce journal restent faits à chaque passe.
+Même méthode qu'en Passe 1 (iframe à viewport CSS indépendant + mesure DOM directe
+`scrollWidth`/`getBoundingClientRect`, `resize_window` toujours inopérant dans cet environnement).
+
+### Bugs trouvés et corrigés
+
+1. **`EleveShell.tsx` — bottom-nav mobile réellement cassée, pas seulement dense.** 8 destinations
+   (`Accueil`/`Tuteur IA`/`Épreuves`/`Mes copies`/`Mes lacunes`/`Quiz`/`Abonnement`/`Profil`) en
+   `flex flex-1` **sans `min-w-0`** : par défaut CSS un enfant flex ne peut pas descendre sous son
+   `min-content`, donc le libellé non sécable "Abonnement" (74px de large mesuré) imposait sa propre
+   largeur et grignotait l'espace des colonnes voisines — mesuré précisément : "Tuteur IA", "Mes copies"
+   et "Mes lacunes" passaient chacun sur 2 lignes (hauteur de texte 31px contre 14px pour une ligne),
+   colonnes réduites à 37-43px, barre entière gonflée à 77px de haut. Corrigé : `min-w-0` sur chaque
+   item (rétablit une distribution flex égale, vérifiée à 45px pile par colonne) + libellés mobiles
+   raccourcis dédiés (`labelMobile`, sidebar desktop inchangée avec les libellés complets) — "Tuteur",
+   "Copies", "Lacunes", "Formule" (vocabulaire déjà utilisé ailleurs dans l'app plutôt qu'une abréviation
+   inventée) — + `truncate` défensif sur chaque libellé au cas où. Revérifié : les 8 colonnes à 45px
+   exactement, texte sur une seule ligne partout, barre à 59px, zéro débordement.
+2. **`ChatPanel.tsx` (chat-tuteur, modes 1 et 2 — composant partagé) — barre de saisie à 4px de la
+   bottom-nav.** `h-[calc(100vh-4rem)]` ne tenait pas compte des 5rem de `pb-20` réservés par
+   `EleveShell` pour la bottom-nav fixe sur mobile (uniquement compensés par un calc pensé pour desktop,
+   sans bottom-nav) : mesuré précisément, le bas du bouton d'envoi se trouvait à seulement **4px** du
+   bord supérieur de la bottom-nav — pas encore caché, mais une marge si fine qu'un écart de rendu
+   mineur (police réelle, barre d'autocomplétion clavier mobile) l'aurait fait passer dessous. Corrigé :
+   `h-[calc(100vh-7rem)]` sur mobile (7rem = 5rem de `pb-20` + 2rem de `py-4` de la page), `md:` inchangé
+   (pas de bottom-nav sur desktop). Revérifié : marge de 54px entre le bouton d'envoi et la bottom-nav.
+   Le mode 2 (`/eleve/epreuves/[id]/discuter`) réutilise le même composant `ChatPanel` et le même patron
+   de page — corrigé du même coup, revérifié en confirmant que ses deux pages partagent l'identique
+   `<main className="max-w-3xl px-6 py-4 sm:px-8 sm:py-8">`.
+
+### Vérifié réellement, sans correctif nécessaire
+
+- **Dashboard** (`/eleve`) : `grid-cols-1 lg:grid-cols-[2fr_1fr]` déjà mobile-first, 0 débordement à
+  375 et 768px.
+- **Banque d'épreuves** (`BanqueEpreuves.tsx`) : grille `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`,
+  pills de filtre déjà `flex flex-wrap` (multi-ligne, pas de débordement), champ de recherche
+  `w-full sm:w-72` — patron déjà correct.
+- **Mes copies** : écran d'upload (`UploadCopie.tsx`) vérifié en conditions réelles à 375px avec une
+  vraie épreuve seedée (`epreuve-prepa-svt-2023`, 3ème) — 0 débordement, les libellés de bouton
+  ("Photographier ma copie" / "ou importer depuis la galerie") s'enroulent naturellement (pas de
+  `whitespace-nowrap` forcé, contrairement au bug de la bottom-nav) donc pas de risque de dépassement.
+  `ResultatCorrection.tsx` vérifié par lecture de code (grille `sm:grid-cols-2`, en-tête `flex-wrap`,
+  modale de signalement `max-w-sm`) — nécessite une vraie correction IA pour un rendu live, hors
+  périmètre raisonnable de ce test (pipeline vision complet) mais patrons déjà mobile-first.
+- **Mes lacunes** (`MesLacunes.tsx`) : grille `grid-cols-1 sm:grid-cols-2`, panneau de détail
+  `lg:grid-cols-[minmax(0,28rem)_1fr]` — déjà correct.
+- **Quiz** (`QuizAujourdhui.tsx`, `QuizPlayer.tsx`) : cartes centrées pleine largeur, choix de réponse
+  `w-full` sans troncature forcée — déjà correct.
+- **Profil** : déjà refondu mobile-first au §74 et corrigé au §75 — reconfirmé 0 débordement (`overflowAmount:
+  -17`) sans changement supplémentaire nécessaire.
+- Tous les wrappers `<main>` des pages élève (`corrections`, `lacunes`, `epreuves`, `epreuves/[id]/correction`,
+  `quiz`, `quiz/[id]`) suivent le même patron `max-w-* px-6 py-8 sm:px-8` — aucune largeur fixe en pixels
+  relevée.
+
+`tsc --noEmit` et `eslint src` : 0 erreur (2 warnings pré-existants dans `mock-provider.ts`, sans rapport).
+
+### Nettoyage
+
+Élèves de test (`ELE-GG6-4FS` PREMIERE/D pour la bottom-nav et le chat, `ELE-JSH-EC6` 3ème pour
+l'upload) supprimés après vérification (`DELETE ... RETURNING` confirmé), aucun Paiement/Abonnement créé
+cette passe donc pas de cascade à gérer. Comptes réels intacts.
