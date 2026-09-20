@@ -13,8 +13,10 @@ import { createRedisConnection } from "@/lib/redis";
  */
 export const QUEUE_RECONCILIATION_PAIEMENT = "reconciliation-paiement";
 
-/** Toutes les 5 minutes — cohérent avec SEUIL_MINUTES dans reconciliation.ts. */
-const CRON_RECONCILIATION = "*/5 * * * *";
+/** Toutes les minutes — cohérent avec SEUIL_MINUTES dans reconciliation.ts (voir
+ * son commentaire : un incident réel a laissé un paiement bloqué 15 min avec
+ * l'ancien intervalle de 5 min, le temps de 3 cycles). */
+const CRON_RECONCILIATION = "* * * * *";
 
 let queue: Queue | undefined;
 

@@ -29,7 +29,7 @@ import { obtenirVideosPourNotion, planifierVideosPourLacunesActives } from "@/li
  *
  * Files actives :
  *  - `paiement-mock-webhook` (§5.2) — simulation du webhook NotchPay en mode mock.
- *  - `reconciliation-paiement` — cron 5 min (PAYMENT_MODE=notchpay uniquement),
+ *  - `reconciliation-paiement` — cron 1 min (PAYMENT_MODE=notchpay uniquement),
  *    rattrape un paiement resté EN_ATTENTE si le webhook NotchPay ne s'est
  *    jamais livré (cf. `src/lib/payment/reconciliation.ts`).
  *  - `retention` (§2.9) — 3 jobs cron : détection d'inactivité, anonymisation
@@ -212,7 +212,7 @@ async function main() {
 
   if (reconciliationWorker) {
     await enregistrerSchedulerReconciliationPaiement();
-    console.log("[worker] scheduler réconciliation paiements enregistré (toutes les 5 min)");
+    console.log("[worker] scheduler réconciliation paiements enregistré (toutes les 1 min)");
   }
 
   const shutdown = async () => {
