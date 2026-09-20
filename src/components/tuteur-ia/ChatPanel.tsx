@@ -203,11 +203,7 @@ export function ChatPanel({ contexteEpreuve }: { contexteEpreuve?: ContexteEpreu
             {contexteEpreuve ? "Pose ta première question sur cette copie." : "Pose ta première question sur cette matière."}
           </p>
         )}
-        {envoiEnCours && (
-          <div className="flex justify-start">
-            <p className="rounded-2xl bg-fond px-4 py-3 text-sm text-texte-muted">Le tuteur réfléchit…</p>
-          </div>
-        )}
+        {envoiEnCours && <IndicateurReflexion />}
         <div ref={finDuFilRef} />
       </div>
 
@@ -236,6 +232,22 @@ export function ChatPanel({ contexteEpreuve }: { contexteEpreuve?: ContexteEpreu
         >
           <IconSend className="h-4 w-4" weight="fill" aria-hidden="true" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** Affiché entre l'envoi du message élève et l'arrivée de la vraie réponse (§2.1). */
+function IndicateurReflexion() {
+  return (
+    <div className="flex justify-start">
+      <div className="flex max-w-[80%] items-center gap-2 rounded-2xl bg-fond px-4 py-3 text-sm text-texte-muted">
+        <span>Réfléchit...</span>
+        <span className="flex items-center gap-1" role="status" aria-label="Le tuteur réfléchit">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-texte-muted [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-texte-muted [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-texte-muted" />
+        </span>
       </div>
     </div>
   );
