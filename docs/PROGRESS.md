@@ -3782,7 +3782,7 @@ publique à montrer à NotchPay (validation de compte marchand), pas de servir d
 véritable déploiement, avec une base de données correctement câblée dès le départ, sera fait plus tard,
 une fois NotchPay validé et le projet prêt pour un vrai lancement.
 
-**Point à traiter plus tard**, avant tout vrai lancement — trois étapes, sans avoir besoin de copier les
+**Point à traiter plus tard**, avant tout vrai lancement — quatre étapes, sans avoir besoin de copier les
 données de test locales :
 1. Remplacer le contenu de `DATABASE_URL` sur Vercel par la vraie chaîne de connexion actuellement sous
    `KLARITY_DATABASE_URL`.
@@ -3793,6 +3793,18 @@ données de test locales :
    8 routes dépendant de Redis (rate-limiting, BullMQ, etc. — protégées par le commit `4494db0`)
    continueront de répondre proprement « service indisponible » plutôt que de planter, mais resteront
    non fonctionnelles tant que ce n'est pas réglé.
+4. **Héberger le service `worker`** (`src/worker/index.ts` — correction IA, génération de quiz, pipeline
+   vidéo, réconciliation des paiements) — découvert le 20 septembre 2026, en diagnostiquant un paiement
+   sandbox resté bloqué en local faute de webhook livrable (voir l'entrée sur le job de réconciliation des
+   paiements). Aucune configuration de déploiement pour lui n'existe (pas de `vercel.json` ni équivalent) :
+   il ne tourne aujourd'hui que via le service Docker `worker` en local. Vercel étant serverless, il ne
+   peut pas faire tourner un processus BullMQ en écoute permanente — donc sans hébergement dédié pour ce
+   worker, aucune fonctionnalité IA ni le filet de sécurité des paiements ne fonctionnerait en vrai
+   déploiement de production.
+   **Décision prise** : héberger le worker sur **Railway** (plutôt qu'un VPS+Docker autogéré), pour éviter
+   la charge d'administration système en solo. À faire lors du vrai déploiement : configurer un service
+   Railway pour `src/worker/index.ts`, avec les mêmes variables d'environnement que l'app (`DATABASE_URL`,
+   `REDIS_URL`, `ANTHROPIC_API_KEY`, etc.), connecté à la même base Postgres/Redis que l'app principale.
 
 Aucun fichier du dépôt modifié dans cette entrée — audit en lecture seule uniquement.
 
