@@ -3784,10 +3784,11 @@ une fois NotchPay validé et le projet prêt pour un vrai lancement.
 
 **Point à traiter plus tard**, avant tout vrai lancement — quatre étapes, sans avoir besoin de copier les
 données de test locales :
-1. Remplacer le contenu de `DATABASE_URL` sur Vercel par la vraie chaîne de connexion actuellement sous
-   `KLARITY_DATABASE_URL`.
+1. ~~Remplacer le contenu de `DATABASE_URL` sur Vercel par la vraie chaîne de connexion actuellement sous
+   `KLARITY_DATABASE_URL`.~~ **RÉSOLU le 21 septembre 2026, §83.**
 2. Lancer une fois `prisma migrate deploy` contre cette base pour lui donner la bonne structure de
-   tables (vide, mais avec la bonne forme — pas un import de données).
+   tables (vide, mais avec la bonne forme — pas un import de données) — **volontairement pas encore fait,
+   reporté au vrai lancement, §83.**
 3. Configurer aussi `REDIS_URL` sur Vercel en production, pointant vers un vrai service Redis externe
    joignable (ex. Upstash) — même situation de câblage que `DATABASE_URL` ci-dessus. Sans ça, les
    8 routes dépendant de Redis (rate-limiting, BullMQ, etc. — protégées par le commit `4494db0`)
@@ -5973,3 +5974,62 @@ correctement configuré côté production.
 Élèves de test créés pendant la reproduction (`TestRedisDown`, `TestRedisDown2`, `TestRedisUp`,
 `TestRedisUp2`, `TestRedisRestored`) supprimés après vérification. Aucune ligne `OtpVerification`
 orpheline (confirmé : la route échoue avant l'envoi de l'OTP quand Redis est indisponible, comme prévu).
+
+## 83. Vrai déploiement de production — Point 1/3 résolu : conflit `DATABASE_URL` / `KLARITY_DATABASE_URL` sur Vercel (21 septembre 2026)
+
+Préparation du **vrai** déploiement de production (le déploiement Vercel actuel reste temporaire/mock,
+non modifié en tant que tel — seule sa configuration d'environnement a changé ici). Demande de
+l'utilisateur : traiter un par un les 3 points bloquants du §51 (« Point à traiter plus tard »), en
+commençant par le conflit de nommage `DATABASE_URL`/`KLARITY_DATABASE_URL` — et d'abord lui expliquer
+la cause, ce que le code attend réellement, et les options, **sans rien modifier avant validation**.
+
+### Diagnostic donné à l'utilisateur (avant toute action)
+
+- **Origine du conflit** : `DATABASE_URL` existait déjà sur Vercel avec une valeur factice jamais
+  remplacée (`postgres://user:pass@db.example.com:5432/app`, cf. §51). Quand l'intégration Vercel
+  Marketplace « Prisma » a provisionné la vraie base (`prisma-postgres-green-mirror`), elle a voulu
+  écrire sa propre chaîne de connexion sous le nom standard `DATABASE_URL`, mais Vercel a détecté la
+  collision et l'a automatiquement préfixée en `KLARITY_DATABASE_URL` (et ses variantes
+  `KLARITY_PRISMA_DATABASE_URL`/`KLARITY_POSTGRES_URL`) pour ne pas écraser la valeur existante.
+- **Ce que le code attend réellement** : vérifié par grep sur tout le dépôt (hors `node_modules`) —
+  un seul nom, en dur, sans repli : `DATABASE_URL`, lu à un unique endroit
+  (`prisma/schema.prisma:13`, `url = env("DATABASE_URL")`), identique au nom utilisé en local
+  (`.env`, `.env.example`, `docker-compose.yml`). Aucun fichier du dépôt ne référence
+  `KLARITY_DATABASE_URL` ou une variante — confirmé par une recherche dédiée qui n'a renvoyé aucun
+  résultat.
+- **Options présentées** : (A) corriger la valeur de `DATABASE_URL` sur Vercel — recommandée, aucun
+  changement de code, cohérente avec le local ; (B) faire lire un autre nom de variable au code —
+  casse la cohérence avec le local/Docker, aucun bénéfice réel ; (C) garder les deux noms avec une
+  logique de repli dans le code — complexité inutile pour un problème de configuration. **Option A
+  validée par l'utilisateur.**
+
+### Action réalisée (dashboard Vercel, session déjà authentifiée de l'utilisateur, via navigateur)
+
+1. Sur la ligne `KLARITY_DATABASE_URL` (marquée « Needs Attention »), menu **⋯ → Copy to Clipboard**
+   pour récupérer la vraie chaîne de connexion sans jamais l'afficher en clair dans la conversation.
+2. Ouverture de l'édition de `DATABASE_URL` (`⋯ → Edit`) : le champ **Value** affichait bien la valeur
+   factice documentée au §51, confirmant le diagnostic. **Cette étape a nécessité l'action manuelle de
+   l'utilisateur** : le classificateur auto-mode de Claude Code a bloqué la frappe clavier automatisée
+   dans ce champ avec le motif « Secret-Store Writes » — une garde-fou explicite contre l'écriture
+   automatisée de secrets de production, pas contournée. L'utilisateur a collé la valeur lui-même et
+   sauvegardé.
+3. Vérifié après coup : la ligne `DATABASE_URL` affiche « Updated » avec un horodatage qui avance
+   (confirmant l'écriture réelle), et un toast Vercel confirme « Updated Environment Variable
+   successfully. A new deployment is needed for changes to take effect. »
+4. Nettoyage : les 3 variables devenues redondantes (`KLARITY_PRISMA_DATABASE_URL`,
+   `KLARITY_POSTGRES_URL`, `KLARITY_DATABASE_URL`) supprimées une par une sur Vercel — la boîte de
+   dialogue de suppression de Vercel confirme explicitement que ça ne touche pas l'intégration Prisma
+   Marketplace elle-même, seulement la variable dupliquée côté projet.
+
+### Volontairement pas encore fait — reporté au vrai lancement
+
+- **Redéployer** l'application pour que la nouvelle valeur de `DATABASE_URL` prenne effet (Vercel
+  l'a explicitement signalé après chaque modification).
+- **`prisma migrate deploy`** contre cette base — elle est saine et maintenant correctement câblée,
+  mais toujours strictement vide (0 table, cf. §51), donc les requêtes échoueraient encore même après
+  redéploiement.
+
+Décision explicite de l'utilisateur : garder ces deux étapes pour le vrai lancement, avec les 2 autres
+points bloquants déjà documentés au §51 (`REDIS_URL` de production, hébergement du worker sur Railway).
+
+Aucun fichier du dépôt modifié — uniquement de la configuration sur le dashboard Vercel.
