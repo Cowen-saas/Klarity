@@ -3807,6 +3807,13 @@ données de test locales :
    Railway pour `src/worker/index.ts`, avec les mêmes variables d'environnement que l'app (`DATABASE_URL`,
    `REDIS_URL`, `ANTHROPIC_API_KEY`, etc.), connecté à la même base Postgres/Redis que l'app principale.
 
+**Points 3 et 4 — volontairement groupés et reportés à juste avant le vrai lancement, décision de
+l'utilisateur du 22 septembre 2026 (§84)** : ils seront traités ensemble (pas maintenant), car liés — le
+worker doit se connecter au même Redis que l'app — et parce que les deux impliquent de payer pour de
+vrais services externes (Redis externe type Upstash, hébergement Railway) qui tourneraient inutilement
+si configurés trop tôt, avant que le reste soit prêt (Sender ID SmsPro dédié à confirmer côté compte,
+décision finale de timing de lancement).
+
 Aucun fichier du dépôt modifié dans cette entrée — audit en lecture seule uniquement.
 
 ## 52. Chantier IA réelle — plan en 7 passes, et champ `Epreuve.typeExercice` (14 septembre 2026)
@@ -6033,3 +6040,31 @@ Décision explicite de l'utilisateur : garder ces deux étapes pour le vrai lanc
 points bloquants déjà documentés au §51 (`REDIS_URL` de production, hébergement du worker sur Railway).
 
 Aucun fichier du dépôt modifié — uniquement de la configuration sur le dashboard Vercel.
+
+## 84. Points 2/3 (`REDIS_URL` de production + hébergement du worker sur Railway) — groupés et reportés à juste avant le vrai lancement (22 septembre 2026)
+
+Suite du §51/§83 : demande explicite de l'utilisateur, **aucune action à mener maintenant** sur ces
+deux points, seulement une mise à jour de la documentation. Décision : `REDIS_URL` de production et
+l'hébergement du worker sur Railway seront traités **ensemble**, mais **volontairement pas maintenant**
+— seulement juste avant le vrai lancement.
+
+### Raisons données par l'utilisateur
+
+- **Les deux points sont liés** : le service `worker` (`src/worker/index.ts`) doit se connecter au
+  même Redis que l'app principale (cf. §51, point 4 — mêmes variables d'environnement,
+  `DATABASE_URL`/`REDIS_URL`/`ANTHROPIC_API_KEY`, sur le même Postgres/Redis). Les configurer
+  séparément n'aurait pas de sens ; autant les câbler ensemble, en une seule fois.
+- **Les deux impliquent de payer pour de vrais services externes** (un Redis externe joignable type
+  Upstash pour le point 2, un service Railway pour le point 3) qui **tourneraient inutilement** —
+  donc pour rien — s'ils étaient configurés trop tôt, avant que le reste ne soit prêt :
+  - le Sender ID SmsPro dédié à l'OTP (`SMSPRO_SENDER_ID_OTP`, cf. l'entrée sur l'audit SmsPro) reste à
+    confirmer côté compte SmsPro ;
+  - la décision finale de timing de lancement n'est pas encore prise.
+
+### État inchangé
+
+- **Point 1 (`DATABASE_URL`) reste marqué résolu, §83 — sans changement.**
+- Points 2 et 3 restent donc en attente, mais désormais documentés comme **groupés** plutôt que comme
+  deux tâches indépendantes à traiter séparément — cf. la note ajoutée directement dans la liste du §51.
+
+Aucun fichier de code modifié — mise à jour de documentation uniquement.
