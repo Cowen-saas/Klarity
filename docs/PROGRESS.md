@@ -6068,3 +6068,29 @@ l'hébergement du worker sur Railway seront traités **ensemble**, mais **volont
   deux tâches indépendantes à traiter séparément — cf. la note ajoutée directement dans la liste du §51.
 
 Aucun fichier de code modifié — mise à jour de documentation uniquement.
+
+## 85. Pipeline vidéo — écran "Mes lacunes" terminé + piège découvert : `app`/`worker` ont chacun leur `node_modules` Docker (22 septembre 2026)
+
+Reprise du pipeline vidéo YouTube (backend déjà fait en Passe 1 — recherche YouTube, filtrage Haiku, cache,
+queue BullMQ dédiée). État des lieux réel avant tout changement : `VideoCard` existait déjà et était déjà
+branché sur "Mes lacunes" et le chat, lecture `youtube-nocookie.com` au clic déjà conforme ; aucune référence
+vidéo nulle part dans le Quiz (mise en pause toujours respectée). Deux manques réels identifiés : aucune durée
+nulle part (ni en base, ni récupérée — `search.list` seul ne la fournit pas) et une seule vidéo affichée alors
+que le filtrage Haiku en retient déjà jusqu'à 3.
+
+Complété : `Video.dureeSecondes` (migration additive) alimenté par un appel `videos.list` ciblé (seulement sur
+les vidéos retenues par Haiku, jamais sur les résultats bruts — 1 unité de quota/vidéo) ; "Mes lacunes" affiche
+désormais jusqu'à 3 vidéos recommandées en pile pleine largeur avec badge de durée, au lieu d'une seule carte
+perdue dans l'espace. Vérifié réellement : vrai élève créé via l'API d'inscription, vraie lacune insérée, vrai
+job déclenché sur la vraie file BullMQ → vrais appels YouTube + Haiku (3 vidéos retenues, durées réelles
+confirmées en base par `psql`), rendu vérifié au navigateur connecté (desktop + mobile 390px sans débordement
+horizontal, lecture réelle testée). Données de test nettoyées après coup ; les lignes `Video`/cache réelles
+laissées en place (contenu mutualisé légitime).
+
+**Piège découvert en testant, maintenant noté en dur dans `CLAUDE.md`** (section « Architecture déjà décidée »)
+pour ne plus s'y refaire prendre : après la migration Prisma, le worker continuait à planter avec `Unknown
+field 'dureeSecondes' for select statement` alors que `docker compose exec app npx prisma migrate dev` avait
+bien régénéré le client — parce que `app` et `worker` déclarent chacun leur propre volume anonyme
+`node_modules` dans `docker-compose.yml` (pas partagé entre les deux). Il faut régénérer explicitement dans
+les deux conteneurs (`docker compose exec worker npx prisma generate`) **et** redémarrer le service concerné
+(le process déjà lancé garde l'ancien client en mémoire même une fois les fichiers régénérés sur disque).

@@ -3,10 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
-import { IconCheckCircle, IconWarning, IconPencil } from "@/components/icons";
+import { IconCheckCircle, IconWarning, IconPencil, IconPlay } from "@/components/icons";
 import { VideoCard } from "@/components/video/VideoCard";
 
 const INTERVALLE_SONDAGE_MS = 2000;
+
+interface VideoVue {
+  titre: string;
+  providerVideoId: string;
+  dureeSecondes: number | null;
+}
 
 interface LacuneVue {
   id: string;
@@ -14,7 +20,7 @@ interface LacuneVue {
   matiere: string;
   niveauMaitrise: number;
   explication: string | null;
-  video: { titre: string; providerVideoId: string } | null;
+  videos: VideoVue[];
 }
 
 type Statut = "bon" | "moyen" | "faible";
@@ -186,13 +192,40 @@ export function MesLacunes({ lacunes }: { lacunes: LacuneVue[] }) {
                 </button>
               </div>
 
-              {selection.video ? (
-                <VideoCard titre={selection.video.titre} providerVideoId={selection.video.providerVideoId} />
-              ) : (
-                <div className="flex min-h-[12rem] items-center justify-center rounded-2xl border-2 border-dashed border-border p-6 text-center text-sm text-texte-muted">
-                  Aucune vidéo disponible pour cette notion pour l&apos;instant.
+              <div className="min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="text-lg font-bold text-texte">Vidéos recommandées</h2>
+                  {selection.videos.length > 0 && (
+                    <span className="shrink-0 text-xs font-semibold text-texte-muted">
+                      {selection.videos.length} vidéo{selection.videos.length > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
-              )}
+                <p className="mt-1 text-sm text-texte-muted">Pour progresser sur « {selection.notion} »</p>
+
+                {selection.videos.length > 0 ? (
+                  <div className="mt-4 flex flex-col gap-4">
+                    {selection.videos.map((v) => (
+                      <VideoCard
+                        key={v.providerVideoId}
+                        titre={v.titre}
+                        providerVideoId={v.providerVideoId}
+                        dureeSecondes={v.dureeSecondes}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border p-6 text-center">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-light">
+                      <IconPlay className="h-4 w-4 text-primary" weight="fill" aria-hidden="true" />
+                    </span>
+                    <p className="text-sm font-semibold text-texte">Aucune vidéo disponible pour l&apos;instant</p>
+                    <p className="max-w-xs text-sm text-texte-muted">
+                      On cherche encore la meilleure ressource pour cette notion — reviens un peu plus tard.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>

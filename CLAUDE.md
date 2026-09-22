@@ -2,17 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository state
-
-**No application code exists yet.** This repository currently contains only specs, reference docs, a Prisma
-schema, and curriculum data — there is no `package.json`, no Next.js app, no tests, and no build/lint/test
-commands to run. If you are asked to implement Klarity, you are building it from scratch against the documents
-below; don't assume any scaffolding is already in place, and check with the user before picking a package
-manager, framework version, or hosting target that isn't already implied by the docs.
-
-`prisma/schema.prisma` is the one artifact that already encodes real architectural decisions (see below) — treat
-it as authoritative for data modeling, not as a draft to redesign.
-
 ## What Klarity is
 
 An IA-powered exam-prep platform for Cameroonian secondary students (3ème, Première, Terminale), in French
@@ -133,6 +122,18 @@ From `docs/reference/Klarity_scalability_reference.txt` and `Klarity_Securite_Re
   sessions, Cloudflare R2 for exam PDFs/corrections/uploaded photos (signed, expiring URLs only — never a public
   bucket), Redis-backed caching (video/lacune cache, matières list), BullMQ for background jobs, Claude API for
   all AI calls. Deployment target is something simple (Vercel/Railway/VPS+Docker) — no Kubernetes.
+- **Local dev (`docker compose`): `app` and `worker` do NOT share `node_modules`.** Each service declares its
+  own anonymous `- /app/node_modules` volume in `docker-compose.yml`, so they get two independent copies of
+  `node_modules` — including the generated Prisma Client. Running `npx prisma migrate dev` / `prisma generate`
+  through one service (typically `app`) regenerates *only that container's* client; the other service keeps
+  running against the stale one. The failure this produces is misleading — a runtime
+  `PrismaClientValidationError: Unknown field 'xxx' for select statement on model 'Yyy'` at the exact line that
+  uses the new field, which reads like a code bug, not a stale-client problem. **After every schema change**,
+  regenerate in both: `docker compose exec app npx prisma generate` **and**
+  `docker compose exec worker npx prisma generate` — then restart whichever service(s) were already running
+  (`docker compose restart worker` / `app`), since a long-running Node process keeps the old client loaded in
+  memory even after the files on disk are regenerated. `docker compose exec app npx prisma migrate dev` only
+  covers the `app` side of this automatically.
 - **Sync request handlers must never call the vision/correction model inline.** Upload responds immediately;
   a background worker (BullMQ/Redis queue) does the Claude call and the client polls/subscribes for the result.
   Same pattern applies to quiz generation, video filtering/search, and SMS/WhatsApp sends.

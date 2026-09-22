@@ -343,6 +343,7 @@ model Video {
 
   titre           String
   providerVideoId String // identifiant YouTube uniquement, lecture via youtube-nocookie.com
+  dureeSecondes   Int? // depuis videos.list(contentDetails), nullable pour les lignes créées avant ce champ
 
   matiereId      String
   matiere        Matiere       @relation(fields: [matiereId], references: [id])

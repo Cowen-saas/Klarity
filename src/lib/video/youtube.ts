@@ -11,6 +11,7 @@ import type { VideoCandidate } from "@/lib/ai";
  */
 
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
+const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 const MAX_RESULTATS_BRUTS = 8;
 
 interface YoutubeSearchItem {
@@ -76,4 +77,52 @@ export async function rechercherVideosYoutube(query: string): Promise<VideoCandi
       description: decodeHtmlEntities(item.snippet.description),
       chaineNom: decodeHtmlEntities(item.snippet.channelTitle),
     }));
+}
+
+interface YoutubeVideosItem {
+  id: string;
+  contentDetails: { duration: string }; // ISO 8601, ex. "PT4M13S"
+}
+
+interface YoutubeVideosResponse {
+  items: YoutubeVideosItem[];
+}
+
+/** "PT1H2M10S" -> 3730 (secondes). Repli sur null si le format est inattendu (jamais bloquant). */
+function parserDureeIso8601(duree: string): number | null {
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duree);
+  if (!m) return null;
+  const [, h, min, s] = m;
+  return (Number(h ?? 0) * 3600) + (Number(min ?? 0) * 60) + Number(s ?? 0);
+}
+
+/**
+ * Récupère la durée des vidéos *déjà retenues* par le filtrage Haiku (jamais sur
+ * les 8 résultats bruts de la recherche) — un seul appel `videos.list` par lot,
+ * 1 unité de quota par vidéo au lieu des 100 unités d'un `search.list` (§2.5,
+ * coût IA/API sous surveillance, cf. CLAUDE.md). Best-effort : une vidéo dont la
+ * durée ne peut pas être récupérée obtient `null`, jamais une erreur bloquante
+ * pour le pipeline entier.
+ */
+export async function recupererDureesVideos(videoIds: string[]): Promise<Map<string, number>> {
+  const resultat = new Map<string, number>();
+  if (videoIds.length === 0) return resultat;
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) return resultat;
+
+  const url = new URL(YOUTUBE_VIDEOS_URL);
+  url.searchParams.set("part", "contentDetails");
+  url.searchParams.set("id", videoIds.join(","));
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) return resultat; // best-effort — une carte vidéo sans durée reste utilisable
+
+  const data = (await res.json()) as YoutubeVideosResponse;
+  for (const item of data.items ?? []) {
+    const secondes = parserDureeIso8601(item.contentDetails.duration);
+    if (secondes !== null) resultat.set(item.id, secondes);
+  }
+  return resultat;
 }

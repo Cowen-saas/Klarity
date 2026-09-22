@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { resoudrePremiereVideoParNotion } from "@/lib/video/lecture";
+import { resoudreVideosParNotion } from "@/lib/video/lecture";
 import { MesLacunes } from "@/components/eleve/MesLacunes";
 
 export const metadata: Metadata = {
@@ -44,7 +44,7 @@ export default async function MesLacunesPage() {
   });
 
   const notions = [...new Set(lacunes.map((l) => l.notion))];
-  const videoParNotion = await resoudrePremiereVideoParNotion(notions);
+  const videosParNotion = await resoudreVideosParNotion(notions);
 
   const lacunesVue = lacunes.map((l) => {
     const pointsManques = (l.sourceCorrection?.pointsManques as { notion: string; detail: string }[] | null) ?? [];
@@ -55,7 +55,7 @@ export default async function MesLacunesPage() {
       matiere: l.matiere.nom,
       niveauMaitrise: l.niveauMaitrise,
       explication,
-      video: videoParNotion.get(l.notion) ?? null,
+      videos: videosParNotion.get(l.notion) ?? [],
     };
   });
 

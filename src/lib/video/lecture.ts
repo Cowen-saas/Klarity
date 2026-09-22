@@ -10,32 +10,48 @@ import { prisma } from "@/lib/prisma";
 export interface VideoVue {
   titre: string;
   providerVideoId: string;
+  dureeSecondes: number | null;
 }
 
-/** Pour chaque notion fournie, résout la 1ère vidéo retenue par le pipeline (ordre de pertinence Haiku). */
-export async function resoudrePremiereVideoParNotion(notions: string[]): Promise<Map<string, VideoVue>> {
-  const resultat = new Map<string, VideoVue>();
+/**
+ * Pour chaque notion fournie, résout toutes les vidéos retenues par le pipeline
+ * (jusqu'à 3, cf. `filtrerVideos` — ordre de pertinence Haiku préservé, pas
+ * l'ordre SQL). Utilisé par "Mes lacunes" (plusieurs recommandations affichées).
+ */
+export async function resoudreVideosParNotion(notions: string[]): Promise<Map<string, VideoVue[]>> {
+  const resultat = new Map<string, VideoVue[]>();
   if (notions.length === 0) return resultat;
 
   const caches = await prisma.lacuneVideoCache.findMany({
     where: { notionCle: { in: notions } },
     select: { notionCle: true, videoIdsJson: true },
   });
-  const premierIdParNotion = new Map(
-    caches.map((c) => [c.notionCle, (c.videoIdsJson as string[])[0] as string | undefined])
-  );
-  const ids = [...premierIdParNotion.values()].filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return resultat;
+  const idsParNotion = new Map(caches.map((c) => [c.notionCle, c.videoIdsJson as string[]]));
+  const tousLesIds = [...idsParNotion.values()].flat();
+  if (tousLesIds.length === 0) return resultat;
 
   const videos = await prisma.video.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, titre: true, providerVideoId: true },
+    where: { id: { in: tousLesIds } },
+    select: { id: true, titre: true, providerVideoId: true, dureeSecondes: true },
   });
   const videoParId = new Map(videos.map((v) => [v.id, v]));
 
-  for (const [notion, videoId] of premierIdParNotion) {
-    const video = videoId ? videoParId.get(videoId) : undefined;
-    if (video) resultat.set(notion, { titre: video.titre, providerVideoId: video.providerVideoId });
+  for (const [notion, ids] of idsParNotion) {
+    const vues = ids
+      .map((id) => videoParId.get(id))
+      .filter((v): v is NonNullable<typeof v> => v !== undefined)
+      .map((v) => ({ titre: v.titre, providerVideoId: v.providerVideoId, dureeSecondes: v.dureeSecondes }));
+    if (vues.length > 0) resultat.set(notion, vues);
+  }
+  return resultat;
+}
+
+/** Pour chaque notion fournie, résout uniquement la 1ère vidéo retenue (chat-tuteur, recommandation inline unique). */
+export async function resoudrePremiereVideoParNotion(notions: string[]): Promise<Map<string, VideoVue>> {
+  const toutes = await resoudreVideosParNotion(notions);
+  const resultat = new Map<string, VideoVue>();
+  for (const [notion, videos] of toutes) {
+    if (videos[0]) resultat.set(notion, videos[0]);
   }
   return resultat;
 }

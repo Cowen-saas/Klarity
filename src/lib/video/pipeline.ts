@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAIProvider } from "@/lib/ai";
 import { estimerCoutIA } from "@/lib/ai/pricing";
 import { planifierRechercheVideo } from "@/lib/queue/video";
-import { construireRequeteRecherche, rechercherVideosYoutube } from "./youtube";
+import { construireRequeteRecherche, rechercherVideosYoutube, recupererDureesVideos } from "./youtube";
 
 /**
  * Pipeline vidéo automatisé (§2.5) — recherche YouTube -> filtrage Haiku ->
@@ -19,6 +19,7 @@ export interface VideoVue {
   id: string;
   titre: string;
   providerVideoId: string;
+  dureeSecondes: number | null;
 }
 
 interface ContexteVideo {
@@ -59,13 +60,18 @@ export async function obtenirVideosPourNotion(ctx: ContexteVideo): Promise<{ vid
   const videoIds: string[] = [];
   if (candidats.length > 0) {
     const filtrage = await getAIProvider().filtrerVideos(candidats, ctx.notion, ctx.matiereNom);
+    const durees = await recupererDureesVideos(filtrage.retenues.map((r) => r.videoId));
 
     for (const retenue of filtrage.retenues) {
+      const dureeSecondes = durees.get(retenue.videoId) ?? null;
       const existante = await prisma.video.findFirst({
         where: { providerVideoId: retenue.videoId, notionAssociee: ctx.notion },
-        select: { id: true },
+        select: { id: true, dureeSecondes: true },
       });
       if (existante) {
+        if (existante.dureeSecondes === null && dureeSecondes !== null) {
+          await prisma.video.update({ where: { id: existante.id }, data: { dureeSecondes } });
+        }
         videoIds.push(existante.id);
         continue;
       }
@@ -73,6 +79,7 @@ export async function obtenirVideosPourNotion(ctx: ContexteVideo): Promise<{ vid
         data: {
           titre: retenue.titre,
           providerVideoId: retenue.videoId,
+          dureeSecondes,
           matiereId: ctx.matiereId,
           notionAssociee: ctx.notion,
           classe: ctx.classe,
